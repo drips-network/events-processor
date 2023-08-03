@@ -1,13 +1,14 @@
 {
-  "name": "drips-db-synchronizer",
+  "name": "drips-events-processor",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "commit": "npx cz",
     "prepare": "husky install",
     "format": "prettier --write .",
+    "docker:clean": "docker container stop postgres_container pgadmin_container && docker container rm postgres_container pgadmin_container && docker volume rm drips-events-processor_postgres_data drips-events-processor_pgadmin_data",
     "start:dev": "NODE_ENV=development npx nodemon",
-    "lint": "prettier --check . && eslint ./**/*.ts",
+    "lint": "prettier --check . && eslint src/**/*.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build:contracts": "typechain --target=ethers-v6 --out-dir contracts ./src/abi/**.json"
   },
@@ -23,8 +24,10 @@
     "@typechain/ethers-v6": "^0.4.3",
     "@types/node": "^20.4.5",
     "@types/pg": "^8.10.2",
+    "@types/uuid": "^9.0.2",
     "@typescript-eslint/eslint-plugin": "^6.2.0",
     "@typescript-eslint/parser": "^6.2.0",
+    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^8.45.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-airbnb-typescript": "^17.1.0",
@@ -39,8 +42,11 @@
   },
   "dependencies": {
     "dotenv": "^16.3.1",
-    "ethers": "^6.6.5",
+    "ethers": "^6.7.0",
+    "get-caller-file": "^2.0.5",
     "pg": "^8.11.1",
-    "sequelize": "^6.32.1"
+    "sequelize": "^6.32.1",
+    "uuid": "^9.0.0",
+    "winston": "^3.10.0"
   }
 }

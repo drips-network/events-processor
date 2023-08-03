@@ -10,6 +10,7 @@
   },
   "plugins": ["@typescript-eslint"],
   "rules": {
+    "max-classes-per-file": "off",
     "camelcase": "off",
     "import/extensions": "off",
     "no-underscore-dangle": "off",

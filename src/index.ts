@@ -1,13 +1,17 @@
-import dotenv from 'dotenv';
-import run from './worker';
-
-dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
+import logger from './common/logger';
+import connectToDb from './db';
+import processPastEvents from './utils/process-past-events';
+import registerOnReceives from './utils/register-event-on-receive-listeners';
+import validateNetworkSettings from './utils/validate-config';
 
 (async () => {
   try {
-    await run();
-  } catch (e) {
-    // TODO: add logger
-    console.error(e);
+    await validateNetworkSettings();
+    await registerOnReceives();
+    await connectToDb();
+    await processPastEvents();
+    logger.info('Listening for events...');
+  } catch (e: any) {
+    logger.error(`Unhandled error: ${e.message}`);
   }
 })();

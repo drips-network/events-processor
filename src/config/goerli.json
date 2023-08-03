@@ -1,0 +1,11 @@
+{
+  "network": "goerli",
+  "drips": {
+    "address": "0x74A32a38D945b9527524900429b083547DeB9bF4",
+    "block": 9000000
+  },
+  "repoDriver": {
+    "address": "0xa71bdf410D48d4AA9aE1517A69D7E1Ef0c179b2B",
+    "block": 9000000
+  }
+}
