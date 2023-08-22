@@ -45,17 +45,18 @@ export abstract class EventHandlerBase<T extends SupportedFilterSignature> {
   public async executeHandle<TResult = any>(
     request: HandleRequest<T>,
   ): Promise<Result<TResult>> {
-    const { id, eventLog } = request;
+    const { eventLog } = request;
 
     const context = {
-      requestId: id,
-      handlerName: this.name,
       transactionHash: `${eventLog.transactionHash}`,
       logIndex: `${eventLog.index}`,
       blockNumber: `${eventLog.blockNumber}`,
     };
     logger.info({
-      message: `${this.name} is processing`,
+      message: `[${request.id}] ${this.name} is executing on ${JSON.stringify(
+        context,
+        null,
+      )}...`,
       context,
     });
 
@@ -64,12 +65,12 @@ export abstract class EventHandlerBase<T extends SupportedFilterSignature> {
 
     if (result.ok) {
       logger.info({
-        message: `${this.name} successfully processed`,
+        message: `[${request.id}] ${this.name} successfully processed event.`,
         context,
       });
     } else {
       logger.error({
-        message: `${this.name} failed with error '${result.error.message}' while processing request`,
+        message: `[${request.id}] ${this.name} failed with error '${result.error.message}' while processing request`,
         context,
       });
     }

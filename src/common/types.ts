@@ -1,4 +1,4 @@
-import type { InitOptions, ModelAttributes, Model } from 'sequelize';
+import type { ModelAttributes, Model } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
 import { type Drips, type RepoDriver } from '../../contracts';
 import type {
@@ -93,42 +93,31 @@ export type KeysToModelAttributes<T extends keyof ModelAttributes> = {
   [K in T]: ModelAttributes[K];
 };
 
-export interface IModelDefinitionConstructor<
-  TModel extends Model<TModelAttributes> & TModelAttributes,
-  TModelAttributes extends {} = any,
-> {
-  model: typeof Model & { new (): Model<TModelAttributes> & TModelAttributes };
-  new (): IModelDefinition<TModel, TModelAttributes>;
-}
-
-export interface IModelDefinition<
-  TModel extends Model<TModelAttributes> & TModelAttributes,
-  TModelAttributes extends {} = any,
-> {
-  attributes: KeysToModelAttributes<KeysOf<TModelAttributes>>;
-  initOptions: InitOptions<TModel>;
-}
-
-export abstract class EventProcessRequest {
+export class HandleRequest<T extends SupportedFilterSignature> {
   public readonly id: UUID;
   public readonly correlationId: UUID | null = null;
 
-  constructor(correlationId: UUID | null = null) {
-    this.id = uuidv4();
-    this.correlationId = correlationId;
-  }
-}
-
-export class HandleRequest<
-  T extends SupportedFilterSignature,
-> extends EventProcessRequest {
   public readonly eventLog: TypedEventLog<SupportedFilter[T]>;
 
   constructor(
     eventLog: TypedEventLog<SupportedFilter[T]>,
     correlationId: UUID | null = null,
   ) {
-    super(correlationId);
+    this.id = uuidv4();
     this.eventLog = eventLog;
+    this.correlationId = correlationId;
   }
+}
+
+export interface ModelCtor {
+  new (): Model;
+  initialize(): void;
+}
+
+export interface IEventModel {
+  readonly rawEvent: string;
+  readonly logIndex: number;
+  readonly blockNumber: number;
+  readonly blockTimestamp: Date;
+  readonly transactionHash: string;
 }

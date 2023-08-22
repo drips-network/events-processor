@@ -1,16 +1,12 @@
-import type {
-  IModelDefinitionConstructor,
-  SupportedFilterSignature,
-} from '../common/types';
+import type { ModelCtor, SupportedFilterSignature } from '../common/types';
 import type { IEventHandlerConstructor } from '../common/EventHandlerBase';
-import AccountMetadataEmittedEventHandler from '../event-handlers/AccountMetadataEmitted/AccountMetadataEmittedHandler';
-import AccountMetadataEmittedEventModelDefinition from '../event-handlers/AccountMetadataEmitted/AccountMetadataEmittedEventModel';
-import OwnerUpdatedEventHandler from '../event-handlers/OwnerUpdatedEventHandler/OwnerUpdatedEventHandler';
-import OwnerUpdateRequestedEventHandler from '../event-handlers/OwnerUpdateRequestedEventHandler/OwnerUpdateRequestedEventHandler';
-import { OwnerUpdatedEventModelDefinition } from '../event-handlers/OwnerUpdatedEventHandler/OwnerUpdatedEventModel';
-import { OwnerUpdateRequestedEventModelDefinition } from '../event-handlers/OwnerUpdateRequestedEventHandler/OwnerUpdateRequestedEventModel';
-import { GitProjectModelDefinition } from '../models/GitProjectModel';
-import { ProcessHistoryModelDefinition } from '../models/ProcessHistoryModel';
+import AccountMetadataEmittedEventHandler from '../event-handlers/AccountMetadataEmittedHandler';
+import { GitProjectModel } from '../models/GitProjectModel';
+import AccountMetadataEmittedEventModel from '../models/AccountMetadataEmittedEventModel';
+import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
+import OwnerUpdatedEventHandler from '../event-handlers/OwnerUpdatedEventHandler';
+import OwnerUpdateRequestedEventHandler from '../event-handlers/OwnerUpdateRequestedEventHandler';
+import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
 
 // Register event handlers here.
 export const EVENT_HANDLERS: Partial<{
@@ -23,10 +19,9 @@ export const EVENT_HANDLERS: Partial<{
 } as const;
 
 // Register models here.
-export const MODEL_DEFINITIONS: IModelDefinitionConstructor<any, any>[] = [
-  GitProjectModelDefinition,
-  ProcessHistoryModelDefinition,
-  OwnerUpdatedEventModelDefinition,
-  AccountMetadataEmittedEventModelDefinition,
-  OwnerUpdateRequestedEventModelDefinition,
+export const MODELS: ModelCtor[] = [
+  GitProjectModel,
+  AccountMetadataEmittedEventModel,
+  OwnerUpdatedEventModel,
+  OwnerUpdateRequestedEventModel,
 ];

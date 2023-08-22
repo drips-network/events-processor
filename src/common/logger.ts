@@ -7,13 +7,9 @@ const format = winston.format.combine(
   winston.format.timestamp(),
   winston.format.colorize(),
   winston.format.errors({ stack: true }),
-  winston.format.printf(({ timestamp, level, message, context }) => {
-    const contextAsString =
-      context && Object.keys(context).length ? JSON.stringify(context) : '';
-    return `${timestamp} ${level}: ${message}${
-      contextAsString ? ` ${contextAsString}` : ''
-    }`;
-  }),
+  winston.format.printf(
+    ({ timestamp, level, message }) => `${timestamp} ${level}: ${message}`,
+  ),
 );
 
 const developmentLogger = winston.createLogger({

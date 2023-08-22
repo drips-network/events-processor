@@ -12,7 +12,7 @@ export default async function executeDbTransaction<T>(
     // Committed
   } catch (error: any) {
     // Rolled back
-    const errorMessage = `Database transaction from request ${requestId} failed and rolled back with error`;
+    const errorMessage = `[${requestId}] Database transaction from request ${requestId} failed and rolled back with error`;
     if (error instanceof BaseError) {
       logger.debug(`${errorMessage} '${JSON.stringify(error, null, 2)}'.`);
     } else {

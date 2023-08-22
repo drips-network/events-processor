@@ -1,7 +1,7 @@
 import { DataTypes } from 'sequelize';
 import type { KeysOf, KeysToModelAttributes } from '../common/types';
 
-const eventModelBaseAttributes = {
+const eventInitAttributes = {
   transactionHash: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -20,16 +20,16 @@ const eventModelBaseAttributes = {
     allowNull: false,
   },
   rawEvent: {
-    type: DataTypes.JSON, // TODO: consider JSONB if needed
+    type: DataTypes.JSON,
     allowNull: true,
   },
 };
 
-export default function createEventAttributes<TAttributes>(
+export default function createEventInitAttributes<TAttributes>(
   options: KeysToModelAttributes<KeysOf<TAttributes>>,
 ) {
   return {
-    ...eventModelBaseAttributes,
+    ...eventInitAttributes,
     ...options,
   };
 }

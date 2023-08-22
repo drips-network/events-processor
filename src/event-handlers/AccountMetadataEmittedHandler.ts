@@ -1,14 +1,10 @@
-import type {
-  TypedContractEvent,
-  TypedListener,
-} from '../../../contracts/common';
-import type { AccountMetadataEmittedEvent } from '../../../contracts/Drips';
-import { EventHandlerBase } from '../../common/EventHandlerBase';
-import executeDbTransaction from '../../utils/execute-db-transaction';
-import type { IAccountMetadataEmittedEventAttributes } from './AccountMetadataEmittedEventModel';
-import AccountMetadataEmittedEventModelDefinition from './AccountMetadataEmittedEventModel';
-import getEventOutput from '../../utils/get-event-output';
-import { HandleRequest } from '../../common/types';
+import type { TypedContractEvent, TypedListener } from '../../contracts/common';
+import type { AccountMetadataEmittedEvent } from '../../contracts/Drips';
+import { EventHandlerBase } from '../common/EventHandlerBase';
+import executeDbTransaction from '../utils/execute-db-transaction';
+import getEventOutput from '../utils/get-event-output';
+import { HandleRequest } from '../common/types';
+import AccountMetadataEmittedEventModel from '../models/AccountMetadataEmittedEventModel';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public filterSignature =
@@ -24,7 +20,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
 
     await executeDbTransaction(
       async (transaction) =>
-        AccountMetadataEmittedEventModelDefinition.model.create(
+        AccountMetadataEmittedEventModel.create(
           {
             accountId: accountId.toString(),
             key,
@@ -34,7 +30,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
             rawEvent: JSON.stringify(eventLog),
             transactionHash: eventLog.transactionHash,
             blockTimestamp: (await eventLog.getBlock()).date,
-          } satisfies IAccountMetadataEmittedEventAttributes,
+          },
           { transaction },
         ),
       requestId,

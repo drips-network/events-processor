@@ -75,7 +75,7 @@ export default async function processPastEvents(): Promise<void> {
       logger[failedLogsOfType > 0 ? 'warn' : 'info'](
         `Found ${foundLogsOfType} ${event.name} ${
           foundLogsOfType > 1 ? 'events' : 'event' // 🤓
-        }, processed successfully ${processedLogsOfType} and failed ${failedLogsOfType}.`,
+        } until block ${endBlock}, processed successfully ${processedLogsOfType} and failed ${failedLogsOfType}.`,
       );
     }),
   );

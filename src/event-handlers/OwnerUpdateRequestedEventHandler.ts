@@ -1,32 +1,17 @@
 import { ethers } from 'ethers';
-import type { OwnerUpdateRequestedEvent } from '../../../contracts/RepoDriver';
-import type {
-  TypedContractEvent,
-  TypedListener,
-} from '../../../contracts/common';
-import { EventHandlerBase } from '../../common/EventHandlerBase';
+import type { OwnerUpdateRequestedEvent } from '../../contracts/RepoDriver';
+import { EventHandlerBase } from '../common/EventHandlerBase';
+import logger from '../common/logger';
+import { HandleRequest } from '../common/types';
+import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
+import executeDbTransaction from '../utils/execute-db-transaction';
+import getEventOutput from '../utils/get-event-output';
 import {
-  OwnerUpdateRequestedEventModelDefinition,
-  type IOwnerUpdateRequestedEventAttributes,
-} from './OwnerUpdateRequestedEventModel';
-import type { IGitProjectAttributes } from '../../models/GitProjectModel';
-import {
-  GitProjectModelDefinition,
+  Forge,
+  GitProjectModel,
   ProjectVerificationStatus,
-} from '../../models/GitProjectModel';
-import { HandleRequest } from '../../common/types';
-import getEventOutput from '../../utils/get-event-output';
-import executeDbTransaction from '../../utils/execute-db-transaction';
-import logger from '../../common/logger';
-
-type OwnerUpdateRequestedGitProjectAttributes = Omit<
-  IGitProjectAttributes,
-  'ownerAddress'
-> & {
-  verificationStatus:
-    | ProjectVerificationStatus.NotStarted
-    | ProjectVerificationStatus.ClaimingProject;
-};
+} from '../models/GitProjectModel';
+import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 
 export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'OwnerUpdateRequested(uint256,uint8,bytes)'> {
   public filterSignature = 'OwnerUpdateRequested(uint256,uint8,bytes)' as const;
@@ -40,7 +25,7 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
       await getEventOutput<OwnerUpdateRequestedEvent.OutputTuple>(eventLog);
 
     return executeDbTransaction(async (transaction) => {
-      await OwnerUpdateRequestedEventModelDefinition.model.create(
+      await OwnerUpdateRequestedEventModel.create(
         {
           accountId: accountId.toString(),
           forge: Number(forge),
@@ -50,29 +35,29 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
           rawEvent: JSON.stringify(eventLog),
           blockTimestamp: (await eventLog.getBlock()).date,
           transactionHash: eventLog.transactionHash,
-        } satisfies IOwnerUpdateRequestedEventAttributes,
+        },
         { transaction },
       );
 
       logger.debug(
-        `Request ${
-          request.id
-        } creates a new Git project with name ${ethers.toUtf8String(
+        `[${requestId}] creating a new Git project with name ${ethers.toUtf8String(
           name,
-        )}, forge ${Number(forge)} and accountId ${accountId}.`,
+        )}, forge ${Forge[Number(forge)]} and accountId ${accountId}.`,
       );
 
-      await GitProjectModelDefinition.model.create(
+      await GitProjectModel.create(
         {
           repoNameBytes: name,
           forge: Number(forge),
-          id: accountId.toString(),
+          accountId: accountId.toString(),
           repoName: ethers.toUtf8String(name),
           verificationStatus: ProjectVerificationStatus.ClaimingProject,
           blockTimestamp: (await eventLog.getBlock()).date,
-        } satisfies OwnerUpdateRequestedGitProjectAttributes,
+        },
         { transaction },
       );
+
+      logger.debug(`[${requestId}] Git project created.`);
     }, requestId);
   }
 

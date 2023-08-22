@@ -1,29 +1,15 @@
-import type { OwnerUpdatedEvent } from '../../../contracts/RepoDriver';
-import type {
-  TypedContractEvent,
-  TypedListener,
-} from '../../../contracts/common';
-import { EventHandlerBase } from '../../common/EventHandlerBase';
-import { HandleRequest } from '../../common/types';
-import type { IGitProjectAttributes } from '../../models/GitProjectModel';
+import type { OwnerUpdatedEvent } from '../../contracts/RepoDriver';
+import type { TypedContractEvent, TypedListener } from '../../contracts/common';
+import { EventHandlerBase } from '../common/EventHandlerBase';
+import logger from '../common/logger';
+import { HandleRequest } from '../common/types';
 import {
-  GitProjectModelDefinition,
+  GitProjectModel,
   ProjectVerificationStatus,
-} from '../../models/GitProjectModel';
-import executeDbTransaction from '../../utils/execute-db-transaction';
-import getEventOutput from '../../utils/get-event-output';
-import {
-  OwnerUpdatedEventModelDefinition,
-  type IOwnerUpdatedEventAttributes,
-} from './OwnerUpdatedEventModel';
-import logger from '../../common/logger';
-
-export type OwnerUpdatedEventGitProjectAttributes = Omit<
-  IGitProjectAttributes,
-  'repoNameBytes' | 'forge' | 'repoName' | 'id'
-> & {
-  verificationStatus: ProjectVerificationStatus.AwaitingProjectMetadata;
-};
+} from '../models/GitProjectModel';
+import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
+import executeDbTransaction from '../utils/execute-db-transaction';
+import getEventOutput from '../utils/get-event-output';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
   protected filterSignature = 'OwnerUpdated(uint256,address)' as const;
@@ -37,7 +23,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       await getEventOutput<OwnerUpdatedEvent.OutputTuple>(eventLog);
 
     await executeDbTransaction(async (transaction) => {
-      await OwnerUpdatedEventModelDefinition.model.create(
+      await OwnerUpdatedEventModel.create(
         {
           accountId: accountId.toString(),
           ownerAddress: owner,
@@ -46,13 +32,13 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           rawEvent: JSON.stringify(eventLog),
           transactionHash: eventLog.transactionHash,
           blockTimestamp: (await eventLog.getBlock()).date,
-        } satisfies IOwnerUpdatedEventAttributes,
+        },
         { transaction },
       );
 
-      const gitProject = await GitProjectModelDefinition.model.findOne({
+      const gitProject = await GitProjectModel.findOne({
         where: {
-          id: accountId.toString(),
+          accountId: accountId.toString(),
         },
       });
 
@@ -63,23 +49,25 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       }
 
       logger.debug(
-        `Request ${requestId} updates Git project ${gitProject.id} (${gitProject.repoName}) owner to ${owner}.`,
+        `[${requestId}] updates Git project with ID ${gitProject.accountId} (${gitProject.repoName}) owner to ${owner}.`,
       );
 
-      await GitProjectModelDefinition.model.update(
+      await GitProjectModel.update(
         {
           ownerAddress: owner,
           verificationStatus: ProjectVerificationStatus.AwaitingProjectMetadata,
           blockTimestamp: (await eventLog.getBlock()).date,
-        } satisfies OwnerUpdatedEventGitProjectAttributes,
+        },
         {
           where: {
-            id: accountId.toString(),
+            accountId: accountId.toString(),
           },
           transaction,
         },
       );
     }, requestId);
+
+    logger.debug(`[${requestId}] Git project's owner updated.`);
   }
 
   protected readonly onReceive: TypedListener<

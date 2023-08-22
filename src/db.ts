@@ -1,7 +1,7 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 import logger, { shouldEnableSequelizeLogging } from './common/logger';
-import { MODEL_DEFINITIONS } from './config/app-settings';
+import { MODELS } from './config/app-settings';
 import { SUPPORTED_NETWORKS } from './config/constants';
 import sequelizeInstance from './utils/get-sequelize-instance';
 
@@ -64,10 +64,8 @@ function initializeEntities(): void {
   try {
     logger.info('Initializing database schema...');
 
-    MODEL_DEFINITIONS.forEach(async (ModelDefinition) => {
-      const { attributes, initOptions } = new ModelDefinition();
-
-      ModelDefinition.model.init(attributes, initOptions);
+    MODELS.forEach(async (Model) => {
+      Model.initialize();
     });
 
     logger.info('Database schema initialized.');
