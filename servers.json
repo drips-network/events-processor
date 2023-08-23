@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Drips PostgreSQL Dev Server",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "postgres",
+      "Username": "user",
+      "Password": "admin",
+      "SSLMode": "prefer"
+    }
+  }
+}
