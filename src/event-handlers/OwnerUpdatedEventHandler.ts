@@ -3,13 +3,10 @@ import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import { EventHandlerBase } from '../common/EventHandlerBase';
 import logger from '../common/logger';
 import { HandleRequest } from '../common/types';
-import {
-  GitProjectModel,
-  ProjectVerificationStatus,
-} from '../models/GitProjectModel';
+import { GitProjectModel } from '../models/GitProjectModel';
 import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
-import executeDbTransaction from '../utils/execute-db-transaction';
 import getEventOutput from '../utils/get-event-output';
+import sequelizeInstance from '../utils/get-sequelize-instance';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
   protected filterSignature = 'OwnerUpdated(uint256,address)' as const;
@@ -22,25 +19,31 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
     const [accountId, owner] =
       await getEventOutput<OwnerUpdatedEvent.OutputTuple>(eventLog);
 
-    await executeDbTransaction(async (transaction) => {
-      await OwnerUpdatedEventModel.create(
-        {
-          accountId: accountId.toString(),
-          ownerAddress: owner,
-          logIndex: eventLog.index,
-          blockNumber: eventLog.blockNumber,
-          rawEvent: JSON.stringify(eventLog),
-          transactionHash: eventLog.transactionHash,
-          blockTimestamp: (await eventLog.getBlock()).date,
-        },
-        { transaction },
-      );
+    await sequelizeInstance.transaction(async (transaction) => {
+      const [ownerUpdatedEventModel, created] =
+        await OwnerUpdatedEventModel.findOrCreate({
+          transaction,
+          where: {
+            logIndex: eventLog.index,
+            blockNumber: eventLog.blockNumber,
+            transactionHash: eventLog.transactionHash,
+          },
+          defaults: {
+            accountId: accountId.toString(),
+            ownerAddress: owner,
+            rawEvent: JSON.stringify(eventLog),
+            blockTimestamp: (await eventLog.getBlock()).date,
+          },
+        });
 
-      const gitProject = await GitProjectModel.findOne({
-        where: {
-          accountId: accountId.toString(),
-        },
-      });
+      if (!created) {
+        logger.info(
+          `[${requestId}] already processed event with ID ${ownerUpdatedEventModel.id}. Skipping...`,
+        );
+        return;
+      }
+
+      const gitProject = await GitProjectModel.findByPk(accountId.toString());
 
       if (!gitProject) {
         throw new Error(
@@ -48,26 +51,17 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
         );
       }
 
-      logger.debug(
-        `[${requestId}] updates Git project with ID ${gitProject.accountId} (${gitProject.repoName}) owner to ${owner}.`,
-      );
-
-      await GitProjectModel.update(
+      await gitProject.update(
         {
           ownerAddress: owner,
-          verificationStatus: ProjectVerificationStatus.AwaitingProjectMetadata,
-          blockTimestamp: (await eventLog.getBlock()).date,
         },
-        {
-          where: {
-            accountId: accountId.toString(),
-          },
-          transaction,
-        },
+        { transaction },
       );
-    }, requestId);
 
-    logger.debug(`[${requestId}] Git project's owner updated.`);
+      logger.debug(
+        `[${requestId}] updated Git project with ID ${gitProject.accountId} (${gitProject.repoName}) owner to ${owner}.`,
+      );
+    });
   }
 
   protected readonly onReceive: TypedListener<

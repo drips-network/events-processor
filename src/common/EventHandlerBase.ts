@@ -70,7 +70,7 @@ export abstract class EventHandlerBase<T extends SupportedFilterSignature> {
       });
     } else {
       logger.error({
-        message: `[${request.id}] ${this.name} failed with error '${result.error.message}' while processing request`,
+        message: `[${request.id}] ${this.name} failed with error '${result.error.message}' while processing request.`,
         context,
       });
     }

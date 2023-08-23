@@ -3,7 +3,7 @@ import logger from '../common/logger';
 import sequelizeInstance from './get-sequelize-instance';
 import type { UUID } from '../common/types';
 
-export default async function executeDbTransaction<T>(
+export default async function debugDbTransaction<T>(
   callback: (t: Transaction) => PromiseLike<T>,
   requestId: UUID,
 ): Promise<T> {

@@ -2,18 +2,23 @@ import { DataTypes } from 'sequelize';
 import type { KeysOf, KeysToModelAttributes } from '../common/types';
 
 const eventInitAttributes = {
+  // Primary key
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+  },
   transactionHash: {
     type: DataTypes.STRING,
     allowNull: false,
-    primaryKey: true,
   },
   logIndex: {
     type: DataTypes.INTEGER,
-    primaryKey: true,
+    allowNull: false,
   },
   blockNumber: {
     type: DataTypes.INTEGER,
-    primaryKey: true,
+    allowNull: false,
   },
   blockTimestamp: {
     type: DataTypes.DATE,
@@ -21,7 +26,7 @@ const eventInitAttributes = {
   },
   rawEvent: {
     type: DataTypes.JSON,
-    allowNull: true,
+    allowNull: false,
   },
 };
 

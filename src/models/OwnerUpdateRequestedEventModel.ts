@@ -7,6 +7,7 @@ export default class OwnerUpdateRequestedEventModel
   extends Model
   implements IEventModel
 {
+  public id!: number; // Primary key
   public name!: string;
   public forge!: number;
   public accountId!: string;
@@ -21,7 +22,7 @@ export default class OwnerUpdateRequestedEventModel
       createEventInitAttributes({
         accountId: {
           type: DataTypes.STRING,
-          primaryKey: true,
+          allowNull: false,
         },
         forge: {
           type: DataTypes.INTEGER,

@@ -7,8 +7,9 @@ export default class OwnerUpdatedEventModel
   extends Model
   implements IEventModel
 {
-  public accountId!: string;
+  public id!: number; // Primary key
   public rawEvent!: string;
+  public accountId!: string;
   public logIndex!: number;
   public blockNumber!: number;
   public ownerAddress!: string;

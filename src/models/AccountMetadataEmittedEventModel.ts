@@ -7,6 +7,7 @@ export default class AccountMetadataEmittedEventModel
   extends Model
   implements IEventModel
 {
+  public id!: number; // Primary key
   public rawEvent!: string;
   public logIndex!: number;
   public blockNumber!: number;
