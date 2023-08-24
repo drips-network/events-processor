@@ -1,4 +1,3 @@
-/* eslint-disable no-await-in-loop */
 import type { Result } from '../common/types';
 
 async function sleep(milliseconds: number): Promise<void> {

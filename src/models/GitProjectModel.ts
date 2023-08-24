@@ -1,68 +1,64 @@
+import type {
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+} from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type { Address } from '../common/types';
-import createInitOptions from '../utils/create-init-options';
+import getSchema from '../utils/get-schema';
+import sequelizeInstance from '../utils/get-sequelize-instance';
 
 export enum Forge {
   GitHub = 0,
 }
 
 export enum ProjectVerificationStatus {
-  OwnerVerificationRequested = 'OwnerVerificationRequested',
-  OwnerVerified = 'OwnerVerified',
-  Completed = 'Completed',
+  Unclaimed = 'Unclaimed',
+  OwnerUpdateRequested = 'OwnerUpdateRequested',
+  OwnerUpdated = 'OwnerUpdated',
+  Claimed = 'Claimed',
 }
 
-export class GitProjectModel extends Model {
-  public id!: number; // Primary key
+export default class GitProjectModel extends Model<
+  InferAttributes<GitProjectModel>,
+  InferCreationAttributes<GitProjectModel>
+> {
+  public declare id: CreationOptional<number>; // Primary key
 
-  public accountId!: string;
-  public verificationStatus!: ProjectVerificationStatus;
-
-  // Properties from `OwnerUpdateRequested` event.
-  public forge!: Forge;
-  public repoName!: string;
-
-  // Properties from `OwnerUpdated` event.
-  public ownerAddress!: Address | null;
+  // Properties from events.
+  public declare name: string;
+  public declare forge: Forge;
+  public declare accountId: string;
+  public declare owner: Address | null;
 
   // Properties from metadata.
-  public url!: string;
-  public emoji!: string;
-  public color!: string;
-  public ownerName!: string;
-  public description!: string;
+  public declare url: string | null;
+  public declare emoji: string | null;
+  public declare color: string | null;
+  public declare ownerName: string | null;
+  public declare description: string | null;
+  public declare verificationStatus: ProjectVerificationStatus;
 
   public static initialize(): void {
     this.init(
       {
-        accountId: {
-          type: DataTypes.STRING, // the `RepoDriver` account ID.
+        id: {
+          type: DataTypes.INTEGER,
+          autoIncrement: true,
           primaryKey: true,
         },
-        verificationStatus: {
-          type: DataTypes.ENUM(...Object.values(ProjectVerificationStatus)),
-          allowNull: false,
-        },
-
-        // Properties from `OwnerUpdateRequested` event.
-        forge: {
-          type: DataTypes.ENUM(
-            ...Object.values(Forge).map((v) => v.toString()),
-          ),
-          allowNull: false,
-        },
-        repoName: {
-          type: DataTypes.STRING,
-          allowNull: false,
-        },
-
-        // Properties from `OwnerUpdated` event.
-        ownerAddress: {
+        accountId: {
           type: DataTypes.STRING,
           allowNull: true,
         },
-
-        // Properties from metadata.
+        name: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        owner: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
         url: {
           type: DataTypes.STRING,
           allowNull: true,
@@ -83,11 +79,22 @@ export class GitProjectModel extends Model {
           type: DataTypes.STRING,
           allowNull: true,
         },
+        verificationStatus: {
+          type: DataTypes.ENUM(...Object.values(ProjectVerificationStatus)),
+          allowNull: false,
+        },
+        forge: {
+          type: DataTypes.ENUM(
+            ...Object.values(Forge).map((v) => v.toString()),
+          ),
+          allowNull: false,
+        },
       },
-      createInitOptions({
-        modelName: 'GitProject',
+      {
+        schema: getSchema(),
         tableName: 'GitProjects',
-      }),
+        sequelize: sequelizeInstance,
+      },
     );
   }
 }

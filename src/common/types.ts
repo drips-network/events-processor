@@ -1,10 +1,7 @@
 import type { ModelAttributes, Model } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
 import { type Drips, type RepoDriver } from '../../contracts';
-import type {
-  SUPPORTED_CONTRACTS,
-  SUPPORTED_NETWORKS,
-} from '../config/constants';
+import type { SUPPORTED_CONTRACTS, SUPPORTED_NETWORKS } from './constants';
 import type { TypedContractEvent, TypedEventLog } from '../../contracts/common';
 
 // TODO: add support for other contracts.

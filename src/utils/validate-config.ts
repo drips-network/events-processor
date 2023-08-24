@@ -1,5 +1,5 @@
 import logger from '../common/logger';
-import { SUPPORTED_CONTRACTS, SUPPORTED_NETWORKS } from '../config/constants';
+import { SUPPORTED_CONTRACTS, SUPPORTED_NETWORKS } from '../common/constants';
 import { getNetworkSettings } from './get-network-settings';
 import getRegisteredEvents from './get-registered-events';
 

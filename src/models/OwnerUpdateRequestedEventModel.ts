@@ -1,25 +1,42 @@
+import type {
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+} from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type { IEventModel } from '../common/types';
-import createInitOptions from '../utils/create-init-options';
-import createEventInitAttributes from '../utils/create-event-init-attributes';
+import sequelizeInstance from '../utils/get-sequelize-instance';
+import getSchema from '../utils/get-schema';
+import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
 
 export default class OwnerUpdateRequestedEventModel
-  extends Model
+  extends Model<
+    InferAttributes<OwnerUpdateRequestedEventModel>,
+    InferCreationAttributes<OwnerUpdateRequestedEventModel>
+  >
   implements IEventModel
 {
-  public id!: number; // Primary key
-  public name!: string;
-  public forge!: number;
-  public accountId!: string;
-  public rawEvent!: string;
-  public logIndex!: number;
-  public blockNumber!: number;
-  public blockTimestamp!: Date;
-  public transactionHash!: string;
+  public declare id: CreationOptional<number>; // Primary key
+
+  // Properties from event output.
+  public declare forge: number;
+  public declare name: string;
+  public declare accountId: string;
+
+  // Common event log properties.
+  public declare rawEvent: string;
+  public declare logIndex: number;
+  public declare blockNumber: number;
+  public declare blockTimestamp: Date;
+  public declare transactionHash: string;
 
   public static initialize(): void {
     this.init(
-      createEventInitAttributes({
+      {
+        name: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
         accountId: {
           type: DataTypes.STRING,
           allowNull: false,
@@ -28,15 +45,13 @@ export default class OwnerUpdateRequestedEventModel
           type: DataTypes.INTEGER,
           allowNull: false,
         },
-        name: {
-          type: DataTypes.STRING,
-          allowNull: false,
-        },
-      }),
-      createInitOptions({
-        modelName: 'OwnerUpdateRequestedEventModel',
+        ...COMMON_EVENT_INIT_ATTRIBUTES,
+      },
+      {
+        schema: getSchema(),
+        sequelize: sequelizeInstance,
         tableName: 'OwnerUpdateRequestedEvents',
-      }),
+      },
     );
   }
 }

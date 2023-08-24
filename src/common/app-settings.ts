@@ -1,12 +1,12 @@
-import type { ModelCtor, SupportedFilterSignature } from '../common/types';
-import type { IEventHandlerConstructor } from '../common/EventHandlerBase';
+import type { IEventHandlerConstructor } from './EventHandlerBase';
 import AccountMetadataEmittedEventHandler from '../event-handlers/AccountMetadataEmittedHandler';
-import { GitProjectModel } from '../models/GitProjectModel';
-import AccountMetadataEmittedEventModel from '../models/AccountMetadataEmittedEventModel';
-import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
+import AccountMetadataEmittedEvent from '../models/AccountMetadataEmittedEventModel';
+import OwnerUpdatedEvent from '../models/OwnerUpdatedEventModel';
 import OwnerUpdatedEventHandler from '../event-handlers/OwnerUpdatedEventHandler';
 import OwnerUpdateRequestedEventHandler from '../event-handlers/OwnerUpdateRequestedEventHandler';
-import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
+import OwnerUpdateRequestedEvent from '../models/OwnerUpdateRequestedEventModel';
+import type { ModelCtor, SupportedFilterSignature } from './types';
+import GitProjectModel from '../models/GitProjectModel';
 
 // Register event handlers here.
 export const EVENT_HANDLERS: Partial<{
@@ -21,7 +21,7 @@ export const EVENT_HANDLERS: Partial<{
 // Register models here.
 export const MODELS: ModelCtor[] = [
   GitProjectModel,
-  AccountMetadataEmittedEventModel,
-  OwnerUpdatedEventModel,
-  OwnerUpdateRequestedEventModel,
+  AccountMetadataEmittedEvent,
+  OwnerUpdatedEvent,
+  OwnerUpdateRequestedEvent,
 ];

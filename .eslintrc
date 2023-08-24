@@ -10,6 +10,14 @@
   },
   "plugins": ["@typescript-eslint"],
   "rules": {
+    "no-await-in-loop": "off",
+    "no-restricted-syntax": [
+      "off",
+      {
+        "selector": "ForOfStatement",
+        "message": "for...of statements are allowed"
+      }
+    ],
     "max-classes-per-file": "off",
     "camelcase": "off",
     "import/extensions": "off",

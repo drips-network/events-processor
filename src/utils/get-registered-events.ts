@@ -1,4 +1,4 @@
-import { EVENT_HANDLERS } from '../config/app-settings';
+import { EVENT_HANDLERS } from '../common/app-settings';
 import type { SupportedFilterSignature } from '../common/types';
 
 export default function getRegisteredEvents(): SupportedFilterSignature[] {

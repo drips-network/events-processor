@@ -61,9 +61,9 @@ export async function getContractInfoByFilterSignature(
   throw new Error(`No contract found for filter ${filterSignature}.`);
 }
 
-export const getContractNameByAccountId = (
+export function getContractNameByAccountId(
   accountId: string | number | bigint,
-): SupportedContractName => {
+): SupportedContractName {
   const accountIdAsBigInt = BigInt(accountId);
 
   if (accountIdAsBigInt < 0n || accountIdAsBigInt > 2n ** 256n - 1n) {
@@ -89,4 +89,4 @@ export const getContractNameByAccountId = (
     default:
       throw new Error(`Unknown driver for accountId: ${accountId}.`);
   }
-};
+}

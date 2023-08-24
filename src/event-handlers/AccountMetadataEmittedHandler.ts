@@ -1,21 +1,21 @@
 import { ethers } from 'ethers';
-import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import type { AccountMetadataEmittedEvent } from '../../contracts/Drips';
 import { EventHandlerBase } from '../common/EventHandlerBase';
-import getEventOutput from '../utils/get-event-output';
+import parseEventOutput from '../utils/parse-event-output';
 import { HandleRequest } from '../common/types';
 import AccountMetadataEmittedEventModel from '../models/AccountMetadataEmittedEventModel';
 import { getContractNameByAccountId } from '../utils/get-contract';
-import { USER_METADATA_KEY } from '../config/constants';
+import { USER_METADATA_KEY } from '../common/constants';
 import fetchIpfs from '../utils/ipfs';
-import {
-  GitProjectModel,
-  ProjectVerificationStatus,
-} from '../models/GitProjectModel';
+
 import { repoDriverAccountMetadataParser } from '../metadata/schemas';
 import sequelizeInstance from '../utils/get-sequelize-instance';
 import logger from '../common/logger';
+import shouldNeverHappen from '../utils/throw';
+import GitProjectModel, {
+  ProjectVerificationStatus,
+} from '../models/GitProjectModel';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public filterSignature =
@@ -24,12 +24,14 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
   protected async _handle(
     request: HandleRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
   ): Promise<void> {
-    const { eventLog, id: requestId } = request;
-
-    const [accountId, key, value] =
-      await getEventOutput<AccountMetadataEmittedEvent.OutputTuple>(eventLog);
-
     await sequelizeInstance.transaction(async (transaction) => {
+      const { eventLog, id: requestId } = request;
+
+      const [accountId, key, value] =
+        await parseEventOutput<AccountMetadataEmittedEvent.OutputTuple>(
+          eventLog,
+        );
+
       const [accountMetadataEmittedEventModel, created] =
         await AccountMetadataEmittedEventModel.findOrCreate({
           transaction,
@@ -43,7 +45,11 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
             key,
             value,
             rawEvent: JSON.stringify(eventLog),
-            blockTimestamp: (await eventLog.getBlock()).date,
+            logIndex: eventLog.index,
+            blockNumber: eventLog.blockNumber,
+            blockTimestamp:
+              (await eventLog.getBlock()).date ?? shouldNeverHappen(),
+            transactionHash: eventLog.transactionHash,
           },
         });
 
@@ -51,31 +57,16 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         logger.info(
           `[${requestId}] already processed event with ID ${accountMetadataEmittedEventModel.id}. Skipping...`,
         );
-        return;
       }
 
-      await AccountMetadataEmittedEventModel.create(
-        {
-          key,
-          value,
-          accountId: accountId.toString(),
-          logIndex: eventLog.index,
-          blockNumber: eventLog.blockNumber,
-          rawEvent: JSON.stringify(eventLog),
-          transactionHash: eventLog.transactionHash,
-          blockTimestamp: (await eventLog.getBlock()).date,
-        },
-        { transaction },
-      );
-
-      const isGitProject =
+      const isAccountGitProject =
         getContractNameByAccountId(accountId) === 'repoDriver';
-
-      if (isGitProject) {
+      if (isAccountGitProject) {
         const gitProject = await GitProjectModel.findOne({
           where: {
             accountId: accountId.toString(),
           },
+          transaction,
         });
 
         if (!gitProject) {
@@ -83,42 +74,22 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
             `Git project with ID ${accountId} not found but it was expected to exist. Maybe the relevant event that creates the project was not processed yet. See logs for more details.`,
           );
         }
+        const metadata = await this._getProjectIpfsMetadata(
+          accountId,
+          value,
+          gitProject,
+        );
 
-        const latestAccountMetadataEmittedEvent =
-          await AccountMetadataEmittedEventModel.findOne({
-            where: {
-              key: USER_METADATA_KEY,
-              accountId: accountId.toString(),
-            },
-            order: [['blockNumber', 'DESC']],
-          });
-
-        const ipfsData = await (
-          await fetchIpfs(
-            ethers.toUtf8String(
-              latestAccountMetadataEmittedEvent
-                ? latestAccountMetadataEmittedEvent.value
-                : value,
-            ),
-          )
-        ).json();
-
-        const metadata = repoDriverAccountMetadataParser.parseAny(ipfsData);
-        this._verifyMetadata(metadata, gitProject, accountId);
-
-        await GitProjectModel.update(
+        await gitProject.update(
           {
             color: metadata.color,
             emoji: metadata.emoji,
             url: metadata.source.url,
             description: metadata.description,
             ownerName: metadata.source.ownerName,
-            verificationStatus: ProjectVerificationStatus.Completed,
+            verificationStatus: ProjectVerificationStatus.Claimed,
           },
           {
-            where: {
-              accountId: accountId.toString(),
-            },
             transaction,
           },
         );
@@ -135,33 +106,54 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
   > = async (_accountId, _key, _value, eventLog) =>
     this.executeHandle(new HandleRequest((eventLog as any).log));
 
-  private _verifyMetadata(
-    metadata: AnyVersion<typeof repoDriverAccountMetadataParser>,
+  private async _getProjectIpfsMetadata(
+    accountId: bigint,
+    value: string,
     gitProject: GitProjectModel,
-    eventAccountId: bigint,
   ) {
+    const latestAccountMetadataEmittedEvent =
+      await AccountMetadataEmittedEventModel.findOne({
+        where: {
+          key: USER_METADATA_KEY,
+          accountId: accountId.toString(),
+        },
+        order: [['blockNumber', 'DESC']],
+      });
+
+    const ipfsData = await (
+      await fetchIpfs(
+        ethers.toUtf8String(
+          latestAccountMetadataEmittedEvent
+            ? latestAccountMetadataEmittedEvent.value
+            : value,
+        ),
+      )
+    ).json();
+
+    const metadata = repoDriverAccountMetadataParser.parseAny(ipfsData);
+
     const errors = [];
 
     const { describes, source } = metadata;
     const { url, repoName, ownerName } = source;
 
-    if (`${ownerName}/${repoName}` !== `${gitProject.repoName}`) {
+    if (`${ownerName}/${repoName}` !== `${gitProject.name}`) {
       errors.push(
-        `repoName mismatch: got ${repoName}, expected ${gitProject.repoName}`,
+        `repoName mismatch: got ${repoName}, expected ${gitProject.name}`,
       );
     }
 
     if (!url.includes(repoName)) {
       errors.push(
-        `URL does not include repoName: ${gitProject.repoName} not found in ${url}`,
+        `URL does not include repoName: ${gitProject.name} not found in ${url}`,
       );
     }
 
-    if (describes.accountId !== eventAccountId.toString()) {
+    if (describes.accountId !== accountId.toString()) {
       errors.push(
         `accountId mismatch with toString: got ${
           describes.accountId
-        }, expected ${eventAccountId.toString()}`,
+        }, expected ${accountId.toString()}`,
       );
     }
 
@@ -173,10 +165,12 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
 
     if (errors.length > 0) {
       throw new Error(
-        `Git project with ID ${eventAccountId} has metadata that does not match the metadata emitted by the contract (${errors.join(
+        `Git project with ID ${accountId} has metadata that does not match the metadata emitted by the contract (${errors.join(
           '; ',
         )}).`,
       );
     }
+
+    return metadata;
   }
 }

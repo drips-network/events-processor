@@ -1,5 +1,4 @@
-/* eslint-disable no-await-in-loop */
-// TODO: parallelize requests (and remove this ☝️ eslint-disable) if this logic ever becomes inefficient.
+// TODO: parallelize requests if this logic ever becomes inefficient.
 
 import type { TypedEventLog } from '../../contracts/common';
 import logger from '../common/logger';

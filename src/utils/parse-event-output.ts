@@ -12,7 +12,7 @@ import type {
 import { getDrips, getRepoDriver } from './get-contract';
 import { isDripsEvent, isRepoDriverEvent } from './is-event-of-contract';
 
-async function getRepoDriverEventOutput<T extends RepoDriverEventOutputTuple>(
+async function parseRepoDriverEventOutput<T extends RepoDriverEventOutputTuple>(
   eventLog: TypedEventLog<RepoDriverEvent>,
 ): Promise<T> {
   const repoDriver = await getRepoDriver();
@@ -34,7 +34,7 @@ async function getRepoDriverEventOutput<T extends RepoDriverEventOutputTuple>(
   return logDescription.args as unknown as T;
 }
 
-async function getDripsEventOutput<T extends DripsEventOutputTuple>(
+async function parseDripsEventOutput<T extends DripsEventOutputTuple>(
   eventLog: TypedEventLog<DripsEvent>,
 ): Promise<T> {
   const drips = await getDrips();
@@ -56,7 +56,7 @@ async function getDripsEventOutput<T extends DripsEventOutputTuple>(
   return logDescription.args as unknown as T;
 }
 
-export default async function getEventOutput<T extends SupportedOutputTuple>(
+export default async function parseEventOutput<T extends SupportedOutputTuple>(
   eventLog: TypedEventLog<SupportedEvent>,
 ) {
   // TODO: add support for other contracts.
@@ -68,7 +68,7 @@ export default async function getEventOutput<T extends SupportedOutputTuple>(
       drips,
     )
   ) {
-    return getDripsEventOutput(
+    return parseDripsEventOutput(
       eventLog as TypedEventLog<DripsEvent>,
     ) as unknown as T;
   }
@@ -80,7 +80,7 @@ export default async function getEventOutput<T extends SupportedOutputTuple>(
       repoDriver,
     )
   ) {
-    return getRepoDriverEventOutput(
+    return parseRepoDriverEventOutput(
       eventLog as TypedEventLog<RepoDriverEvent>,
     ) as unknown as T;
   }

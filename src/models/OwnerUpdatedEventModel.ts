@@ -1,37 +1,52 @@
+import type {
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+} from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type { IEventModel } from '../common/types';
-import createEventInitAttributes from '../utils/create-event-init-attributes';
-import createInitOptions from '../utils/create-init-options';
+import getSchema from '../utils/get-schema';
+import sequelizeInstance from '../utils/get-sequelize-instance';
+import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
 
 export default class OwnerUpdatedEventModel
-  extends Model
+  extends Model<
+    InferAttributes<OwnerUpdatedEventModel>,
+    InferCreationAttributes<OwnerUpdatedEventModel>
+  >
   implements IEventModel
 {
-  public id!: number; // Primary key
-  public rawEvent!: string;
-  public accountId!: string;
-  public logIndex!: number;
-  public blockNumber!: number;
-  public ownerAddress!: string;
-  public blockTimestamp!: Date;
-  public transactionHash!: string;
+  public declare id: CreationOptional<number>; // Primary key
+
+  // Properties from event output.
+  public declare owner: string;
+  public declare accountId: string;
+
+  // Common event log properties.
+  public declare rawEvent: string;
+  public declare logIndex: number;
+  public declare blockNumber: number;
+  public declare blockTimestamp: Date;
+  public declare transactionHash: string;
 
   public static initialize(): void {
     this.init(
-      createEventInitAttributes({
+      {
+        owner: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
         accountId: {
           type: DataTypes.STRING,
           allowNull: false,
         },
-        ownerAddress: {
-          type: DataTypes.STRING,
-          allowNull: false,
-        },
-      }),
-      createInitOptions({
-        modelName: 'OwnerUpdatedEventModel',
+        ...COMMON_EVENT_INIT_ATTRIBUTES,
+      },
+      {
+        schema: getSchema(),
+        sequelize: sequelizeInstance,
         tableName: 'OwnerUpdatedEvents',
-      }),
+      },
     );
   }
 }

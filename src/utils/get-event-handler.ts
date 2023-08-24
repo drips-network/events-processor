@@ -1,5 +1,5 @@
 import type { EventHandlerBase } from '../common/EventHandlerBase';
-import { EVENT_HANDLERS } from '../config/app-settings';
+import { EVENT_HANDLERS } from '../common/app-settings';
 import { type SupportedFilterSignature } from '../common/types';
 
 export default function getEventHandlerByFilterSignature<

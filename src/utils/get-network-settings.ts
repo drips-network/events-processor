@@ -3,7 +3,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { WebSocketProvider } from 'ethers';
 import type { ChainConfig, SupportedNetwork } from '../common/types';
-import { SUPPORTED_NETWORKS } from '../config/constants';
+import { SUPPORTED_NETWORKS } from '../common/constants';
 import logger from '../common/logger';
 
 dotenv.config({ path: `.env.${process.env.NODE_ENV}` });

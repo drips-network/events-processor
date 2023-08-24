@@ -1,30 +1,38 @@
+import type {
+  CreationOptional,
+  InferAttributes,
+  InferCreationAttributes,
+} from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import createInitOptions from '../utils/create-init-options';
 import type { IEventModel } from '../common/types';
-import createEventInitAttributes from '../utils/create-event-init-attributes';
+import getSchema from '../utils/get-schema';
+import sequelizeInstance from '../utils/get-sequelize-instance';
+import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
 
 export default class AccountMetadataEmittedEventModel
-  extends Model
+  extends Model<
+    InferAttributes<AccountMetadataEmittedEventModel>,
+    InferCreationAttributes<AccountMetadataEmittedEventModel>
+  >
   implements IEventModel
 {
-  public id!: number; // Primary key
-  public rawEvent!: string;
-  public logIndex!: number;
-  public blockNumber!: number;
-  public blockTimestamp!: Date;
-  public transactionHash!: string;
+  public declare id: CreationOptional<number>; // Primary key
 
-  public key!: string;
-  public value!: string;
-  public accountId!: string;
+  // Properties from event output.
+  public declare key: string;
+  public declare value: string;
+  public declare accountId: string;
+
+  // Common event log properties.
+  public declare rawEvent: string;
+  public declare logIndex: number;
+  public declare blockNumber: number;
+  public declare blockTimestamp: Date;
+  public declare transactionHash: string;
 
   public static initialize(): void {
     this.init(
-      createEventInitAttributes({
-        accountId: {
-          type: DataTypes.STRING,
-          allowNull: false,
-        },
+      {
         key: {
           type: DataTypes.STRING,
           allowNull: false,
@@ -33,11 +41,17 @@ export default class AccountMetadataEmittedEventModel
           type: DataTypes.STRING,
           allowNull: false,
         },
-      }),
-      createInitOptions({
-        modelName: 'AccountMetadataEmittedEventModel',
+        accountId: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        ...COMMON_EVENT_INIT_ATTRIBUTES,
+      },
+      {
+        schema: getSchema(),
+        sequelize: sequelizeInstance,
         tableName: 'AccountMetadataEmittedEvents',
-      }),
+      },
     );
   }
 }

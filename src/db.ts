@@ -1,9 +1,9 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 import logger, { shouldEnableSequelizeLogging } from './common/logger';
-import { MODELS } from './config/app-settings';
-import { SUPPORTED_NETWORKS } from './config/constants';
+import { SUPPORTED_NETWORKS } from './common/constants';
 import sequelizeInstance from './utils/get-sequelize-instance';
+import { MODELS } from './common/app-settings';
 
 dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
 

@@ -15,15 +15,10 @@ const repoDriverSplitReceiverSchema = z.object({
 });
 
 const repoDriverAccountSplitsSchema = z.object({
-  maintainers: z.array(addressDriverSplitReceiverSchema).optional(),
-  dependencies: z
-    .array(
-      z.union([
-        repoDriverSplitReceiverSchema,
-        addressDriverSplitReceiverSchema,
-      ]),
-    )
-    .optional(),
+  maintainers: z.array(addressDriverSplitReceiverSchema),
+  dependencies: z.array(
+    z.union([repoDriverSplitReceiverSchema, addressDriverSplitReceiverSchema]),
+  ),
 });
 
 const repoDriverAccountMetadataSchemaV2 = z.object({

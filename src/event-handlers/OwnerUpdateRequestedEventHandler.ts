@@ -4,14 +4,14 @@ import { EventHandlerBase } from '../common/EventHandlerBase';
 import logger from '../common/logger';
 import { HandleRequest } from '../common/types';
 import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
-import getEventOutput from '../utils/get-event-output';
-import {
-  Forge,
-  GitProjectModel,
-  ProjectVerificationStatus,
-} from '../models/GitProjectModel';
+import parseEventOutput from '../utils/parse-event-output';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import sequelizeInstance from '../utils/get-sequelize-instance';
+import shouldNeverHappen from '../utils/throw';
+import GitProjectModel, {
+  Forge,
+  ProjectVerificationStatus,
+} from '../models/GitProjectModel';
 
 export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'OwnerUpdateRequested(uint256,uint8,bytes)'> {
   public filterSignature = 'OwnerUpdateRequested(uint256,uint8,bytes)' as const;
@@ -19,12 +19,12 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
   protected async _handle(
     request: HandleRequest<'OwnerUpdateRequested(uint256,uint8,bytes)'>,
   ): Promise<void> {
-    const { eventLog, id: requestId } = request;
-
-    const [accountId, forge, name] =
-      await getEventOutput<OwnerUpdateRequestedEvent.OutputTuple>(eventLog);
-
     return sequelizeInstance.transaction(async (transaction) => {
+      const { eventLog, id: requestId } = request;
+
+      const [accountId, forge, name] =
+        await parseEventOutput<OwnerUpdateRequestedEvent.OutputTuple>(eventLog);
+
       const [ownerUpdateRequestedEvent, created] =
         await OwnerUpdateRequestedEventModel.findOrCreate({
           transaction,
@@ -38,7 +38,11 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
             forge: Number(forge),
             accountId: accountId.toString(),
             rawEvent: JSON.stringify(eventLog),
-            blockTimestamp: (await eventLog.getBlock()).date,
+            logIndex: eventLog.index,
+            blockNumber: eventLog.blockNumber,
+            blockTimestamp:
+              (await eventLog.getBlock()).date ?? shouldNeverHappen(),
+            transactionHash: eventLog.transactionHash,
           },
         });
 
@@ -51,11 +55,10 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
 
       await GitProjectModel.create(
         {
-          forge: Forge[Number(forge)],
+          forge: Number(forge),
           accountId: accountId.toString(),
-          repoName: ethers.toUtf8String(name),
-          verificationStatus:
-            ProjectVerificationStatus.OwnerVerificationRequested,
+          name: ethers.toUtf8String(name),
+          verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
         },
         { transaction },
       );
