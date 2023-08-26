@@ -4,7 +4,7 @@ async function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds)); // eslint-disable-line no-promise-executor-return
 }
 
-export default async function retry<T>(
+export default async function retryOperation<T>(
   operation: () => T | Promise<T>,
   maxRetries: number = 3,
 ): Promise<Result<T>> {
@@ -36,6 +36,7 @@ export default async function retry<T>(
     error: {
       message: errors[errors.length - 1],
       errors,
+      attempts,
     },
   };
 }

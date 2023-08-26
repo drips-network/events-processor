@@ -4,10 +4,7 @@ import {
   type RepoDriver,
   RepoDriver__factory,
 } from '../../contracts';
-import type {
-  SupportedContractName,
-  SupportedFilterSignature,
-} from '../common/types';
+import type { DripsContract, DripsEventSignature } from '../common/types';
 import { getNetworkSettings } from './get-network-settings';
 import { isDripsEvent, isRepoDriverEvent } from './is-event-of-contract';
 
@@ -17,7 +14,7 @@ export async function getDrips(): Promise<Drips> {
     chainConfig: { drips },
   } = await getNetworkSettings();
 
-  return Drips__factory.connect(drips.address, provider);
+  return Drips__factory.connect(drips.address as string, provider);
 }
 
 export async function getRepoDriver(): Promise<RepoDriver> {
@@ -26,11 +23,11 @@ export async function getRepoDriver(): Promise<RepoDriver> {
     chainConfig: { repoDriver },
   } = await getNetworkSettings();
 
-  return RepoDriver__factory.connect(repoDriver.address, provider);
+  return RepoDriver__factory.connect(repoDriver.address as string, provider);
 }
 
 export async function getContractInfoByFilterSignature(
-  filterSignature: SupportedFilterSignature,
+  eventSignature: DripsEventSignature,
 ): Promise<
   | {
       name: 'drips';
@@ -41,9 +38,8 @@ export async function getContractInfoByFilterSignature(
       contract: RepoDriver;
     }
 > {
-  // TODO: add support for other contracts.
   const drips = await getDrips();
-  if (isDripsEvent(filterSignature, drips)) {
+  if (isDripsEvent(eventSignature, drips)) {
     return {
       contract: drips,
       name: 'drips',
@@ -51,19 +47,19 @@ export async function getContractInfoByFilterSignature(
   }
 
   const repoDriver = await getRepoDriver();
-  if (isRepoDriverEvent(filterSignature, repoDriver)) {
+  if (isRepoDriverEvent(eventSignature, repoDriver)) {
     return {
       contract: repoDriver,
       name: 'repoDriver',
     };
   }
 
-  throw new Error(`No contract found for filter ${filterSignature}.`);
+  throw new Error(`No contract found for filter ${eventSignature}.`);
 }
 
 export function getContractNameByAccountId(
   accountId: string | number | bigint,
-): SupportedContractName {
+): DripsContract {
   const accountIdAsBigInt = BigInt(accountId);
 
   if (accountIdAsBigInt < 0n || accountIdAsBigInt > 2n ** 256n - 1n) {

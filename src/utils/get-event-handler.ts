@@ -1,9 +1,9 @@
-import type { EventHandlerBase } from '../common/EventHandlerBase';
+import type EventHandlerBase from '../common/EventHandlerBase';
 import { EVENT_HANDLERS } from '../common/app-settings';
-import { type SupportedFilterSignature } from '../common/types';
+import type { DripsEventSignature } from '../common/types';
 
 export default function getEventHandlerByFilterSignature<
-  T extends SupportedFilterSignature,
+  T extends DripsEventSignature,
 >(filterSignature: T): EventHandlerBase<T> {
   const HandlerConstructor = EVENT_HANDLERS[filterSignature];
 

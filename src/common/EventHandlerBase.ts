@@ -1,78 +1,69 @@
-import type { Drips, RepoDriver } from '../../contracts';
 import type { TypedListener } from '../../contracts/common';
 import { getContractInfoByFilterSignature } from '../utils/get-contract';
-import retryOperation from '../utils/retry-operation';
-import logger from './logger';
+import getResult from '../utils/get-result';
+import { logRequestError, logRequestInfo } from '../utils/log-request';
+import shouldNeverHappen from '../utils/should-never-happen';
 import type {
-  DripsEvent,
-  HandleRequest,
-  RepoDriverEvent,
   Result,
-  SupportedDripsFilterSignature,
-  SupportedFilter,
-  SupportedFilterSignature,
-  SupportedRepoDriverFilterSignature,
+  DripsEventSignature,
+  EventSignatureToEventMap,
+  HandleRequest,
+  DripsContractEvent,
+  RepoDriverContractEvent,
+  DripsContractEventSignature,
+  RepoDriverContractEventSignature,
 } from './types';
 
-export interface IEventHandlerConstructor<T extends SupportedFilterSignature> {
-  new (): EventHandlerBase<T>;
-}
+export default abstract class EventHandlerBase<T extends DripsEventSignature> {
+  public readonly name = Object.getPrototypeOf(this).constructor.name;
 
-export abstract class EventHandlerBase<T extends SupportedFilterSignature> {
-  public name = Object.getPrototypeOf(this).constructor.name;
-
-  protected abstract filterSignature: T;
+  protected abstract readonly eventSignature: T;
 
   /**
    * The callback function that will be called when the event is received.
    */
-  protected abstract readonly onReceive: TypedListener<SupportedFilter[T]>;
+  protected abstract readonly onReceive: TypedListener<
+    EventSignatureToEventMap[T]
+  >;
 
   /**
-   * Implements the handler's _logic_.
+   * Implements the handler's logic.
    *
    * **IMPORTANT: ⚠️ do NOT call this method directly**. Use {@link executeHandle} instead.
    *
-   * Usually, you'd call {@link executeHandle} from {@link onReceive} to process the event.
+   * Usually, you'd call {@link executeHandle} from the {@link onReceive} to process the event.
    */
-  protected abstract _handle<TResult = any>(
-    request: HandleRequest<T>,
-  ): Promise<TResult | void>;
+  protected abstract _handle(request: HandleRequest<T>): Promise<void>;
 
   /**
    * Executes the handler.
    */
-  public async executeHandle<TResult = any>(
-    request: HandleRequest<T>,
-  ): Promise<Result<TResult>> {
-    const { eventLog } = request;
+  public async executeHandle(request: HandleRequest<T>): Promise<Result<void>> {
+    const {
+      id: requestId,
+      eventLog: { eventName, transactionHash, index, blockNumber },
+    } = request;
 
-    const context = {
-      transactionHash: `${eventLog.transactionHash}`,
-      logIndex: `${eventLog.index}`,
-      blockNumber: `${eventLog.blockNumber}`,
-    };
-    logger.info({
-      message: `[${request.id}] ${this.name} is executing on ${JSON.stringify(
-        context,
-        null,
-      )}...`,
-      context,
-    });
+    logRequestInfo(
+      this.name,
+      `executing on ${eventName} event with transaction hash ${transactionHash}, block number ${blockNumber} and log index ${index}.`,
+      request.id,
+    );
 
-    // TODO: retry logic will be handled by BeeQueue. When switching to BeeQueue, remember to wrap the call to _handle to `getResult`.
-    const result = await retryOperation(() => this._handle(request));
+    const result = await getResult(this._handle.bind(this))(request);
 
     if (result.ok) {
-      logger.info({
-        message: `[${request.id}] ${this.name} successfully processed event.`,
-        context,
-      });
+      logRequestInfo(this.name, `successfully processed event.`, request.id);
     } else {
-      logger.error({
-        message: `[${request.id}] ${this.name} failed with error '${result.error.message}' while processing request.`,
-        context,
-      });
+      logRequestError(
+        this.name,
+        `failed with error: ${
+          result.error?.attempts
+            ? JSON.stringify(result.error)
+            : result.error.message
+        }`,
+        requestId,
+      );
     }
 
     return result;
@@ -83,56 +74,35 @@ export abstract class EventHandlerBase<T extends SupportedFilterSignature> {
    */
   public async registerEventListener(): Promise<void> {
     const { contract, name: contractName } =
-      await getContractInfoByFilterSignature(this.filterSignature);
+      await getContractInfoByFilterSignature(this.eventSignature);
 
-    // We know that we are *not* going to add other contracts in the future. Switching here on all of them is fine.
     switch (contractName) {
       case 'drips': {
-        const dripsContract = contract as Drips;
-
         const eventFilter =
-          dripsContract.filters[
-            this.filterSignature as SupportedDripsFilterSignature
-          ];
+          contract.filters[this.eventSignature as DripsContractEventSignature];
 
-        if (!eventFilter) {
-          throw new Error(
-            `Failed to register listener for filter ${this.filterSignature}: ${contractName} contract does not have a filter with the specified signature.`,
-          );
-        }
-
-        await dripsContract.on(
+        await contract.on(
           eventFilter,
-          this.onReceive as TypedListener<DripsEvent>,
+          this.onReceive as TypedListener<DripsContractEvent>,
         );
 
         break;
       }
       case 'repoDriver': {
-        const repoDriverContract = contract as RepoDriver;
-
         const eventFilter =
-          repoDriverContract.filters[
-            this.filterSignature as SupportedRepoDriverFilterSignature
+          contract.filters[
+            this.eventSignature as RepoDriverContractEventSignature
           ];
 
-        if (!eventFilter) {
-          throw new Error(
-            `Failed to register listener for filter ${this.filterSignature}: ${contractName} contract does not have a filter with the specified signature.`,
-          );
-        }
-
-        await repoDriverContract.on(
+        await contract.on(
           eventFilter,
-          this.onReceive as TypedListener<RepoDriverEvent>,
+          this.onReceive as TypedListener<RepoDriverContractEvent>,
         );
 
         break;
       }
       default: {
-        throw new Error(
-          `Failed to register listener for filter ${this.filterSignature}: no contract found for the specified filter.`,
-        );
+        shouldNeverHappen();
       }
     }
   }

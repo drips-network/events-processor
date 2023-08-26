@@ -4,10 +4,16 @@ import type {
   InferCreationAttributes,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
+import { ethers } from 'ethers';
 import type { IEventModel } from '../common/types';
 import sequelizeInstance from '../utils/get-sequelize-instance';
 import getSchema from '../utils/get-schema';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
+import GitProjectModel, {
+  Forge,
+  ProjectVerificationStatus,
+} from './GitProjectModel';
+import { logRequestInfo } from '../utils/log-request';
 
 export default class OwnerUpdateRequestedEventModel
   extends Model<
@@ -51,6 +57,33 @@ export default class OwnerUpdateRequestedEventModel
         schema: getSchema(),
         sequelize: sequelizeInstance,
         tableName: 'OwnerUpdateRequestedEvents',
+        hooks: {
+          afterCreate: async (newInstance, options) => {
+            const { forge, name, accountId } = newInstance;
+            const { transaction, requestId } = options as any;
+
+            const gitProject = await GitProjectModel.create(
+              {
+                forge: Number(forge),
+                accountId: accountId.toString(),
+                name: ethers.toUtf8String(name),
+                verificationStatus:
+                  ProjectVerificationStatus.OwnerUpdateRequested,
+              },
+              { transaction },
+            );
+
+            logRequestInfo(
+              this.name,
+              `created a new Git project with ID ${
+                gitProject.id
+              } (name ${ethers.toUtf8String(name)}, forge ${
+                Forge[Number(forge)]
+              } and accountId ${accountId}).`,
+              requestId,
+            );
+          },
+        },
       },
     );
   }

@@ -1,17 +1,17 @@
 import type {
-  SupportedDripsFilterSignature,
-  SupportedFilterSignature,
-  SupportedRepoDriverFilterSignature,
+  DripsContractEventSignature,
+  DripsEventSignature,
+  RepoDriverContractEventSignature,
 } from '../common/types';
 import type { getDrips, getRepoDriver } from './get-contract';
 
 // TODO: refactor and add support for other contracts.
 export function isDripsEvent(
-  event: SupportedFilterSignature,
+  event: DripsEventSignature,
   drips: typeof getDrips extends (...args: any[]) => Promise<infer T>
     ? T
     : never,
-): event is SupportedDripsFilterSignature {
+): event is DripsContractEventSignature {
   try {
     return Boolean(drips.filters[event as keyof typeof drips.filters]);
   } catch (error) {
@@ -20,11 +20,11 @@ export function isDripsEvent(
 }
 
 export function isRepoDriverEvent(
-  event: SupportedFilterSignature,
+  event: DripsEventSignature,
   repoDriver: typeof getRepoDriver extends (...args: any[]) => Promise<infer T>
     ? T
     : never,
-): event is SupportedRepoDriverFilterSignature {
+): event is RepoDriverContractEventSignature {
   try {
     return Boolean(
       repoDriver.filters[event as keyof typeof repoDriver.filters],

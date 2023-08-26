@@ -5,14 +5,11 @@ import logger from '../common/logger';
 import { getNetworkSettings } from './get-network-settings';
 import { getContractInfoByFilterSignature } from './get-contract';
 import getEventHandlerByFilterSignature from './get-event-handler';
-import {
-  HandleRequest,
-  type SupportedEvent,
-  type SupportedFilterSignature,
-} from '../common/types';
+import type { DripsEvent, DripsEventSignature } from '../common/types';
+import { HandleRequest } from '../common/types';
 import getEventByFilterSignature from './get-event-by-filter';
-import type { EventHandlerBase } from '../common/EventHandlerBase';
 import getRegisteredEvents from './get-registered-events';
+import type EventHandlerBase from '../common/EventHandlerBase';
 
 export default async function processPastEvents(): Promise<void> {
   const { chainConfig, provider } = await getNetworkSettings();
@@ -85,8 +82,8 @@ export default async function processPastEvents(): Promise<void> {
 }
 
 async function ingest(
-  logs: TypedEventLog<SupportedEvent>[],
-  handler: EventHandlerBase<SupportedFilterSignature>,
+  logs: TypedEventLog<DripsEvent>[],
+  handler: EventHandlerBase<DripsEventSignature>,
 ): Promise<{
   processedEvents: number;
   failedEvents: number;

@@ -1,16 +1,19 @@
-import type { IEventHandlerConstructor } from './EventHandlerBase';
 import AccountMetadataEmittedEventHandler from '../event-handlers/AccountMetadataEmittedHandler';
 import AccountMetadataEmittedEvent from '../models/AccountMetadataEmittedEventModel';
 import OwnerUpdatedEvent from '../models/OwnerUpdatedEventModel';
 import OwnerUpdatedEventHandler from '../event-handlers/OwnerUpdatedEventHandler';
 import OwnerUpdateRequestedEventHandler from '../event-handlers/OwnerUpdateRequestedEventHandler';
 import OwnerUpdateRequestedEvent from '../models/OwnerUpdateRequestedEventModel';
-import type { ModelCtor, SupportedFilterSignature } from './types';
+import type {
+  DripsEventSignature,
+  EventHandlerConstructor,
+  ModelCtor,
+} from './types';
 import GitProjectModel from '../models/GitProjectModel';
 
 // Register event handlers here.
 export const EVENT_HANDLERS: Partial<{
-  [T in SupportedFilterSignature]: IEventHandlerConstructor<T>;
+  [T in DripsEventSignature]: EventHandlerConstructor<T>;
 }> = {
   'OwnerUpdated(uint256,address)': OwnerUpdatedEventHandler,
   'OwnerUpdateRequested(uint256,uint8,bytes)': OwnerUpdateRequestedEventHandler,

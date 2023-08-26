@@ -1,33 +1,47 @@
 import { ethers } from 'ethers';
 import type { OwnerUpdateRequestedEvent } from '../../contracts/RepoDriver';
-import { EventHandlerBase } from '../common/EventHandlerBase';
-import logger from '../common/logger';
-import { HandleRequest } from '../common/types';
 import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
-import parseEventOutput from '../utils/parse-event-output';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import sequelizeInstance from '../utils/get-sequelize-instance';
-import shouldNeverHappen from '../utils/throw';
-import GitProjectModel, {
-  Forge,
-  ProjectVerificationStatus,
-} from '../models/GitProjectModel';
+import shouldNeverHappen from '../utils/should-never-happen';
+import {
+  logRequestInfo,
+  logRequestWarn,
+  nameOfType,
+} from '../utils/log-request';
+import { HandleRequest } from '../common/types';
+import EventHandlerBase from '../common/EventHandlerBase';
 
 export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'OwnerUpdateRequested(uint256,uint8,bytes)'> {
-  public filterSignature = 'OwnerUpdateRequested(uint256,uint8,bytes)' as const;
+  public eventSignature = 'OwnerUpdateRequested(uint256,uint8,bytes)' as const;
 
   protected async _handle(
     request: HandleRequest<'OwnerUpdateRequested(uint256,uint8,bytes)'>,
   ): Promise<void> {
-    return sequelizeInstance.transaction(async (transaction) => {
-      const { eventLog, id: requestId } = request;
+    const { eventLog, id: requestId } = request;
+    const { accountId, forge, name } = eventLog.args;
 
-      const [accountId, forge, name] =
-        await parseEventOutput<OwnerUpdateRequestedEvent.OutputTuple>(eventLog);
+    logRequestInfo(
+      this.name,
+      `event data was accountId: ${accountId}, forge: ${forge}, name: ${ethers.toUtf8String(
+        name,
+      )}.`,
+      requestId,
+    );
+
+    await sequelizeInstance.transaction(async (transaction) => {
+      logRequestInfo(
+        this.name,
+        `creating a new ${nameOfType(
+          OwnerUpdateRequestedEventModel,
+        )} for the received event...`,
+        requestId,
+      );
 
       const [ownerUpdateRequestedEvent, created] =
         await OwnerUpdateRequestedEventModel.findOrCreate({
           transaction,
+          requestId,
           where: {
             logIndex: eventLog.index,
             blockNumber: eventLog.blockNumber,
@@ -44,30 +58,25 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
               (await eventLog.getBlock()).date ?? shouldNeverHappen(),
             transactionHash: eventLog.transactionHash,
           },
-        });
+        } as any); // HACK: Necessary (in all handlers) for passing the `requestId` to sequelize Hooks.
 
-      if (!created) {
-        logger.info(
-          `[${requestId}] already processed event with ID ${ownerUpdateRequestedEvent.id}. Skipping...`,
+      if (created) {
+        logRequestInfo(
+          this.name,
+          `created a new ${nameOfType(
+            OwnerUpdateRequestedEventModel,
+          )} with ID ${ownerUpdateRequestedEvent.id}.`,
+          requestId,
         );
-        return;
+      } else {
+        logRequestWarn(
+          this.name,
+          `${nameOfType(OwnerUpdateRequestedEventModel)} with ID ${
+            ownerUpdateRequestedEvent.id
+          } already exists. Skipping...`,
+          requestId,
+        );
       }
-
-      await GitProjectModel.create(
-        {
-          forge: Number(forge),
-          accountId: accountId.toString(),
-          name: ethers.toUtf8String(name),
-          verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
-        },
-        { transaction },
-      );
-
-      logger.debug(
-        `[${requestId}] created a new Git project with name ${ethers.toUtf8String(
-          name,
-        )}, forge ${Forge[Number(forge)]} and accountId ${accountId}.`,
-      );
     });
   }
 
@@ -77,6 +86,10 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
       OwnerUpdateRequestedEvent.OutputTuple,
       OwnerUpdateRequestedEvent.OutputObject
     >
+    // TODO: fix listener event type.
+    // Incoming event type is 'any' (in ALL listeners) because of a bug in ethers.js.
+    // It should be typed as TypedEventLog<TypedContractEvent<...>>, which is what TS infers by default.
+    // When fixed, we won't need to pass event.log to `executeHandle`.
   > = async (_accountId, _forge, _name, eventLog) => {
     await this.executeHandle(new HandleRequest((eventLog as any).log));
   };

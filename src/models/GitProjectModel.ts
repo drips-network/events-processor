@@ -4,7 +4,7 @@ import type {
   InferCreationAttributes,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import type { Address } from '../common/types';
+import type { AddressLike } from 'ethers';
 import getSchema from '../utils/get-schema';
 import sequelizeInstance from '../utils/get-sequelize-instance';
 
@@ -29,7 +29,7 @@ export default class GitProjectModel extends Model<
   public declare name: string;
   public declare forge: Forge;
   public declare accountId: string;
-  public declare owner: Address | null;
+  public declare owner: AddressLike | null;
 
   // Properties from metadata.
   public declare url: string | null;

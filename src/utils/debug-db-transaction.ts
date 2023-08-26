@@ -1,7 +1,7 @@
 import { BaseError, type Transaction } from 'sequelize';
+import type { UUID } from 'crypto';
 import logger from '../common/logger';
 import sequelizeInstance from './get-sequelize-instance';
-import type { UUID } from '../common/types';
 
 export default async function debugDbTransaction<T>(
   callback: (t: Transaction) => PromiseLike<T>,

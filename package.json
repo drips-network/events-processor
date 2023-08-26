@@ -22,9 +22,8 @@
   },
   "devDependencies": {
     "@typechain/ethers-v6": "^0.5.0",
-    "@types/node": "^20.5.3",
+    "@types/node": "^20.5.6",
     "@types/pg": "^8.10.2",
-    "@types/uuid": "^9.0.2",
     "@typescript-eslint/eslint-plugin": "^6.4.1",
     "@typescript-eslint/parser": "^6.4.1",
     "cz-conventional-changelog": "^3.3.0",
@@ -38,7 +37,7 @@
     "prettier": "^3.0.2",
     "ts-node": "^10.9.1",
     "typechain": "^8.3.1",
-    "typescript": "^5.1.6"
+    "typescript": "^5.2.2"
   },
   "dependencies": {
     "@efstajas/versioned-parser": "^0.1.4",
@@ -47,7 +46,6 @@
     "get-caller-file": "^2.0.5",
     "pg": "^8.11.3",
     "sequelize": "^6.32.1",
-    "uuid": "^9.0.0",
     "winston": "^3.10.0",
     "zod": "^3.22.2"
   }

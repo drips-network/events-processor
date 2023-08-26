@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 
 export const SUPPORTED_NETWORKS = ['mainnet', 'sepolia', 'goerli'] as const;
 
-export const SUPPORTED_CONTRACTS = [
+export const DRIPS_CONTRACT_NAMES = [
   'drips',
   'nftDriver',
   'repoDriver',

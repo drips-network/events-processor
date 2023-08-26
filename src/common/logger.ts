@@ -8,7 +8,8 @@ const format = winston.format.combine(
   winston.format.colorize(),
   winston.format.errors({ stack: true }),
   winston.format.printf(
-    ({ timestamp, level, message }) => `${timestamp} ${level}: ${message}`,
+    ({ timestamp, level, message, requestId }) =>
+      `${timestamp} ${level}${requestId ? ` [${requestId}]` : ''}: ${message}`,
   ),
 );
 

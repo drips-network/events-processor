@@ -1,10 +1,10 @@
-import type { SupportedEvent, SupportedFilterSignature } from '../common/types';
+import type { DripsEvent, DripsEventSignature } from '../common/types';
 import { getDrips, getRepoDriver } from './get-contract';
 import { isDripsEvent, isRepoDriverEvent } from './is-event-of-contract';
 
 export default async function getEventByFilterSignature(
-  filterSignature: SupportedFilterSignature,
-): Promise<SupportedEvent> {
+  filterSignature: DripsEventSignature,
+): Promise<DripsEvent> {
   const drips = await getDrips();
   const repoDriver = await getRepoDriver();
 
