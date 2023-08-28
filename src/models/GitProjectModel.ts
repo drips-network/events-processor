@@ -1,12 +1,14 @@
 import type {
-  CreationOptional,
   InferAttributes,
   InferCreationAttributes,
+  InstanceUpdateOptions,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
 import sequelizeInstance from '../utils/getSequelizeInstance';
+import assertTransaction from '../utils/assert';
+import { logRequestInfo, nameOfType } from '../utils/logRequest';
 
 export enum Forge {
   GitHub = 0,
@@ -23,8 +25,6 @@ export default class GitProjectModel extends Model<
   InferAttributes<GitProjectModel>,
   InferCreationAttributes<GitProjectModel>
 > {
-  public declare id: CreationOptional<number>; // Primary key
-
   // Properties from events.
   public declare name: string;
   public declare forge: Forge;
@@ -42,11 +42,6 @@ export default class GitProjectModel extends Model<
   public static initialize(): void {
     this.init(
       {
-        id: {
-          type: DataTypes.INTEGER,
-          autoIncrement: true,
-          primaryKey: true,
-        },
         accountId: {
           type: DataTypes.STRING,
           allowNull: true,
@@ -94,7 +89,57 @@ export default class GitProjectModel extends Model<
         schema: getSchema(),
         tableName: 'GitProjects',
         sequelize: sequelizeInstance,
+        hooks: {
+          afterCreate: this._afterCreate,
+          afterUpdate: this._afterUpdate,
+        },
       },
     );
   }
+
+  private static _afterCreate = async (
+    instance: GitProjectModel,
+    options: InstanceUpdateOptions<
+      InferAttributes<
+        GitProjectModel,
+        {
+          omit: never;
+        }
+      >
+    >,
+  ): Promise<void> => {
+    const { transaction, requestId } = options as any;
+    assertTransaction(transaction);
+
+    logRequestInfo(
+      `Created a new ${nameOfType(GitProjectModel)} DB entry for ${
+        instance.name
+      } repo, with ID ${instance.accountId}.`,
+      requestId,
+    );
+  };
+
+  private static _afterUpdate = async (
+    instance: GitProjectModel,
+    options: InstanceUpdateOptions<
+      InferAttributes<
+        GitProjectModel,
+        {
+          omit: never;
+        }
+      >
+    >,
+  ): Promise<void> => {
+    const { transaction, requestId } = options as any;
+    assertTransaction(transaction);
+
+    logRequestInfo(
+      `Updated Git project with ID ${
+        instance.accountId
+      }. Updated fields were: ${(instance.changed() as string[]).map(
+        (property) => property,
+      )}.`,
+      requestId,
+    );
+  };
 }

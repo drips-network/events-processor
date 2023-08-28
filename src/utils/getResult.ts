@@ -12,10 +12,7 @@ export default function getResult<TArgs extends any[], TReturn>(
       };
     } catch (e: any) {
       return {
-        error: {
-          message: e.message,
-          ...e,
-        },
+        error: e,
         ok: false,
       };
     }

@@ -15,18 +15,15 @@ export const USER_METADATA_KEY = ethers.hexlify(ethers.toUtf8Bytes('ipfs'));
 
 export const COMMON_EVENT_INIT_ATTRIBUTES = {
   // Primary key
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
   transactionHash: {
     type: DataTypes.STRING,
     allowNull: false,
+    primaryKey: true,
   },
   logIndex: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    primaryKey: true,
   },
   blockNumber: {
     type: DataTypes.INTEGER,

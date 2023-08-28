@@ -20,7 +20,6 @@ export type Result<T> =
   | {
       ok: false;
       error: {
-        message: string;
         [key: string]: any;
       };
     };
@@ -100,7 +99,6 @@ export type EventHandlerConstructor<T extends DripsEventSignature> = {
 };
 
 export interface IEventModel {
-  id: number;
   rawEvent: string;
   logIndex: number;
   blockNumber: number;

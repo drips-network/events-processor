@@ -45,22 +45,18 @@ export default abstract class EventHandlerBase<T extends DripsEventSignature> {
     } = request;
 
     logRequestInfo(
-      this.name,
-      `executing on ${eventName} event with transaction hash ${transactionHash}, block number ${blockNumber} and log index ${index}.`,
+      `${this.name} is processing ${eventName} event with transaction hash ${transactionHash}, block number ${blockNumber} and log index ${index}.`,
       request.id,
     );
 
     const result = await getResult(this._handle.bind(this))(request);
 
     if (result.ok) {
-      logRequestInfo(this.name, `successfully processed event.`, request.id);
+      logRequestInfo(`Successfully processed event.`, request.id);
     } else {
       logRequestError(
-        this.name,
-        `failed with error: ${
-          result.error?.attempts
-            ? JSON.stringify(result.error)
-            : result.error.message
+        `Failed to process event: ${
+          result.error?.attempts ? JSON.stringify(result.error) : result.error
         }`,
         requestId,
       );

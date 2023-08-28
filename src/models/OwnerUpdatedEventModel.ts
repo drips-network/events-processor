@@ -1,17 +1,15 @@
 import type {
-  CreateOptions,
-  CreationOptional,
   InferAttributes,
   InferCreationAttributes,
+  InstanceUpdateOptions,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import type { UUID } from 'crypto';
 import type { IEventModel } from '../common/types';
 import getSchema from '../utils/getSchema';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
 import { ProjectVerificationStatus } from './GitProjectModel';
 import sequelizeInstance from '../utils/getSequelizeInstance';
-import { logRequestInfo } from '../utils/logRequest';
+import { logRequestInfo, nameOfType } from '../utils/logRequest';
 import tryFindExpectedToExistGitProject from '../utils/tryFindExpectedToExistGitProject';
 import assertTransaction from '../utils/assert';
 
@@ -22,8 +20,6 @@ export default class OwnerUpdatedEventModel
   >
   implements IEventModel
 {
-  public declare id: CreationOptional<number>; // Primary key
-
   // Properties from event output.
   public declare owner: string;
   public declare accountId: string;
@@ -53,32 +49,43 @@ export default class OwnerUpdatedEventModel
         sequelize: sequelizeInstance,
         tableName: 'OwnerUpdatedEvents',
         hooks: {
-          afterCreate: this._updateGitProjectOwner,
+          afterCreate: this._afterCreate,
         },
       },
     );
   }
 
-  private static _updateGitProjectOwner = async (
-    newInstance: OwnerUpdatedEventModel,
-    options: CreateOptions<
+  private static async _afterCreate(
+    instance: OwnerUpdatedEventModel,
+    options: InstanceUpdateOptions<
       InferAttributes<
         OwnerUpdatedEventModel,
         {
           omit: never;
         }
       >
-    > & { requestId: UUID },
-  ): Promise<void> => {
-    const { accountId, owner } = newInstance;
-    const { transaction, requestId } = options;
-
+    >,
+  ): Promise<void> {
+    const { transaction, requestId } = options as any;
     assertTransaction(transaction);
 
-    const gitProject = await tryFindExpectedToExistGitProject(
-      this.name,
+    const {
+      owner,
+      logIndex,
+      transactionHash,
+      accountId: gitProjectAccountId,
+    } = instance;
+
+    logRequestInfo(
+      `Created a new ${nameOfType(
+        OwnerUpdatedEventModel,
+      )} DB entry with ID ${transactionHash}-${logIndex}`,
       requestId,
-      accountId,
+    );
+
+    const gitProject = await tryFindExpectedToExistGitProject(
+      requestId,
+      gitProjectAccountId,
       transaction,
     );
 
@@ -87,13 +94,7 @@ export default class OwnerUpdatedEventModel
         owner,
         verificationStatus: ProjectVerificationStatus.OwnerUpdated,
       },
-      { transaction },
+      { transaction, requestId } as any,
     );
-
-    logRequestInfo(
-      this.name,
-      `updated the owner of Git project with ID ${gitProject.id} (name: ${gitProject.name}, accountId: ${accountId}) to ${owner}.`,
-      requestId,
-    );
-  };
+  }
 }

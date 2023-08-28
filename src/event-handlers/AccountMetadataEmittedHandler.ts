@@ -5,11 +5,7 @@ import AccountMetadataEmittedEventModel from '../models/AccountMetadataEmittedEv
 
 import sequelizeInstance from '../utils/getSequelizeInstance';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
-import {
-  logRequestInfo,
-  logRequestWarn,
-  nameOfType,
-} from '../utils/logRequest';
+import { logRequestInfo } from '../utils/logRequest';
 import EventHandlerBase from '../common/EventHandlerBase';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
@@ -25,50 +21,24 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         eventLog.args as AccountMetadataEmittedEvent.OutputObject;
 
       logRequestInfo(
-        this.name,
-        `event data was accountId: ${accountId}, key: ${key}, value: ${value}}.`,
+        `Event data was accountId: ${accountId}, key: ${key} and value: ${value}}.`,
         requestId,
       );
 
-      const [accountMetadataEmittedEventModel, created] =
-        await AccountMetadataEmittedEventModel.findOrCreate({
-          transaction,
-          requestId,
-          where: {
-            logIndex: eventLog.index,
-            blockNumber: eventLog.blockNumber,
-            transactionHash: eventLog.transactionHash,
-          },
-          defaults: {
-            key,
-            value,
-            logIndex: eventLog.index,
-            accountId: accountId.toString(),
-            blockNumber: eventLog.blockNumber,
-            rawEvent: JSON.stringify(eventLog),
-            blockTimestamp:
-              (await eventLog.getBlock()).date ?? shouldNeverHappen(),
-            transactionHash: eventLog.transactionHash,
-          },
-        } as any);
-
-      if (created) {
-        logRequestInfo(
-          this.name,
-          `created a new ${nameOfType(
-            AccountMetadataEmittedEventModel,
-          )} with ID ${accountMetadataEmittedEventModel.id}.`,
-          requestId,
-        );
-      } else {
-        logRequestWarn(
-          this.name,
-          `${nameOfType(AccountMetadataEmittedEventModel)} with ID ${
-            accountMetadataEmittedEventModel.id
-          } already exists. Skipping...`,
-          requestId,
-        );
-      }
+      await AccountMetadataEmittedEventModel.create(
+        {
+          key,
+          value,
+          logIndex: eventLog.index,
+          accountId: accountId.toString(),
+          blockNumber: eventLog.blockNumber,
+          rawEvent: JSON.stringify(eventLog),
+          blockTimestamp:
+            (await eventLog.getBlock()).date ?? shouldNeverHappen(),
+          transactionHash: eventLog.transactionHash,
+        },
+        { transaction, requestId },
+      );
     });
   }
 

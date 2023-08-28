@@ -1,6 +1,5 @@
 import type {
   CreateOptions,
-  CreationOptional,
   InferAttributes,
   InferCreationAttributes,
 } from 'sequelize';
@@ -15,7 +14,7 @@ import {
   USER_METADATA_KEY,
 } from '../common/constants';
 import { ProjectVerificationStatus } from './GitProjectModel';
-import { logRequestInfo } from '../utils/logRequest';
+import { logRequestInfo, nameOfType } from '../utils/logRequest';
 import isAccountGitProject from '../utils/isAccountGitProject';
 import tryFindExpectedToExistGitProject from '../utils/tryFindExpectedToExistGitProject';
 import assertTransaction from '../utils/assert';
@@ -29,8 +28,6 @@ export default class AccountMetadataEmittedEventModel
   >
   implements IEventModel
 {
-  public declare id: CreationOptional<number>; // Primary key
-
   // Properties from event output.
   public declare key: string;
   public declare value: string;
@@ -65,20 +62,41 @@ export default class AccountMetadataEmittedEventModel
         sequelize: sequelizeInstance,
         tableName: 'AccountMetadataEmittedEvents',
         hooks: {
-          afterCreate: (newInstance, options) => {
-            if (isAccountGitProject(newInstance.accountId)) {
-              return this._updateGitProjectMetadata(
-                newInstance,
-                options as any,
-              );
-            }
-
-            return Promise.resolve();
-          },
+          afterCreate: this._afterCreate,
         },
       },
     );
   }
+
+  private static _afterCreate = (
+    newInstance: AccountMetadataEmittedEventModel,
+    options: CreateOptions<
+      InferAttributes<
+        AccountMetadataEmittedEventModel,
+        {
+          omit: never;
+        }
+      >
+    > & { requestId: UUID },
+  ): Promise<void> => {
+    const { transactionHash, logIndex } = newInstance;
+    const { transaction, requestId } = options as any;
+
+    assertTransaction(transaction);
+
+    logRequestInfo(
+      `Created a new ${nameOfType(
+        AccountMetadataEmittedEventModel,
+      )} DB entry with ID ${transactionHash}-${logIndex}`,
+      requestId,
+    );
+
+    if (isAccountGitProject(newInstance.accountId)) {
+      return this._updateGitProjectMetadata(newInstance, options as any);
+    }
+
+    return Promise.resolve();
+  };
 
   private static async _updateGitProjectMetadata(
     newInstance: AccountMetadataEmittedEventModel,
@@ -97,7 +115,6 @@ export default class AccountMetadataEmittedEventModel
     assertTransaction(transaction);
 
     const gitProject = await tryFindExpectedToExistGitProject(
-      this.name,
       requestId,
       accountId,
       transaction,
@@ -140,13 +157,8 @@ export default class AccountMetadataEmittedEventModel
       },
       {
         transaction,
-      },
-    );
-
-    logRequestInfo(
-      this.name,
-      `updated the metadata of Git project with ID ${gitProject.id} (name: ${gitProject.name}, accountId: ${accountId}).`,
-      requestId,
+        requestId,
+      } as any,
     );
   }
 }

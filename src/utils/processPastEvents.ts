@@ -39,13 +39,6 @@ export default async function processPastEvents(): Promise<void> {
       const startBlock = chainConfig[contractName].block;
 
       for (i = startBlock; i < endBlock; i += batchSize) {
-        logger.info(
-          `Processing ${event.name} events from block ${i} to ${Math.min(
-            i + batchSize - 1,
-            endBlock,
-          )}...`,
-        );
-
         const logs = await contract.queryFilter(
           event,
           i,

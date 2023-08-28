@@ -4,11 +4,7 @@ import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
 import sequelizeInstance from '../utils/getSequelizeInstance';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
 import { HandleRequest } from '../common/types';
-import {
-  logRequestInfo,
-  logRequestWarn,
-  nameOfType,
-} from '../utils/logRequest';
+import { logRequestInfo } from '../utils/logRequest';
 import EventHandlerBase from '../common/EventHandlerBase';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
@@ -22,49 +18,26 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       const { accountId, owner } = eventLog.args;
 
       logRequestInfo(
-        this.name,
-        `event data was accountId: ${accountId}, owner: ${owner}.`,
+        `Event data was accountId: ${accountId}, owner: ${owner}.`,
         requestId,
       );
 
-      const [ownerUpdatedEventModel, created] =
-        await OwnerUpdatedEventModel.findOrCreate({
+      await OwnerUpdatedEventModel.create(
+        {
+          owner,
+          logIndex: eventLog.index,
+          accountId: accountId.toString(),
+          rawEvent: JSON.stringify(eventLog),
+          blockNumber: eventLog.blockNumber,
+          blockTimestamp:
+            (await eventLog.getBlock()).date ?? shouldNeverHappen(),
+          transactionHash: eventLog.transactionHash,
+        },
+        {
           transaction,
           requestId,
-          where: {
-            logIndex: eventLog.index,
-            blockNumber: eventLog.blockNumber,
-            transactionHash: eventLog.transactionHash,
-          },
-          defaults: {
-            owner,
-            logIndex: eventLog.index,
-            accountId: accountId.toString(),
-            rawEvent: JSON.stringify(eventLog),
-            blockNumber: eventLog.blockNumber,
-            blockTimestamp:
-              (await eventLog.getBlock()).date ?? shouldNeverHappen(),
-            transactionHash: eventLog.transactionHash,
-          },
-        } as any);
-
-      if (created) {
-        logRequestInfo(
-          this.name,
-          `created a new ${nameOfType(OwnerUpdatedEventModel)} with ID ${
-            ownerUpdatedEventModel.id
-          }.`,
-          requestId,
-        );
-      } else {
-        logRequestWarn(
-          this.name,
-          `${nameOfType(OwnerUpdatedEventModel)} with ID ${
-            ownerUpdatedEventModel.id
-          } already exists. Skipping...`,
-          requestId,
-        );
-      }
+        },
+      );
     });
   }
 
