@@ -1,14 +1,14 @@
 import type { OwnerUpdatedEvent } from '../../contracts/RepoDriver';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
-import sequelizeInstance from '../utils/get-sequelize-instance';
-import shouldNeverHappen from '../utils/should-never-happen';
+import sequelizeInstance from '../utils/getSequelizeInstance';
+import shouldNeverHappen from '../utils/shouldNeverHappen';
 import { HandleRequest } from '../common/types';
 import {
   logRequestInfo,
   logRequestWarn,
   nameOfType,
-} from '../utils/log-request';
+} from '../utils/logRequest';
 import EventHandlerBase from '../common/EventHandlerBase';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {

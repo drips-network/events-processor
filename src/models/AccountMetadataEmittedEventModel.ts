@@ -1,23 +1,26 @@
 import type {
+  CreateOptions,
   CreationOptional,
   InferAttributes,
   InferCreationAttributes,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import { ethers } from 'ethers';
+import type { UUID } from 'crypto';
 import type { IEventModel } from '../common/types';
-import getSchema from '../utils/get-schema';
-import sequelizeInstance from '../utils/get-sequelize-instance';
+import getSchema from '../utils/getSchema';
+import sequelizeInstance from '../utils/getSequelizeInstance';
 import {
   COMMON_EVENT_INIT_ATTRIBUTES,
   USER_METADATA_KEY,
 } from '../common/constants';
-import { getContractNameByAccountId } from '../utils/get-contract';
-import GitProjectModel, { ProjectVerificationStatus } from './GitProjectModel';
-import fetchIpfs from '../utils/ipfs';
-import { repoDriverAccountMetadataParser } from '../metadata/schemas';
-import retryOperation from '../utils/retry-operation';
-import { logRequestDebug, logRequestInfo } from '../utils/log-request';
+import { ProjectVerificationStatus } from './GitProjectModel';
+import { logRequestInfo } from '../utils/logRequest';
+import isAccountGitProject from '../utils/isAccountGitProject';
+import tryFindExpectedToExistGitProject from '../utils/tryFindExpectedToExistGitProject';
+import assertTransaction from '../utils/assert';
+import getProjectMetadata from '../utils/getProjectMetadata';
+import validateGitProjectMetadata from '../utils/validateProjectMetadata';
 
 export default class AccountMetadataEmittedEventModel
   extends Model<
@@ -62,143 +65,88 @@ export default class AccountMetadataEmittedEventModel
         sequelize: sequelizeInstance,
         tableName: 'AccountMetadataEmittedEvents',
         hooks: {
-          afterCreate: async (newInstance, options) => {
-            const { accountId, value } = newInstance;
-            const { transaction, requestId } = options as any;
-
-            const isAccountGitProject =
-              getContractNameByAccountId(accountId) === 'repoDriver';
-
-            let gitProject: GitProjectModel | null;
-
-            // We expect the Git project to exist at this point, but it's possible that the event that creates it was not processed yet.
-            if (isAccountGitProject) {
-              const result = await retryOperation(async () => {
-                gitProject = await GitProjectModel.findOne({
-                  where: {
-                    accountId: accountId.toString(),
-                  },
-                  transaction,
-                });
-
-                if (!gitProject) {
-                  logRequestDebug(
-                    this.name,
-                    `Git project with accountId ${accountId} was not found but it was expected to exist. Retrying because it's possible that the event that creates the project was not processed yet...`,
-                    requestId,
-                  );
-
-                  throw new Error(
-                    `Git project with accountId ${accountId} was not found after trying but it was expected to exist. Maybe the event that creates the project was not processed yet? Check the logs for more details.`,
-                  );
-                }
-
-                return gitProject;
-              });
-
-              if (!result.ok) {
-                throw result.error;
-              }
-
-              gitProject = result.value;
-
-              const metadata = await getProjectMetadata(
-                accountId,
-                value,
-                gitProject,
-              );
-
-              await gitProject.update(
-                {
-                  color: metadata.color,
-                  emoji: metadata.emoji,
-                  url: metadata.source.url,
-                  description: metadata.description,
-                  ownerName: metadata.source.ownerName,
-                  verificationStatus: ProjectVerificationStatus.Claimed,
-                },
-                {
-                  transaction,
-                },
-              );
-
-              logRequestInfo(
-                this.name,
-                `updated the metadata of Git project with ID ${gitProject.id} (name: ${gitProject.name}, accountId: ${accountId}).`,
-                requestId,
+          afterCreate: (newInstance, options) => {
+            if (isAccountGitProject(newInstance.accountId)) {
+              return this._updateGitProjectMetadata(
+                newInstance,
+                options as any,
               );
             }
+
+            return Promise.resolve();
           },
         },
       },
     );
   }
-}
 
-async function getProjectMetadata(
-  accountId: string,
-  value: string,
-  gitProject: GitProjectModel,
-) {
-  const latestAccountMetadataEmittedEvent =
-    await AccountMetadataEmittedEventModel.findOne({
-      where: {
-        key: USER_METADATA_KEY,
-        accountId: accountId.toString(),
+  private static async _updateGitProjectMetadata(
+    newInstance: AccountMetadataEmittedEventModel,
+    options: CreateOptions<
+      InferAttributes<
+        AccountMetadataEmittedEventModel,
+        {
+          omit: never;
+        }
+      >
+    > & { requestId: UUID },
+  ): Promise<void> {
+    const { accountId } = newInstance;
+    const { transaction, requestId } = options;
+
+    assertTransaction(transaction);
+
+    const gitProject = await tryFindExpectedToExistGitProject(
+      this.name,
+      requestId,
+      accountId,
+      transaction,
+    );
+
+    const latestAccountMetadataEmittedEvent =
+      (await AccountMetadataEmittedEventModel.findOne({
+        where: {
+          accountId,
+          key: USER_METADATA_KEY,
+        },
+        order: [
+          ['blockNumber', 'DESC'],
+          ['logIndex', 'DESC'],
+        ],
+      })) ?? newInstance;
+
+    const ipfsHash = ethers.toUtf8String(
+      latestAccountMetadataEmittedEvent.value,
+    );
+
+    const metadata = await getProjectMetadata(ipfsHash);
+
+    if (!metadata) {
+      throw new Error(
+        `Project metadata not found for Git project with account ID ${accountId} but it was expected to exist.`,
+      );
+    }
+
+    validateGitProjectMetadata(gitProject, metadata);
+
+    await gitProject.update(
+      {
+        color: metadata.color,
+        emoji: metadata.emoji,
+        url: metadata.source.url,
+        description: metadata.description,
+        ownerName: metadata.source.ownerName,
+        verificationStatus: ProjectVerificationStatus.Claimed,
       },
-      order: [['blockNumber', 'DESC']],
-    });
+      {
+        transaction,
+      },
+    );
 
-  const ipfsData = await (
-    await fetchIpfs(
-      ethers.toUtf8String(
-        latestAccountMetadataEmittedEvent
-          ? latestAccountMetadataEmittedEvent.value
-          : value,
-      ),
-    )
-  ).json();
-
-  const metadata = repoDriverAccountMetadataParser.parseAny(ipfsData);
-
-  const errors = [];
-
-  const { describes, source } = metadata;
-  const { url, repoName, ownerName } = source;
-
-  if (`${ownerName}/${repoName}` !== `${gitProject.name}`) {
-    errors.push(
-      `repoName mismatch: got ${repoName}, expected ${gitProject.name}`,
+    logRequestInfo(
+      this.name,
+      `updated the metadata of Git project with ID ${gitProject.id} (name: ${gitProject.name}, accountId: ${accountId}).`,
+      requestId,
     );
   }
-
-  if (!url.includes(repoName)) {
-    errors.push(
-      `URL does not include repoName: ${gitProject.name} not found in ${url}`,
-    );
-  }
-
-  if (describes.accountId !== accountId.toString()) {
-    errors.push(
-      `accountId mismatch with toString: got ${
-        describes.accountId
-      }, expected ${accountId.toString()}`,
-    );
-  }
-
-  if (describes.accountId !== gitProject.accountId) {
-    errors.push(
-      `accountId mismatch with gitProject: got ${describes.accountId}, expected ${gitProject.accountId}`,
-    );
-  }
-
-  if (errors.length > 0) {
-    throw new Error(
-      `Git project with ID ${accountId} has metadata that does not match the metadata emitted by the contract (${errors.join(
-        '; ',
-      )}).`,
-    );
-  }
-
-  return metadata;
 }

@@ -1,16 +1,19 @@
 import type {
+  CreateOptions,
   CreationOptional,
   InferAttributes,
   InferCreationAttributes,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
+import type { UUID } from 'crypto';
 import type { IEventModel } from '../common/types';
-import getSchema from '../utils/get-schema';
-import sequelizeInstance from '../utils/get-sequelize-instance';
+import getSchema from '../utils/getSchema';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
-import GitProjectModel, { ProjectVerificationStatus } from './GitProjectModel';
-import retryOperation from '../utils/retry-operation';
-import { logRequestDebug, logRequestInfo } from '../utils/log-request';
+import { ProjectVerificationStatus } from './GitProjectModel';
+import sequelizeInstance from '../utils/getSequelizeInstance';
+import { logRequestInfo } from '../utils/logRequest';
+import tryFindExpectedToExistGitProject from '../utils/tryFindExpectedToExistGitProject';
+import assertTransaction from '../utils/assert';
 
 export default class OwnerUpdatedEventModel
   extends Model<
@@ -50,58 +53,47 @@ export default class OwnerUpdatedEventModel
         sequelize: sequelizeInstance,
         tableName: 'OwnerUpdatedEvents',
         hooks: {
-          afterCreate: async (newInstance, options) => {
-            const { accountId, owner } = newInstance;
-            const { transaction, requestId } = options as any;
-
-            let gitProject: GitProjectModel | null;
-
-            // We expect the Git project to exist at this point, but it's possible that the event that creates it was not processed yet.
-            const result = await retryOperation(async () => {
-              gitProject = await GitProjectModel.findOne({
-                where: {
-                  accountId: accountId.toString(),
-                },
-                transaction,
-              });
-
-              if (!gitProject) {
-                logRequestDebug(
-                  this.name,
-                  `Git project with accountId ${accountId} was not found but it was expected to exist. Retrying because it's possible that the event that creates the project was not processed yet...`,
-                  requestId,
-                );
-
-                throw new Error(
-                  `Git project with accountId ${accountId} was not found after trying but it was expected to exist. Maybe the event that creates the project was not processed yet? Check the logs for more details.`,
-                );
-              }
-
-              return gitProject;
-            });
-
-            if (!result.ok) {
-              throw result.error;
-            }
-
-            gitProject = result.value;
-
-            await gitProject.update(
-              {
-                owner,
-                verificationStatus: ProjectVerificationStatus.OwnerUpdated,
-              },
-              { transaction },
-            );
-
-            logRequestInfo(
-              this.name,
-              `updated the owner of Git project with ID ${gitProject.id} (name: ${gitProject.name}, accountId: ${accountId}) to ${owner}.`,
-              requestId,
-            );
-          },
+          afterCreate: this._updateGitProjectOwner,
         },
       },
     );
   }
+
+  private static _updateGitProjectOwner = async (
+    newInstance: OwnerUpdatedEventModel,
+    options: CreateOptions<
+      InferAttributes<
+        OwnerUpdatedEventModel,
+        {
+          omit: never;
+        }
+      >
+    > & { requestId: UUID },
+  ): Promise<void> => {
+    const { accountId, owner } = newInstance;
+    const { transaction, requestId } = options;
+
+    assertTransaction(transaction);
+
+    const gitProject = await tryFindExpectedToExistGitProject(
+      this.name,
+      requestId,
+      accountId,
+      transaction,
+    );
+
+    await gitProject.update(
+      {
+        owner,
+        verificationStatus: ProjectVerificationStatus.OwnerUpdated,
+      },
+      { transaction },
+    );
+
+    logRequestInfo(
+      this.name,
+      `updated the owner of Git project with ID ${gitProject.id} (name: ${gitProject.name}, accountId: ${accountId}) to ${owner}.`,
+      requestId,
+    );
+  };
 }

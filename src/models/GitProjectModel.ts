@@ -5,8 +5,8 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
-import getSchema from '../utils/get-schema';
-import sequelizeInstance from '../utils/get-sequelize-instance';
+import getSchema from '../utils/getSchema';
+import sequelizeInstance from '../utils/getSequelizeInstance';
 
 export enum Forge {
   GitHub = 0,

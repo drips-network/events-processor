@@ -5,8 +5,8 @@ import {
   RepoDriver__factory,
 } from '../../contracts';
 import type { DripsContract, DripsEventSignature } from '../common/types';
-import { getNetworkSettings } from './get-network-settings';
-import { isDripsEvent, isRepoDriverEvent } from './is-event-of-contract';
+import { getNetworkSettings } from './getNetworkSettings';
+import { isDripsEvent, isRepoDriverEvent } from './isEventOfContract';
 
 export async function getDrips(): Promise<Drips> {
   const {

@@ -1,6 +1,6 @@
 import type { DripsEvent, DripsEventSignature } from '../common/types';
-import { getDrips, getRepoDriver } from './get-contract';
-import { isDripsEvent, isRepoDriverEvent } from './is-event-of-contract';
+import { getDrips, getRepoDriver } from './getContract';
+import { isDripsEvent, isRepoDriverEvent } from './isEventOfContract';
 
 export default async function getEventByFilterSignature(
   filterSignature: DripsEventSignature,

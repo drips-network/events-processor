@@ -2,13 +2,13 @@ import { ethers } from 'ethers';
 import type { OwnerUpdateRequestedEvent } from '../../contracts/RepoDriver';
 import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
-import sequelizeInstance from '../utils/get-sequelize-instance';
-import shouldNeverHappen from '../utils/should-never-happen';
+import sequelizeInstance from '../utils/getSequelizeInstance';
+import shouldNeverHappen from '../utils/shouldNeverHappen';
 import {
   logRequestInfo,
   logRequestWarn,
   nameOfType,
-} from '../utils/log-request';
+} from '../utils/logRequest';
 import { HandleRequest } from '../common/types';
 import EventHandlerBase from '../common/EventHandlerBase';
 

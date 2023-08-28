@@ -3,13 +3,13 @@ import type { AccountMetadataEmittedEvent } from '../../contracts/Drips';
 import { HandleRequest } from '../common/types';
 import AccountMetadataEmittedEventModel from '../models/AccountMetadataEmittedEventModel';
 
-import sequelizeInstance from '../utils/get-sequelize-instance';
-import shouldNeverHappen from '../utils/should-never-happen';
+import sequelizeInstance from '../utils/getSequelizeInstance';
+import shouldNeverHappen from '../utils/shouldNeverHappen';
 import {
   logRequestInfo,
   logRequestWarn,
   nameOfType,
-} from '../utils/log-request';
+} from '../utils/logRequest';
 import EventHandlerBase from '../common/EventHandlerBase';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
