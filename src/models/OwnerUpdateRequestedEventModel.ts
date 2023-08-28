@@ -1,19 +1,22 @@
 import type {
+  CreateOptions,
   CreationOptional,
   InferAttributes,
   InferCreationAttributes,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import { ethers } from 'ethers';
+import type { UUID } from 'crypto';
 import type { IEventModel } from '../common/types';
-import sequelizeInstance from '../utils/get-sequelize-instance';
-import getSchema from '../utils/get-schema';
+import sequelizeInstance from '../utils/getSequelizeInstance';
+import getSchema from '../utils/getSchema';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
 import GitProjectModel, {
   Forge,
   ProjectVerificationStatus,
 } from './GitProjectModel';
-import { logRequestInfo } from '../utils/log-request';
+import { logRequestInfo } from '../utils/logRequest';
+import assertTransaction from '../utils/assert';
 
 export default class OwnerUpdateRequestedEventModel
   extends Model<
@@ -58,33 +61,46 @@ export default class OwnerUpdateRequestedEventModel
         sequelize: sequelizeInstance,
         tableName: 'OwnerUpdateRequestedEvents',
         hooks: {
-          afterCreate: async (newInstance, options) => {
-            const { forge, name, accountId } = newInstance;
-            const { transaction, requestId } = options as any;
-
-            const gitProject = await GitProjectModel.create(
-              {
-                forge: Number(forge),
-                accountId: accountId.toString(),
-                name: ethers.toUtf8String(name),
-                verificationStatus:
-                  ProjectVerificationStatus.OwnerUpdateRequested,
-              },
-              { transaction },
-            );
-
-            logRequestInfo(
-              this.name,
-              `created a new Git project with ID ${
-                gitProject.id
-              } (name ${ethers.toUtf8String(name)}, forge ${
-                Forge[Number(forge)]
-              } and accountId ${accountId}).`,
-              requestId,
-            );
-          },
+          afterCreate: this._createGitProject,
         },
       },
+    );
+  }
+
+  private static async _createGitProject(
+    newInstance: OwnerUpdateRequestedEventModel,
+    options: CreateOptions<
+      InferAttributes<
+        OwnerUpdateRequestedEventModel,
+        {
+          omit: never;
+        }
+      >
+    > & { requestId: UUID },
+  ): Promise<void> {
+    const { forge, name, accountId } = newInstance;
+    const { transaction, requestId } = options;
+
+    assertTransaction(transaction);
+
+    const gitProject = await GitProjectModel.create(
+      {
+        accountId,
+        forge: Number(forge),
+        name: ethers.toUtf8String(name),
+        verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
+      },
+      { transaction },
+    );
+
+    logRequestInfo(
+      this.name,
+      `created a new Git project with ID ${
+        gitProject.id
+      } (name ${ethers.toUtf8String(name)}, forge ${
+        Forge[Number(forge)]
+      } and accountId ${accountId}).`,
+      requestId,
     );
   }
 }

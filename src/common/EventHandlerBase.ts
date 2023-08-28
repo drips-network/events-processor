@@ -1,8 +1,8 @@
 import type { TypedListener } from '../../contracts/common';
-import { getContractInfoByFilterSignature } from '../utils/get-contract';
-import getResult from '../utils/get-result';
-import { logRequestError, logRequestInfo } from '../utils/log-request';
-import shouldNeverHappen from '../utils/should-never-happen';
+import { getContractInfoByFilterSignature } from '../utils/getContract';
+import getResult from '../utils/getResult';
+import { logRequestError, logRequestInfo } from '../utils/logRequest';
+import shouldNeverHappen from '../utils/shouldNeverHappen';
 import type {
   Result,
   DripsEventSignature,

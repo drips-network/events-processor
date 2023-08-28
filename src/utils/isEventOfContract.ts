@@ -3,7 +3,7 @@ import type {
   DripsEventSignature,
   RepoDriverContractEventSignature,
 } from '../common/types';
-import type { getDrips, getRepoDriver } from './get-contract';
+import type { getDrips, getRepoDriver } from './getContract';
 
 // TODO: refactor and add support for other contracts.
 export function isDripsEvent(

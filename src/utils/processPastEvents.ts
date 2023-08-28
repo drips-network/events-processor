@@ -2,16 +2,18 @@
 
 import type { TypedEventLog } from '../../contracts/common';
 import logger from '../common/logger';
-import { getNetworkSettings } from './get-network-settings';
-import { getContractInfoByFilterSignature } from './get-contract';
-import getEventHandlerByFilterSignature from './get-event-handler';
+import { getNetworkSettings } from './getNetworkSettings';
+import { getContractInfoByFilterSignature } from './getContract';
+import getEventHandlerByFilterSignature from './getEventHandler';
 import type { DripsEvent, DripsEventSignature } from '../common/types';
 import { HandleRequest } from '../common/types';
-import getEventByFilterSignature from './get-event-by-filter';
-import getRegisteredEvents from './get-registered-events';
+import getEventByFilterSignature from './getEventByFilter';
+import getRegisteredEvents from './getRegisteredEvents';
 import type EventHandlerBase from '../common/EventHandlerBase';
 
 export default async function processPastEvents(): Promise<void> {
+  logger.info('Start processing past events. This might take a while...');
+
   const { chainConfig, provider } = await getNetworkSettings();
 
   let totalProcessedLogs = 0;
@@ -32,11 +34,18 @@ export default async function processPastEvents(): Promise<void> {
       let failedLogsOfType = 0;
 
       let i;
-      const batchSize = 1000;
+      const batchSize = 5000;
       // TODO: store last processed block in the database and start from there.
       const startBlock = chainConfig[contractName].block;
 
       for (i = startBlock; i < endBlock; i += batchSize) {
+        logger.info(
+          `Processing ${event.name} events from block ${i} to ${Math.min(
+            i + batchSize - 1,
+            endBlock,
+          )}...`,
+        );
+
         const logs = await contract.queryFilter(
           event,
           i,

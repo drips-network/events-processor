@@ -1,7 +1,7 @@
 import logger from '../common/logger';
 import { DRIPS_CONTRACT_NAMES, SUPPORTED_NETWORKS } from '../common/constants';
-import { getNetworkSettings } from './get-network-settings';
-import getRegisteredEvents from './get-registered-events';
+import { getNetworkSettings } from './getNetworkSettings';
+import getRegisteredEvents from './getRegisteredEvents';
 
 export default async function validateNetworkSettings(): Promise<void> {
   const { chainConfig, network, provider } = await getNetworkSettings();

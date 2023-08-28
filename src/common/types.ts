@@ -7,6 +7,8 @@ import type { DRIPS_CONTRACT_NAMES, SUPPORTED_NETWORKS } from './constants';
 import type { TypedContractEvent, TypedEventLog } from '../../contracts/common';
 import type EventHandlerBase from './EventHandlerBase';
 
+export type IpfsHash = string;
+
 export type KeysOf<T> = keyof T;
 export type ValuesOf<T> = T[KeysOf<T>];
 

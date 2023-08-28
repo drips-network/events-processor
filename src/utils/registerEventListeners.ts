@@ -1,8 +1,8 @@
-import getRegisteredEvents from './get-registered-events';
+import getRegisteredEvents from './getRegisteredEvents';
 import logger from '../common/logger';
-import getEventHandlerByFilterSignature from './get-event-handler';
+import getEventHandlerByFilterSignature from './getEventHandler';
 
-export default async function registerOnReceives(): Promise<void> {
+export default async function registerEventListeners(): Promise<void> {
   const registeredEvents = getRegisteredEvents();
 
   logger.info(`Registering listeners for ${registeredEvents.length} events...`);
