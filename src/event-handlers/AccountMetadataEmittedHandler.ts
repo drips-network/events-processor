@@ -1,7 +1,7 @@
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import type { AccountMetadataEmittedEvent } from '../../contracts/Drips';
 import { HandleRequest } from '../common/types';
-import AccountMetadataEmittedEventModel from '../models/AccountMetadataEmittedEventModel';
+import AccountMetadataEmittedEventModel from '../models/AccountMetadataEmittedEvent/AccountMetadataEmittedEventModel';
 
 import sequelizeInstance from '../utils/getSequelizeInstance';
 import shouldNeverHappen from '../utils/shouldNeverHappen';

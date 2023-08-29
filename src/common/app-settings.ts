@@ -1,15 +1,15 @@
 import AccountMetadataEmittedEventHandler from '../event-handlers/AccountMetadataEmittedHandler';
-import AccountMetadataEmittedEvent from '../models/AccountMetadataEmittedEventModel';
-import OwnerUpdatedEvent from '../models/OwnerUpdatedEventModel';
+import AccountMetadataEmittedEvent from '../models/AccountMetadataEmittedEvent/AccountMetadataEmittedEventModel';
+import OwnerUpdatedEvent from '../models/OwnerUpdatedEvent/OwnerUpdatedEventModel';
 import OwnerUpdatedEventHandler from '../event-handlers/OwnerUpdatedEventHandler';
 import OwnerUpdateRequestedEventHandler from '../event-handlers/OwnerUpdateRequestedEventHandler';
-import OwnerUpdateRequestedEvent from '../models/OwnerUpdateRequestedEventModel';
+import OwnerUpdateRequestedEvent from '../models/OwnerUpdateRequestedEvent/OwnerUpdateRequestedEventModel';
 import type {
   DripsEventSignature,
   EventHandlerConstructor,
   ModelCtor,
 } from './types';
-import GitProjectModel from '../models/GitProjectModel';
+import GitProjectModel from '../models/GitProjectModel/GitProjectModel';
 
 // Register event handlers here.
 export const EVENT_HANDLERS: Partial<{

@@ -44,6 +44,7 @@ export default abstract class EventHandlerBase<T extends DripsEventSignature> {
       eventLog: { eventName, transactionHash, index, blockNumber },
     } = request;
 
+    logRequestInfo(`*********** New request ***********`, requestId);
     logRequestInfo(
       `${this.name} is processing ${eventName} event with transaction hash ${transactionHash}, block number ${blockNumber} and log index ${index}.`,
       request.id,

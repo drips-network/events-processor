@@ -1,6 +1,6 @@
 import type { Transaction } from 'sequelize';
 import type { UUID } from 'crypto';
-import GitProjectModel from '../models/GitProjectModel';
+import GitProjectModel from '../models/GitProjectModel/GitProjectModel';
 import retryOperation from './retryOperation';
 import { logRequestDebug } from './logRequest';
 
@@ -10,10 +10,7 @@ export default async function tryFindExpectedToExistGitProject(
   transaction: Transaction,
 ): Promise<GitProjectModel> {
   const result = await retryOperation(async () => {
-    const gitProject = await GitProjectModel.findOne({
-      where: {
-        accountId,
-      },
+    const gitProject = await GitProjectModel.findByPk(accountId, {
       transaction,
     });
 

@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import type { OwnerUpdateRequestedEvent } from '../../contracts/RepoDriver';
-import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
+import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEvent/OwnerUpdateRequestedEventModel';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import sequelizeInstance from '../utils/getSequelizeInstance';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
