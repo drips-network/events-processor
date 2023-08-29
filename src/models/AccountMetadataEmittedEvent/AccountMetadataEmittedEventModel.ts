@@ -5,7 +5,6 @@ import type {
   Transaction,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import type { UUID } from 'crypto';
 import {
   COMMON_EVENT_INIT_ATTRIBUTES,
   USER_METADATA_KEY,
@@ -13,10 +12,14 @@ import {
 import type { IEventModel } from '../../common/types';
 import getSchema from '../../utils/getSchema';
 import sequelizeInstance from '../../utils/getSequelizeInstance';
-import assertTransaction from '../../utils/assert';
-import { logRequestInfo, nameOfType } from '../../utils/logRequest';
-import isGitProject from './isGitProject';
-import updateGitProjectMetadata from './updateGitProjectMetadata';
+import { logRequestDebug, nameOfType } from '../../utils/logRequest';
+import createDbEntriesForProjectSplits from './createDbEntriesForProjectSplits';
+import retryFindProject from '../../utils/retryFindProject';
+import getProjectMetadata from './getProjectMetadata';
+import isProjectId from './isProjectId';
+import validateProjectMetadata from './validateProjectMetadata';
+import { ProjectVerificationStatus } from '../GitProjectModel';
+import { assertRequestId, assertTransaction } from '../../utils/assert';
 
 export default class AccountMetadataEmittedEventModel
   extends Model<
@@ -75,28 +78,47 @@ async function afterCreate(
         omit: never;
       }
     >
-  > & { requestId: UUID },
+  >,
 ): Promise<void> {
-  const { transactionHash, logIndex } = instance;
-  const { transaction, requestId } = options as any;
+  const { transaction, requestId } = options as any; // `as any` to avoid TS complaining about passing in the `requestId`.
+  const { transactionHash, logIndex, accountId, value } = instance;
 
   assertTransaction(transaction);
+  assertRequestId(requestId);
 
-  logRequestInfo(
+  logRequestDebug(
     `Created a new ${nameOfType(
       AccountMetadataEmittedEventModel,
-    )} DB entry with ID ${transactionHash}-${logIndex}`,
+    )} DB entry with ID transactionHash:${transactionHash}-logIndex:${logIndex}`,
     requestId,
   );
 
-  if (
-    isGitProject(instance.accountId) &&
-    (await isLatest(instance, transaction))
-  ) {
-    await updateGitProjectMetadata(
+  if (isProjectId(accountId) && (await isLatestEvent(instance, transaction))) {
+    const project = await retryFindProject(accountId, transaction, requestId);
+
+    const metadata = await getProjectMetadata(accountId, value);
+
+    validateProjectMetadata(project, metadata);
+
+    await project.update(
+      {
+        color: metadata.color,
+        emoji: metadata.emoji,
+        url: metadata.source.url,
+        description: metadata.description,
+        ownerName: metadata.source.ownerName,
+        verificationStatus: ProjectVerificationStatus.Claimed,
+      },
+      {
+        transaction,
+        requestId,
+      } as any, // `as any` to avoid TS complaining about passing in the `requestId`.
+    );
+
+    await createDbEntriesForProjectSplits(
+      project.id,
+      metadata.splits,
       requestId,
-      instance.accountId,
-      instance.value,
       transaction,
     );
   }
@@ -104,7 +126,7 @@ async function afterCreate(
   return Promise.resolve();
 }
 
-async function isLatest(
+async function isLatestEvent(
   instance: AccountMetadataEmittedEventModel,
   transaction: Transaction,
 ): Promise<boolean> {

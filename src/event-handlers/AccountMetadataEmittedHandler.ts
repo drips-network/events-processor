@@ -1,15 +1,15 @@
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import type { AccountMetadataEmittedEvent } from '../../contracts/Drips';
 import { HandleRequest } from '../common/types';
-import AccountMetadataEmittedEventModel from '../models/AccountMetadataEmittedEvent/AccountMetadataEmittedEventModel';
 
 import sequelizeInstance from '../utils/getSequelizeInstance';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
 import { logRequestInfo } from '../utils/logRequest';
 import EventHandlerBase from '../common/EventHandlerBase';
+import AccountMetadataEmittedEventModel from '../models/AccountMetadataEmittedEvent/AccountMetadataEmittedEventModel';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
-  public eventSignature =
+  public readonly eventSignature =
     'AccountMetadataEmitted(uint256,bytes32,bytes)' as const;
 
   protected async _handle(
@@ -21,7 +21,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         eventLog.args as AccountMetadataEmittedEvent.OutputObject;
 
       logRequestInfo(
-        `Event data was accountId: ${accountId}, key: ${key} and value: ${value}}.`,
+        `Event args: accountId ${accountId}, key ${key}, value ${value}}.`,
         requestId,
       );
 
@@ -49,6 +49,6 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       AccountMetadataEmittedEvent.OutputObject
     >
   > = async (_accountId, _key, _value, eventLog) => {
-    await this.executeHandle(new HandleRequest((eventLog as any).log));
+    await super.executeHandle(new HandleRequest((eventLog as any).log));
   };
 }

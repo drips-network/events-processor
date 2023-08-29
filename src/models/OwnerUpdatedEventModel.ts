@@ -4,15 +4,14 @@ import type {
   InstanceUpdateOptions,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import type { UUID } from 'crypto';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
 import type { IEventModel } from '../common/types';
 import getSchema from '../utils/getSchema';
 import sequelizeInstance from '../utils/getSequelizeInstance';
-import assertTransaction from '../utils/assert';
-import { logRequestInfo, nameOfType } from '../utils/logRequest';
-import retryFindGitProject from '../utils/retryFindGitProject';
+import { logRequestDebug, nameOfType } from '../utils/logRequest';
 import { ProjectVerificationStatus } from './GitProjectModel';
+import retryFindProject from '../utils/retryFindProject';
+import { assertRequestId, assertTransaction } from '../utils/assert';
 
 export default class OwnerUpdatedEventModel
   extends Model<
@@ -66,36 +65,28 @@ async function afterCreate(
         omit: never;
       }
     >
-  > & { requestId: UUID },
+  >,
 ): Promise<void> {
-  const { transaction, requestId } = options;
+  const { transaction, requestId } = options as any; // `as any` to avoid TS complaining about passing in the `requestId`.
+  const { owner, logIndex, accountId: projectId, transactionHash } = instance;
+
   assertTransaction(transaction);
+  assertRequestId(requestId);
 
-  const {
-    owner,
-    logIndex,
-    transactionHash,
-    accountId: gitProjectAccountId,
-  } = instance;
-
-  logRequestInfo(
+  logRequestDebug(
     `Created a new ${nameOfType(
       OwnerUpdatedEventModel,
     )} DB entry with ID ${transactionHash}-${logIndex}`,
     requestId,
   );
 
-  const gitProject = await retryFindGitProject(
-    requestId,
-    gitProjectAccountId,
-    transaction,
-  );
+  const project = await retryFindProject(projectId, transaction, requestId);
 
-  await gitProject.update(
+  await project.update(
     {
       owner,
       verificationStatus: ProjectVerificationStatus.OwnerUpdated,
     },
-    { transaction, requestId } as any,
+    { transaction, requestId } as any, // `as any` to avoid TS complaining about passing in the `requestId`.
   );
 }

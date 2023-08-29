@@ -1,17 +1,17 @@
 import type {
-  DripsContractEventSignature,
   DripsEventSignature,
-  RepoDriverContractEventSignature,
+  EventSignature,
+  RepoDriverEventSignature,
 } from '../common/types';
 import type { getDrips, getRepoDriver } from './getContract';
 
 // TODO: refactor and add support for other contracts.
 export function isDripsEvent(
-  event: DripsEventSignature,
+  event: EventSignature,
   drips: typeof getDrips extends (...args: any[]) => Promise<infer T>
     ? T
     : never,
-): event is DripsContractEventSignature {
+): event is DripsEventSignature {
   try {
     return Boolean(drips.filters[event as keyof typeof drips.filters]);
   } catch (error) {
@@ -20,11 +20,11 @@ export function isDripsEvent(
 }
 
 export function isRepoDriverEvent(
-  event: DripsEventSignature,
+  event: EventSignature,
   repoDriver: typeof getRepoDriver extends (...args: any[]) => Promise<infer T>
     ? T
     : never,
-): event is RepoDriverContractEventSignature {
+): event is RepoDriverEventSignature {
   try {
     return Boolean(
       repoDriver.filters[event as keyof typeof repoDriver.filters],

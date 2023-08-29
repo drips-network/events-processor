@@ -5,14 +5,17 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import { ethers } from 'ethers';
-import type { UUID } from 'crypto';
-import type { IEventModel } from '../common/types';
+import type { Forge, IEventModel } from '../common/types';
 import sequelizeInstance from '../utils/getSequelizeInstance';
 import getSchema from '../utils/getSchema';
-import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
-import assertTransaction from '../utils/assert';
-import { logRequestInfo, nameOfType } from '../utils/logRequest';
+import { COMMON_EVENT_INIT_ATTRIBUTES, FORGES_MAP } from '../common/constants';
+import { logRequestDebug, nameOfType } from '../utils/logRequest';
 import GitProjectModel, { ProjectVerificationStatus } from './GitProjectModel';
+import {
+  assertProjectId,
+  assertRequestId,
+  assertTransaction,
+} from '../utils/assert';
 
 export default class OwnerUpdateRequestedEventModel
   extends Model<
@@ -22,7 +25,7 @@ export default class OwnerUpdateRequestedEventModel
   implements IEventModel
 {
   // Properties from event output.
-  public declare forge: number;
+  public declare forge: Forge;
   public declare name: string;
   public declare accountId: string;
 
@@ -45,7 +48,7 @@ export default class OwnerUpdateRequestedEventModel
           allowNull: false,
         },
         forge: {
-          type: DataTypes.INTEGER,
+          type: DataTypes.ENUM(...Object.values(FORGES_MAP)),
           allowNull: false,
         },
         ...COMMON_EVENT_INIT_ATTRIBUTES,
@@ -71,20 +74,16 @@ async function afterCreate(
         omit: never;
       }
     >
-  > & { requestId: UUID },
+  >,
 ): Promise<void> {
-  const { transaction, requestId } = options;
+  const { transaction, requestId } = options as any; // `as any` to avoid TS complaining about passing in the `requestId`.
+  const { name, forge, logIndex, accountId, transactionHash } = instance;
+
   assertTransaction(transaction);
+  assertRequestId(requestId);
+  assertProjectId(accountId);
 
-  const {
-    name,
-    forge,
-    logIndex,
-    transactionHash,
-    accountId: gitProjectAccountId,
-  } = instance;
-
-  logRequestInfo(
+  logRequestDebug(
     `Created a new ${nameOfType(
       OwnerUpdateRequestedEventModel,
     )} DB entry with ID ${transactionHash}-${logIndex}`,
@@ -93,8 +92,8 @@ async function afterCreate(
 
   await GitProjectModel.create(
     {
-      forge: Number(forge),
-      accountId: gitProjectAccountId,
+      forge,
+      id: accountId,
       name: ethers.toUtf8String(name),
       verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
     },

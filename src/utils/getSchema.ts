@@ -2,5 +2,5 @@ import type { DbSchema } from '../common/types';
 import { getNetwork } from './getNetworkSettings';
 
 export default function getSchema(): DbSchema {
-  return getNetwork();
+  return getNetwork() as DbSchema;
 }

@@ -14,7 +14,6 @@ export const DRIPS_CONTRACT_NAMES = [
 export const USER_METADATA_KEY = ethers.hexlify(ethers.toUtf8Bytes('ipfs'));
 
 export const COMMON_EVENT_INIT_ATTRIBUTES = {
-  // Primary key
   transactionHash: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -25,10 +24,6 @@ export const COMMON_EVENT_INIT_ATTRIBUTES = {
     allowNull: false,
     primaryKey: true,
   },
-  blockNumber: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
   blockTimestamp: {
     type: DataTypes.DATE,
     allowNull: false,
@@ -37,4 +32,13 @@ export const COMMON_EVENT_INIT_ATTRIBUTES = {
     type: DataTypes.JSON,
     allowNull: false,
   },
-};
+  blockNumber: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+} as const;
+
+export const FORGES_MAP = {
+  0: 'GitHub',
+  1: 'GitLab',
+} as const;

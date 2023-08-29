@@ -8,7 +8,7 @@ import { logRequestInfo } from '../utils/logRequest';
 import EventHandlerBase from '../common/EventHandlerBase';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
-  protected eventSignature = 'OwnerUpdated(uint256,address)' as const;
+  protected readonly eventSignature = 'OwnerUpdated(uint256,address)' as const;
 
   protected async _handle(
     request: HandleRequest<'OwnerUpdated(uint256,address)'>,
@@ -18,7 +18,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       const { accountId, owner } = eventLog.args;
 
       logRequestInfo(
-        `Event data was accountId: ${accountId}, owner: ${owner}.`,
+        `Event args: accountId ${accountId}, owner ${owner}.`,
         requestId,
       );
 
@@ -48,6 +48,6 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       OwnerUpdatedEvent.OutputObject
     >
   > = async (_accountId, _owner, eventLog) => {
-    await this.executeHandle(new HandleRequest((eventLog as any).log));
+    await super.executeHandle(new HandleRequest((eventLog as any).log));
   };
 }

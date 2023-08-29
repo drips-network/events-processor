@@ -1,20 +1,21 @@
 import type { TypedListener } from '../../contracts/common';
-import { getContractInfoByFilterSignature } from '../utils/getContract';
+import { getContractDetails } from '../utils/getContract';
 import getResult from '../utils/getResult';
 import { logRequestError, logRequestInfo } from '../utils/logRequest';
+import { isRetryError } from '../utils/retryOperation';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
 import type {
   Result,
-  DripsEventSignature,
+  EventSignature,
   EventSignatureToEventMap,
   HandleRequest,
   DripsContractEvent,
   RepoDriverContractEvent,
-  DripsContractEventSignature,
-  RepoDriverContractEventSignature,
+  DripsEventSignature,
+  RepoDriverEventSignature,
 } from './types';
 
-export default abstract class EventHandlerBase<T extends DripsEventSignature> {
+export default abstract class EventHandlerBase<T extends EventSignature> {
   public readonly name = Object.getPrototypeOf(this).constructor.name;
 
   protected abstract readonly eventSignature: T;
@@ -44,7 +45,6 @@ export default abstract class EventHandlerBase<T extends DripsEventSignature> {
       eventLog: { eventName, transactionHash, index, blockNumber },
     } = request;
 
-    logRequestInfo(`*********** New request ***********`, requestId);
     logRequestInfo(
       `${this.name} is processing ${eventName} event with transaction hash ${transactionHash}, block number ${blockNumber} and log index ${index}.`,
       request.id,
@@ -56,9 +56,11 @@ export default abstract class EventHandlerBase<T extends DripsEventSignature> {
       logRequestInfo(`Successfully processed event.`, request.id);
     } else {
       logRequestError(
-        `Failed to process event: ${
-          result.error?.attempts ? JSON.stringify(result.error) : result.error
-        }`,
+        `Failed to process event with error '${
+          isRetryError(result.error)
+            ? JSON.stringify(result.error)
+            : result.error
+        }'.`,
         requestId,
       );
     }
@@ -70,13 +72,14 @@ export default abstract class EventHandlerBase<T extends DripsEventSignature> {
    * Registers the {@link onReceive} listener for the event.
    */
   public async registerEventListener(): Promise<void> {
-    const { contract, name: contractName } =
-      await getContractInfoByFilterSignature(this.eventSignature);
+    const { contract, name: contractName } = await getContractDetails(
+      this.eventSignature,
+    );
 
     switch (contractName) {
       case 'drips': {
         const eventFilter =
-          contract.filters[this.eventSignature as DripsContractEventSignature];
+          contract.filters[this.eventSignature as DripsEventSignature];
 
         await contract.on(
           eventFilter,
@@ -87,9 +90,7 @@ export default abstract class EventHandlerBase<T extends DripsEventSignature> {
       }
       case 'repoDriver': {
         const eventFilter =
-          contract.filters[
-            this.eventSignature as RepoDriverContractEventSignature
-          ];
+          contract.filters[this.eventSignature as RepoDriverEventSignature];
 
         await contract.on(
           eventFilter,

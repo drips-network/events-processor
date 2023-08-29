@@ -3,9 +3,9 @@
 import type { TypedEventLog } from '../../contracts/common';
 import logger from '../common/logger';
 import { getNetworkSettings } from './getNetworkSettings';
-import { getContractInfoByFilterSignature } from './getContract';
+import { getContractDetails } from './getContract';
 import getEventHandlerByFilterSignature from './getEventHandler';
-import type { DripsEvent, DripsEventSignature } from '../common/types';
+import type { DripsEvent, EventSignature } from '../common/types';
 import { HandleRequest } from '../common/types';
 import getEventByFilterSignature from './getEventByFilter';
 import getRegisteredEvents from './getRegisteredEvents';
@@ -25,7 +25,7 @@ export default async function processPastEvents(): Promise<void> {
   await Promise.all(
     registeredEvents.map(async (filterSignature) => {
       const { contract, name: contractName } =
-        await getContractInfoByFilterSignature(filterSignature);
+        await getContractDetails(filterSignature);
       const event = await getEventByFilterSignature(filterSignature);
       const handler = getEventHandlerByFilterSignature(filterSignature);
 
@@ -35,7 +35,6 @@ export default async function processPastEvents(): Promise<void> {
 
       let i;
       const batchSize = 5000;
-      // TODO: store last processed block in the database and start from there.
       const startBlock = chainConfig[contractName].block;
 
       for (i = startBlock; i < endBlock; i += batchSize) {
@@ -85,7 +84,7 @@ export default async function processPastEvents(): Promise<void> {
 
 async function ingest(
   logs: TypedEventLog<DripsEvent>[],
-  handler: EventHandlerBase<DripsEventSignature>,
+  handler: EventHandlerBase<EventSignature>,
 ): Promise<{
   processedEvents: number;
   failedEvents: number;

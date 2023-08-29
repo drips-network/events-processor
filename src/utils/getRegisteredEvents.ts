@@ -1,6 +1,6 @@
 import { EVENT_HANDLERS } from '../common/app-settings';
-import type { DripsEventSignature } from '../common/types';
+import type { EventSignature } from '../common/types';
 
-export default function getRegisteredEvents(): DripsEventSignature[] {
-  return Object.keys(EVENT_HANDLERS) as DripsEventSignature[];
+export default function getRegisteredEvents(): EventSignature[] {
+  return Object.keys(EVENT_HANDLERS) as EventSignature[];
 }

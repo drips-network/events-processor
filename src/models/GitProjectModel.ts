@@ -5,15 +5,13 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
-import type { UUID } from 'crypto';
 import getSchema from '../utils/getSchema';
 import sequelizeInstance from '../utils/getSequelizeInstance';
-import assertTransaction from '../utils/assert';
-import { logRequestInfo, nameOfType } from '../utils/logRequest';
-
-export enum Forge {
-  GitHub = 0,
-}
+import { logRequestDebug, nameOfType } from '../utils/logRequest';
+import type { Forge, ProjectId } from '../common/types';
+import { FORGES_MAP } from '../common/constants';
+import getChangedProperties from '../utils/getChangedProperties';
+import { assertRequestId, assertTransaction } from '../utils/assert';
 
 export enum ProjectVerificationStatus {
   Unclaimed = 'Unclaimed',
@@ -27,9 +25,9 @@ export default class GitProjectModel extends Model<
   InferCreationAttributes<GitProjectModel>
 > {
   // Properties from events.
+  public declare id: ProjectId; // The `accountId` from `OwnerUpdatedRequested` event.
   public declare name: string;
   public declare forge: Forge;
-  public declare accountId: string;
   public declare owner: AddressLike | null;
 
   // Properties from metadata.
@@ -43,7 +41,7 @@ export default class GitProjectModel extends Model<
   public static initialize(): void {
     this.init(
       {
-        accountId: {
+        id: {
           type: DataTypes.STRING,
           primaryKey: true,
         },
@@ -80,9 +78,7 @@ export default class GitProjectModel extends Model<
           allowNull: false,
         },
         forge: {
-          type: DataTypes.ENUM(
-            ...Object.values(Forge).map((v) => v.toString()),
-          ),
+          type: DataTypes.ENUM(...Object.values(FORGES_MAP)),
           allowNull: false,
         },
       },
@@ -110,13 +106,14 @@ async function afterCreate(
     >
   >,
 ): Promise<void> {
-  const { transaction, requestId } = options as any;
+  const { transaction, requestId } = options as any; // `as any` to avoid TS complaining about passing in the `requestId`.
   assertTransaction(transaction);
+  assertRequestId(requestId);
 
-  logRequestInfo(
+  logRequestDebug(
     `Created a new ${nameOfType(GitProjectModel)} DB entry for ${
       instance.name
-    } repo, with account ID ${instance.accountId}.`,
+    } repo, with ID ${instance.id}.`,
     requestId,
   );
 }
@@ -130,16 +127,15 @@ async function afterUpdate(
         omit: never;
       }
     >
-  > & { requestId: UUID },
+  >,
 ): Promise<void> {
-  const { transaction, requestId } = options;
+  const { transaction, requestId } = options as any; // `as any` to avoid TS complaining about passing in the `requestId`.
   assertTransaction(transaction);
+  assertRequestId(requestId);
 
-  logRequestInfo(
-    `Updated Git project with account ID ${
-      instance.accountId
-    }. Updated fields were: ${(instance.changed() as string[]).map(
-      (property) => property,
+  logRequestDebug(
+    `Updated Git project with ID ${instance.id}: ${JSON.stringify(
+      getChangedProperties(instance),
     )}.`,
     requestId,
   );

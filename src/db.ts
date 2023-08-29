@@ -4,6 +4,9 @@ import logger, { shouldEnableSequelizeLogging } from './common/logger';
 import { SUPPORTED_NETWORKS } from './common/constants';
 import sequelizeInstance from './utils/getSequelizeInstance';
 import { MODELS } from './common/app-settings';
+import GitProjectModel from './models/GitProjectModel';
+import AddressDriverSplitReceiverModel from './models/AddressDriverSplitReceiverModel';
+import RepoDriverSplitReceiverModel from './models/RepoDriverSplitReceiverModel';
 
 dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
 
@@ -18,6 +21,7 @@ export default async function connectToDb(): Promise<void> {
 
   await authenticate();
   initializeEntities();
+  defineAssociations();
   await sequelizeInstance.sync();
 
   logger.info('Database initialized.');
@@ -73,4 +77,26 @@ function initializeEntities(): void {
     logger.error(`Unable to initialize the database schema: ${error}.`);
     throw error;
   }
+}
+
+function defineAssociations() {
+  GitProjectModel.hasMany(AddressDriverSplitReceiverModel, {
+    foreignKey: 'funderProjectId',
+  });
+  AddressDriverSplitReceiverModel.belongsTo(GitProjectModel, {
+    foreignKey: 'funderProjectId',
+  });
+
+  GitProjectModel.hasMany(RepoDriverSplitReceiverModel, {
+    foreignKey: 'funderProjectId',
+  });
+  RepoDriverSplitReceiverModel.belongsTo(GitProjectModel, {
+    foreignKey: 'funderProjectId',
+  });
+  GitProjectModel.hasMany(RepoDriverSplitReceiverModel, {
+    foreignKey: 'selfProjectId',
+  });
+  RepoDriverSplitReceiverModel.belongsTo(GitProjectModel, {
+    foreignKey: 'selfProjectId',
+  });
 }

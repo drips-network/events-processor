@@ -7,9 +7,11 @@ import shouldNeverHappen from '../utils/shouldNeverHappen';
 import { logRequestInfo } from '../utils/logRequest';
 import { HandleRequest } from '../common/types';
 import EventHandlerBase from '../common/EventHandlerBase';
+import { FORGES_MAP } from '../common/constants';
 
 export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'OwnerUpdateRequested(uint256,uint8,bytes)'> {
-  public eventSignature = 'OwnerUpdateRequested(uint256,uint8,bytes)' as const;
+  public readonly eventSignature =
+    'OwnerUpdateRequested(uint256,uint8,bytes)' as const;
 
   protected async _handle(
     request: HandleRequest<'OwnerUpdateRequested(uint256,uint8,bytes)'>,
@@ -18,7 +20,7 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
     const { accountId, forge, name } = eventLog.args;
 
     logRequestInfo(
-      `Event data was accountId: ${accountId}, forge: ${forge}, name: ${ethers.toUtf8String(
+      `Event args: accountId ${accountId}, forge ${forge}, name ${ethers.toUtf8String(
         name,
       )}.`,
       requestId,
@@ -28,7 +30,6 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
       await OwnerUpdateRequestedEventModel.create(
         {
           name,
-          forge: Number(forge),
           accountId: accountId.toString(),
           rawEvent: JSON.stringify(eventLog),
           logIndex: eventLog.index,
@@ -36,6 +37,7 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
           blockTimestamp:
             (await eventLog.getBlock()).date ?? shouldNeverHappen(),
           transactionHash: eventLog.transactionHash,
+          forge: FORGES_MAP[Number(forge) as keyof typeof FORGES_MAP],
         },
         { transaction, requestId },
       );
@@ -48,11 +50,11 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
       OwnerUpdateRequestedEvent.OutputTuple,
       OwnerUpdateRequestedEvent.OutputObject
     >
-    // TODO: fix listener event type.
-    // Incoming event type is 'any' (in ALL listeners) because of a bug in ethers.js.
-    // It should be typed as TypedEventLog<TypedContractEvent<...>>, which is what TS infers by default.
+    // TODO: change `eventLog` type.
+    // Until ethers/typechain fixes the related bug, the received `eventLog` is typed as 'any' (in ALL listeners).
+    // It should be of `TypedEventLog<TypedContractEvent<...>>`, which TS infers by default.
     // When fixed, we won't need to pass event.log to `executeHandle`.
   > = async (_accountId, _forge, _name, eventLog) => {
-    await this.executeHandle(new HandleRequest((eventLog as any).log));
+    await super.executeHandle(new HandleRequest((eventLog as any).log));
   };
 }

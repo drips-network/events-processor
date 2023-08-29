@@ -3,14 +3,18 @@ import type { AddressLike } from 'ethers';
 import type { UUID } from 'crypto';
 import { randomUUID } from 'crypto';
 import type { Drips, RepoDriver } from '../../contracts';
-import type { DRIPS_CONTRACT_NAMES, SUPPORTED_NETWORKS } from './constants';
-import type { TypedContractEvent, TypedEventLog } from '../../contracts/common';
+import type {
+  DRIPS_CONTRACT_NAMES,
+  FORGES_MAP,
+  SUPPORTED_NETWORKS,
+} from './constants';
+import type { TypedEventLog } from '../../contracts/common';
 import type EventHandlerBase from './EventHandlerBase';
 
-export type IpfsHash = string;
+export type IpfsHash = string & { __brand: 'IpfsHash' };
+export type ProjectId = string & { __brand: 'ProjectId' };
 
-export type KeysOf<T> = keyof T;
-export type ValuesOf<T> = T[KeysOf<T>];
+export type ValuesOf<T> = T[keyof T];
 
 export type Result<T> =
   | {
@@ -19,13 +23,14 @@ export type Result<T> =
     }
   | {
       ok: false;
-      error: {
-        [key: string]: any;
-      };
+      error: unknown;
     };
 
 export type SupportedNetwork = (typeof SUPPORTED_NETWORKS)[number];
-export type DbSchema = SupportedNetwork;
+
+export type DbSchema = SupportedNetwork & { __brand: 'dbSchema' };
+
+export type Forge = ValuesOf<typeof FORGES_MAP>;
 
 export type DripsContract = (typeof DRIPS_CONTRACT_NAMES)[number];
 
@@ -46,41 +51,31 @@ export type RepoDriverContractEvent = ValuesOf<typeof _repoDriverFilters>;
 
 type EventSignaturePattern = `${string}(${string})`;
 
-export type DripsContractEventSignature = {
-  [T in KeysOf<typeof _dripsFilters>]: T extends string
+export type DripsEventSignature = {
+  [T in keyof typeof _dripsFilters]: T extends string
     ? T extends EventSignaturePattern
       ? T
       : never
     : never;
-}[KeysOf<typeof _dripsFilters>];
+}[keyof typeof _dripsFilters];
 
-export type RepoDriverContractEventSignature = {
-  [T in KeysOf<typeof _repoDriverFilters>]: T extends string
+export type RepoDriverEventSignature = {
+  [T in keyof typeof _repoDriverFilters]: T extends string
     ? T extends EventSignaturePattern
       ? T
       : never
     : never;
-}[KeysOf<typeof _repoDriverFilters>];
+}[keyof typeof _repoDriverFilters];
 
-export type DripsEventSignature =
-  | DripsContractEventSignature
-  | RepoDriverContractEventSignature;
+export type EventSignature = DripsEventSignature | RepoDriverEventSignature;
 
 export type EventSignatureToEventMap = {
-  [K in DripsEventSignature]: (typeof _allFilters)[K];
+  [K in EventSignature]: (typeof _allFilters)[K];
 };
 
 export type DripsEvent = ValuesOf<EventSignatureToEventMap>;
 
-export type TypedEventOutputObject<T> = T extends TypedContractEvent<
-  any,
-  any,
-  infer OutputObject
->
-  ? OutputObject
-  : never;
-
-export class HandleRequest<T extends DripsEventSignature> {
+export class HandleRequest<T extends EventSignature> {
   public readonly id: UUID = randomUUID();
   public readonly eventLog: TypedEventLog<EventSignatureToEventMap[T]>;
 
@@ -89,12 +84,12 @@ export class HandleRequest<T extends DripsEventSignature> {
   }
 }
 
-export type ModelCtor = {
+export type ModelStaticMembers = {
   new (): Model;
   initialize(): void;
 };
 
-export type EventHandlerConstructor<T extends DripsEventSignature> = {
+export type EventHandlerConstructor<T extends EventSignature> = {
   new (): EventHandlerBase<T>;
 };
 

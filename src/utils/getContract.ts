@@ -4,7 +4,7 @@ import {
   type RepoDriver,
   RepoDriver__factory,
 } from '../../contracts';
-import type { DripsContract, DripsEventSignature } from '../common/types';
+import type { DripsContract, EventSignature } from '../common/types';
 import { getNetworkSettings } from './getNetworkSettings';
 import { isDripsEvent, isRepoDriverEvent } from './isEventOfContract';
 
@@ -26,8 +26,8 @@ export async function getRepoDriver(): Promise<RepoDriver> {
   return RepoDriver__factory.connect(repoDriver.address as string, provider);
 }
 
-export async function getContractInfoByFilterSignature(
-  eventSignature: DripsEventSignature,
+export async function getContractDetails(
+  eventSignature: EventSignature,
 ): Promise<
   | {
       name: 'drips';
@@ -54,7 +54,7 @@ export async function getContractInfoByFilterSignature(
     };
   }
 
-  throw new Error(`No contract found for filter ${eventSignature}.`);
+  throw new Error(`No contract found for ${eventSignature} event.`);
 }
 
 export function getContractNameByAccountId(
@@ -70,8 +70,7 @@ export function getContractNameByAccountId(
 
   const mask = 2n ** 32n - 1n; // 32 bits mask
 
-  // eslint-disable-next-line no-bitwise
-  const bits = (accountIdAsBigInt >> 224n) & mask; // shift right to bring the first 32 bits to the end and apply the mask
+  const bits = (accountIdAsBigInt >> 224n) & mask; // eslint-disable-line no-bitwise
 
   switch (bits) {
     case 0n:

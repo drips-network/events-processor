@@ -4,25 +4,24 @@ import GitProjectModel from '../models/GitProjectModel';
 import retryOperation from './retryOperation';
 import { logRequestDebug } from './logRequest';
 
-export default async function retryFindGitProject(
-  requestId: UUID,
-  accountId: string,
+export default async function retryFindProject(
+  id: string,
   transaction: Transaction,
+  requestId: UUID,
 ): Promise<GitProjectModel> {
   const result = await retryOperation(async () => {
-    const gitProject = await GitProjectModel.findByPk(accountId, {
+    const project = await GitProjectModel.findByPk(id, {
       transaction,
     });
 
-    if (!gitProject) {
-      const errorMessage = `Git project with accountId ${accountId} was not found but it was expected to exist. Maybe the event that should have created the project is not processed yet. Retrying...`;
+    if (!project) {
+      const errorMessage = `Git project with ID ${id} was not found, but it was expected to exist. The event that should have created the project may not have been processed yet. Retrying...`;
 
       logRequestDebug(errorMessage, requestId);
-
       throw new Error(errorMessage);
     }
 
-    return gitProject;
+    return project;
   });
 
   if (!result.ok) {

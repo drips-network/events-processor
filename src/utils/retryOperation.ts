@@ -4,6 +4,22 @@ async function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds)); // eslint-disable-line no-promise-executor-return
 }
 
+type RetryError = {
+  message: string;
+  errors: string[];
+  attempts: number;
+};
+
+export function isRetryError(err: unknown): err is RetryError {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'message' in err &&
+    'errors' in err &&
+    'attempts' in err
+  );
+}
+
 export default async function retryOperation<T>(
   operation: () => T | Promise<T>,
   maxRetries: number = 3,
