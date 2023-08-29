@@ -1,5 +1,5 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
-import type GitProjectModel from '../GitProjectModel/GitProjectModel';
+import type GitProjectModel from '../GitProjectModel';
 import type { repoDriverAccountMetadataParser } from '../../metadata/schemas';
 
 export default function validateGitProjectMetadata(
@@ -32,7 +32,7 @@ export default function validateGitProjectMetadata(
 
   if (errors.length > 0) {
     throw new Error(
-      `Git project with ID ${gitProjectAccountId} has metadata that does not match the metadata emitted by the contract (${errors.join(
+      `Git project with account ID ${gitProjectAccountId} has metadata that does not match the metadata emitted by the contract (${errors.join(
         '; ',
       )}).`,
     );

@@ -1,10 +1,10 @@
 import type { Transaction } from 'sequelize';
 import type { UUID } from 'crypto';
-import GitProjectModel from '../models/GitProjectModel/GitProjectModel';
+import GitProjectModel from '../models/GitProjectModel';
 import retryOperation from './retryOperation';
 import { logRequestDebug } from './logRequest';
 
-export default async function tryFindExpectedToExistGitProject(
+export default async function retryFindGitProject(
   requestId: UUID,
   accountId: string,
   transaction: Transaction,

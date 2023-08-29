@@ -1,6 +1,6 @@
 import type { OwnerUpdatedEvent } from '../../contracts/RepoDriver';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
-import OwnerUpdatedEventModel from '../models/OwnerUpdatedEvent/OwnerUpdatedEventModel';
+import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
 import sequelizeInstance from '../utils/getSequelizeInstance';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
 import { HandleRequest } from '../common/types';

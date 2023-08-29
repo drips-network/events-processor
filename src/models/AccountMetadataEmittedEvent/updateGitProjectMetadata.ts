@@ -1,61 +1,30 @@
-import type { CreateOptions, InferAttributes } from 'sequelize';
-import type { UUID } from 'crypto';
+import type { Transaction } from 'sequelize';
+import type { AnyVersion } from '@efstajas/versioned-parser';
 import { ethers } from 'ethers';
-import AccountMetadataEmittedEventModel from './AccountMetadataEmittedEventModel';
-import assertTransaction from '../../utils/assert';
-import { USER_METADATA_KEY } from '../../common/constants';
-import validateGitProjectMetadata from './validateProjectMetadata';
-import type GitProjectModel from '../GitProjectModel/GitProjectModel';
-import { ProjectVerificationStatus } from '../GitProjectModel/GitProjectModel';
-import getIpfsFile from '../../utils/getIpfsFile';
+import type { UUID } from 'crypto';
+import type { AccountId } from '../../metadata/types';
+import type GitProjectModel from '../GitProjectModel';
 import { repoDriverAccountMetadataParser } from '../../metadata/schemas';
 import retryFindGitProject from '../../utils/retryFindGitProject';
+import getIpfsFile from '../../utils/getIpfsFile';
+import validateGitProjectMetadata from './validateProjectMetadata';
+import { ProjectVerificationStatus } from '../GitProjectModel';
 
 export default async function updateGitProjectMetadata(
-  newInstance: AccountMetadataEmittedEventModel,
-  options: CreateOptions<
-    InferAttributes<
-      AccountMetadataEmittedEventModel,
-      {
-        omit: never;
-      }
-    >
-  > & { requestId: UUID },
-): Promise<void> {
-  const { accountId } = newInstance;
-  const { transaction, requestId } = options;
-
-  assertTransaction(transaction);
-
+  requestId: UUID,
+  accountId: AccountId,
+  ipfsHashBytes: string,
+  transaction: Transaction,
+): Promise<
+  [GitProjectModel, AnyVersion<typeof repoDriverAccountMetadataParser>]
+> {
   const gitProject: GitProjectModel = await retryFindGitProject(
     requestId,
     accountId,
     transaction,
   );
 
-  let latestAccountMetadataEmittedEvent =
-    (await AccountMetadataEmittedEventModel.findOne({
-      where: {
-        accountId,
-        key: USER_METADATA_KEY,
-      },
-      order: [
-        ['blockNumber', 'DESC'],
-        ['logIndex', 'DESC'],
-      ],
-      transaction,
-    })) ?? newInstance;
-
-  if (
-    newInstance.blockNumber > latestAccountMetadataEmittedEvent.blockNumber ||
-    (newInstance.blockNumber ===
-      latestAccountMetadataEmittedEvent.blockNumber &&
-      newInstance.logIndex > latestAccountMetadataEmittedEvent.logIndex)
-  ) {
-    latestAccountMetadataEmittedEvent = newInstance;
-  }
-
-  const ipfsHash = ethers.toUtf8String(latestAccountMetadataEmittedEvent.value);
+  const ipfsHash = ethers.toUtf8String(ipfsHashBytes);
   const ipfsFile = await (await getIpfsFile(ipfsHash)).json();
   const metadata = repoDriverAccountMetadataParser.parseAny(ipfsFile);
 
@@ -81,4 +50,6 @@ export default async function updateGitProjectMetadata(
       requestId,
     } as any,
   );
+
+  return [gitProject, metadata];
 }
