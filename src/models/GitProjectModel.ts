@@ -6,7 +6,7 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
-import sequelizeInstance from '../utils/getSequelizeInstance';
+import sequelizeInstance from '../db/getSequelizeInstance';
 import { logRequestDebug, nameOfType } from '../utils/logRequest';
 import type { Forge, ProjectId } from '../common/types';
 import { FORGES_MAP } from '../common/constants';

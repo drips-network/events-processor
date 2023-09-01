@@ -16,13 +16,11 @@ async function getWebSocketProvider(
   return new WebSocketProvider(url);
 }
 
-export const DEFAULT_NETWORK = 'sepolia';
-
 export function getNetwork(): SupportedNetwork {
   const network = process.env.NETWORK as SupportedNetwork;
 
   if (!network) {
-    return DEFAULT_NETWORK;
+    throw new Error(`NETWORK environment variable is not set.`);
   }
 
   if (!SUPPORTED_NETWORKS.includes(network)) {

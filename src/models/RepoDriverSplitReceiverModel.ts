@@ -5,7 +5,7 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
-import sequelizeInstance from '../utils/getSequelizeInstance';
+import sequelizeInstance from '../db/getSequelizeInstance';
 import GitProjectModel from './GitProjectModel';
 import type { ProjectId } from '../common/types';
 

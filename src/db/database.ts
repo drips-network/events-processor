@@ -1,20 +1,20 @@
 import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
-import logger, { shouldEnableSequelizeLogging } from './common/logger';
-import { SUPPORTED_NETWORKS } from './common/constants';
-import sequelizeInstance from './utils/getSequelizeInstance';
-import { MODELS } from './common/app-settings';
-import GitProjectModel from './models/GitProjectModel';
-import AddressDriverSplitReceiverModel from './models/AddressDriverSplitReceiverModel';
-import RepoDriverSplitReceiverModel from './models/RepoDriverSplitReceiverModel';
+import logger from '../common/logger';
+import { SUPPORTED_NETWORKS } from '../common/constants';
+import sequelizeInstance from './getSequelizeInstance';
+import { MODELS } from '../common/app-settings';
+import GitProjectModel from '../models/GitProjectModel';
+import AddressDriverSplitReceiverModel from '../models/AddressDriverSplitReceiverModel';
+import RepoDriverSplitReceiverModel from '../models/RepoDriverSplitReceiverModel';
+import config from './config';
 
-dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
-
-const dbName = process.env.POSTGRES_DB!;
-const dbHost = process.env.POSTGRES_HOST!;
-const dbPort = process.env.POSTGRES_PORT!;
-const dbUsername = process.env.POSTGRES_USER!;
-const dbPassword = process.env.POSTGRES_PASSWORD!;
+const {
+  postgresHost,
+  postgresPort,
+  postgresDatabase,
+  postgresPassword,
+  postgresUsername,
+} = config;
 
 export default async function connectToDb(): Promise<void> {
   logger.info('Initializing database...');
@@ -38,22 +38,25 @@ async function authenticate(): Promise<void> {
 
       try {
         const tempSequelize = new Sequelize(
-          `postgres://${dbUsername}:${dbPassword}@${dbHost}:${dbPort}/postgres`,
+          `postgres://${postgresUsername}:${postgresPassword}@${postgresHost}:${postgresPort}/postgres`,
           {
-            logging: shouldEnableSequelizeLogging,
+            logging: (msg) => logger.debug(msg),
           },
         );
-        await tempSequelize.query(`DROP DATABASE IF EXISTS ${dbName};`);
-        await tempSequelize.query(`CREATE DATABASE ${dbName};`);
-        SUPPORTED_NETWORKS.forEach(async (network) => {
-          await sequelizeInstance.query(
-            `CREATE SCHEMA IF NOT EXISTS ${network};`,
-          );
-        });
+        await tempSequelize.query(
+          `DROP DATABASE IF EXISTS ${postgresDatabase};`,
+        );
+        await tempSequelize.query(`CREATE DATABASE ${postgresDatabase};`);
+
         await tempSequelize.close();
 
         logger.info('Database created successfully.');
 
+        for (const network of SUPPORTED_NETWORKS) {
+          await sequelizeInstance.query(
+            `CREATE SCHEMA IF NOT EXISTS ${network};`,
+          );
+        }
         await sequelizeInstance.authenticate();
       } catch (e: any) {
         logger.error('Unable to create the database:', e);

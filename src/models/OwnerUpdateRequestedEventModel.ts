@@ -6,7 +6,7 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import { ethers } from 'ethers';
 import type { Forge, IEventModel } from '../common/types';
-import sequelizeInstance from '../utils/getSequelizeInstance';
+import sequelizeInstance from '../db/getSequelizeInstance';
 import getSchema from '../utils/getSchema';
 import { COMMON_EVENT_INIT_ATTRIBUTES, FORGES_MAP } from '../common/constants';
 import { logRequestDebug, nameOfType } from '../utils/logRequest';

@@ -11,7 +11,7 @@ import {
 } from '../../common/constants';
 import type { IEventModel } from '../../common/types';
 import getSchema from '../../utils/getSchema';
-import sequelizeInstance from '../../utils/getSequelizeInstance';
+import sequelizeInstance from '../../db/getSequelizeInstance';
 import { logRequestDebug, nameOfType } from '../../utils/logRequest';
 import createDbEntriesForProjectSplits from './createDbEntriesForProjectSplits';
 import retryFindProject from '../../utils/retryFindProject';
@@ -130,27 +130,27 @@ async function isLatestEvent(
   instance: AccountMetadataEmittedEventModel,
   transaction: Transaction,
 ): Promise<boolean> {
-  const latestAccountMetadataEmittedEvent =
-    await AccountMetadataEmittedEventModel.findOne({
-      where: {
-        accountId: instance.accountId,
-        key: USER_METADATA_KEY,
-      },
-      order: [
-        ['blockNumber', 'DESC'],
-        ['logIndex', 'DESC'],
-      ],
-      transaction,
-    });
+  const latestEvent = await AccountMetadataEmittedEventModel.findOne({
+    where: {
+      accountId: instance.accountId,
+      key: USER_METADATA_KEY,
+    },
+    order: [
+      ['blockNumber', 'DESC'],
+      ['logIndex', 'DESC'],
+    ],
+    transaction,
+    lock: true,
+  });
 
-  if (!latestAccountMetadataEmittedEvent) {
+  if (!latestEvent) {
     return true;
   }
 
   if (
-    latestAccountMetadataEmittedEvent.blockNumber > instance.blockNumber ||
-    (latestAccountMetadataEmittedEvent.blockNumber === instance.blockNumber &&
-      latestAccountMetadataEmittedEvent.logIndex >= instance.logIndex)
+    latestEvent.blockNumber > instance.blockNumber ||
+    (latestEvent.blockNumber === instance.blockNumber &&
+      latestEvent.logIndex >= instance.logIndex)
   ) {
     return false;
   }

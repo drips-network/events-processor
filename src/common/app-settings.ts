@@ -1,15 +1,19 @@
+import {
+  OwnerUpdateRequestedEventHandler,
+  OwnerUpdatedEventHandler,
+} from '../event-handlers';
 import AccountMetadataEmittedEventHandler from '../event-handlers/AccountMetadataEmittedHandler';
-import OwnerUpdateRequestedEventHandler from '../event-handlers/OwnerUpdateRequestedEventHandler';
-import OwnerUpdatedEventHandler from '../event-handlers/OwnerUpdatedEventHandler';
-import AccountMetadataEmittedEventModel from '../models/AccountMetadataEmittedEvent/AccountMetadataEmittedEventModel';
-import AddressDriverSplitReceiverModel from '../models/AddressDriverSplitReceiverModel';
-import GitProjectModel from '../models/GitProjectModel';
-import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
-import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
-import RepoDriverSplitReceiverModel from '../models/RepoDriverSplitReceiverModel';
+import {
+  AccountMetadataEmittedEventModel,
+  AddressDriverSplitReceiverModel,
+  GitProjectModel,
+  OwnerUpdateRequestedEventModel,
+  OwnerUpdatedEventModel,
+  RepoDriverSplitReceiverModel,
+} from '../models';
 import type {
-  EventSignature,
   EventHandlerConstructor,
+  EventSignature,
   ModelStaticMembers,
 } from './types';
 

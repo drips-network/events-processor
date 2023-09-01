@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import type { OwnerUpdateRequestedEvent } from '../../contracts/RepoDriver';
 import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
-import sequelizeInstance from '../utils/getSequelizeInstance';
+import sequelizeInstance from '../db/getSequelizeInstance';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
 import { logRequestInfo } from '../utils/logRequest';
 import { HandleRequest } from '../common/types';

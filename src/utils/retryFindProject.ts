@@ -12,6 +12,7 @@ export default async function retryFindProject(
   const result = await retryOperation(async () => {
     const project = await GitProjectModel.findByPk(id, {
       transaction,
+      lock: true,
     });
 
     if (!project) {

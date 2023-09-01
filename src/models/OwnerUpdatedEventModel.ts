@@ -2,12 +2,13 @@ import type {
   InferAttributes,
   InferCreationAttributes,
   InstanceUpdateOptions,
+  Transaction,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
 import type { IEventModel } from '../common/types';
 import getSchema from '../utils/getSchema';
-import sequelizeInstance from '../utils/getSequelizeInstance';
+import sequelizeInstance from '../db/getSequelizeInstance';
 import { logRequestDebug, nameOfType } from '../utils/logRequest';
 import { ProjectVerificationStatus } from './GitProjectModel';
 import retryFindProject from '../utils/retryFindProject';
@@ -80,13 +81,46 @@ async function afterCreate(
     requestId,
   );
 
-  const project = await retryFindProject(projectId, transaction, requestId);
+  if (await isLatestEvent(instance, transaction)) {
+    const project = await retryFindProject(projectId, transaction, requestId);
 
-  await project.update(
-    {
-      owner,
-      verificationStatus: ProjectVerificationStatus.OwnerUpdated,
+    await project.update(
+      {
+        owner,
+        verificationStatus: ProjectVerificationStatus.OwnerUpdated,
+      },
+      { transaction, requestId } as any, // `as any` to avoid TS complaining about passing in the `requestId`.
+    );
+  }
+}
+
+async function isLatestEvent(
+  instance: OwnerUpdatedEventModel,
+  transaction: Transaction,
+): Promise<boolean> {
+  const latestEvent = await OwnerUpdatedEventModel.findOne({
+    where: {
+      accountId: instance.accountId,
     },
-    { transaction, requestId } as any, // `as any` to avoid TS complaining about passing in the `requestId`.
-  );
+    order: [
+      ['blockNumber', 'DESC'],
+      ['logIndex', 'DESC'],
+    ],
+    transaction,
+    lock: true,
+  });
+
+  if (!latestEvent) {
+    return true;
+  }
+
+  if (
+    latestEvent.blockNumber > instance.blockNumber ||
+    (latestEvent.blockNumber === instance.blockNumber &&
+      latestEvent.logIndex >= instance.logIndex)
+  ) {
+    return false;
+  }
+
+  return true;
 }
