@@ -30,7 +30,6 @@ export default class OwnerUpdateRequestedEventModel
   public declare accountId: string;
 
   // Common event log properties.
-  public declare rawEvent: string;
   public declare logIndex: number;
   public declare blockNumber: number;
   public declare blockTimestamp: Date;

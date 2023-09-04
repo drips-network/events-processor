@@ -28,10 +28,6 @@ export const COMMON_EVENT_INIT_ATTRIBUTES = {
     type: DataTypes.DATE,
     allowNull: false,
   },
-  rawEvent: {
-    type: DataTypes.JSON,
-    allowNull: false,
-  },
   blockNumber: {
     type: DataTypes.INTEGER,
     allowNull: false,

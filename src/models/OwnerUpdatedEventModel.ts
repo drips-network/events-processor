@@ -26,7 +26,6 @@ export default class OwnerUpdatedEventModel
   public declare accountId: string;
 
   // Common event log properties.
-  public declare rawEvent: string;
   public declare logIndex: number;
   public declare blockNumber: number;
   public declare blockTimestamp: Date;
@@ -117,7 +116,7 @@ async function isLatestEvent(
   if (
     latestEvent.blockNumber > instance.blockNumber ||
     (latestEvent.blockNumber === instance.blockNumber &&
-      latestEvent.logIndex >= instance.logIndex)
+      latestEvent.logIndex > instance.logIndex)
   ) {
     return false;
   }

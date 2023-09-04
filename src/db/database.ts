@@ -2,7 +2,7 @@ import { Sequelize } from 'sequelize';
 import logger from '../common/logger';
 import { SUPPORTED_NETWORKS } from '../common/constants';
 import sequelizeInstance from './getSequelizeInstance';
-import { MODELS } from '../common/app-settings';
+import { MODELS } from '../common/registrations';
 import GitProjectModel from '../models/GitProjectModel';
 import AddressDriverSplitReceiverModel from '../models/AddressDriverSplitReceiverModel';
 import RepoDriverSplitReceiverModel from '../models/RepoDriverSplitReceiverModel';

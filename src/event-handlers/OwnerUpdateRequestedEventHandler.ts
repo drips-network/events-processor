@@ -31,7 +31,6 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
         {
           name,
           accountId: accountId.toString(),
-          rawEvent: JSON.stringify(eventLog),
           logIndex: eventLog.index,
           blockNumber: eventLog.blockNumber,
           blockTimestamp:

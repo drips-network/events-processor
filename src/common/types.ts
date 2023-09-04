@@ -94,7 +94,6 @@ export type EventHandlerConstructor<T extends EventSignature> = {
 };
 
 export interface IEventModel {
-  rawEvent: string;
   logIndex: number;
   blockNumber: number;
   blockTimestamp: Date;

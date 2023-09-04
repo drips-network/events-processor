@@ -32,7 +32,6 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
           logIndex: eventLog.index,
           accountId: accountId.toString(),
           blockNumber: eventLog.blockNumber,
-          rawEvent: JSON.stringify(eventLog),
           blockTimestamp:
             (await eventLog.getBlock()).date ?? shouldNeverHappen(),
           transactionHash: eventLog.transactionHash,
