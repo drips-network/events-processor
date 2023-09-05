@@ -8,7 +8,7 @@ import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
 import sequelizeInstance from '../db/getSequelizeInstance';
 import { logRequestDebug, nameOfType } from '../utils/logRequest';
-import type { Forge, ProjectId } from '../common/types';
+import type { Forge, KnownAny, ProjectId } from '../common/types';
 import { FORGES_MAP } from '../common/constants';
 import getChangedProperties from '../utils/getChangedProperties';
 import { assertRequestId, assertTransaction } from '../utils/assert';
@@ -106,7 +106,7 @@ async function afterCreate(
     >
   >,
 ): Promise<void> {
-  const { transaction, requestId } = options as any; // `as any` to avoid TS complaining about passing in the `requestId`.
+  const { transaction, requestId } = options as KnownAny; // `as any` to avoid TS complaining about passing in the `requestId`.
   assertTransaction(transaction);
   assertRequestId(requestId);
 
@@ -129,7 +129,7 @@ async function afterUpdate(
     >
   >,
 ): Promise<void> {
-  const { transaction, requestId } = options as any; // `as any` to avoid TS complaining about passing in the `requestId`.
+  const { transaction, requestId } = options as KnownAny; // `as any` to avoid TS complaining about passing in the `requestId`.
   assertTransaction(transaction);
   assertRequestId(requestId);
 

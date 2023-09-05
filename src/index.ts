@@ -1,7 +1,7 @@
 import logger from './common/logger';
+import registerServices from './common/registrations';
 import connectToDb from './db/database';
 import processPastEvents from './utils/processPastEvents';
-import registerEventListeners from './utils/registerEventListeners';
 import validateNetworkSettings from './utils/validateConfig';
 
 // ! TODO: the app is designed to run on a ONE node for simplicity, based on the expected data volume.
@@ -10,7 +10,7 @@ import validateNetworkSettings from './utils/validateConfig';
 (async () => {
   try {
     await validateNetworkSettings();
-    await registerEventListeners();
+    registerServices();
     await connectToDb();
     await processPastEvents();
     logger.info('Listening for events...');

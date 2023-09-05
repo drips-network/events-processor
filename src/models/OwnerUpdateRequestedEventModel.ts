@@ -5,7 +5,7 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import { ethers } from 'ethers';
-import type { Forge, IEventModel } from '../common/types';
+import type { Forge, IEventModel, KnownAny } from '../common/types';
 import sequelizeInstance from '../db/getSequelizeInstance';
 import getSchema from '../utils/getSchema';
 import { COMMON_EVENT_INIT_ATTRIBUTES, FORGES_MAP } from '../common/constants';
@@ -75,7 +75,7 @@ async function afterCreate(
     >
   >,
 ): Promise<void> {
-  const { transaction, requestId } = options as any; // `as any` to avoid TS complaining about passing in the `requestId`.
+  const { transaction, requestId } = options as KnownAny; // `as any` to avoid TS complaining about passing in the `requestId`.
   const { name, forge, logIndex, accountId, transactionHash } = instance;
 
   assertTransaction(transaction);

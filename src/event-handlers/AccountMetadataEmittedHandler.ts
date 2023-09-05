@@ -1,5 +1,6 @@
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import type { AccountMetadataEmittedEvent } from '../../contracts/Drips';
+import type { KnownAny } from '../common/types';
 import { HandleRequest } from '../common/types';
 
 import sequelizeInstance from '../db/getSequelizeInstance';
@@ -48,6 +49,6 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       AccountMetadataEmittedEvent.OutputObject
     >
   > = async (_accountId, _key, _value, eventLog) => {
-    await super.executeHandle(new HandleRequest((eventLog as any).log));
+    await super.executeHandle(new HandleRequest((eventLog as KnownAny).log));
   };
 }

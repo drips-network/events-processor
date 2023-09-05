@@ -4,12 +4,11 @@ import type { TypedEventLog } from '../../contracts/common';
 import logger from '../common/logger';
 import { getNetworkSettings } from './getNetworkSettings';
 import { getContractDetails } from './getContract';
-import getEventHandlerByFilterSignature from './getEventHandler';
 import type { DripsEvent, EventSignature } from '../common/types';
 import { HandleRequest } from '../common/types';
-import getEventByFilterSignature from './getEventByFilter';
-import getRegisteredEvents from './getRegisteredEvents';
 import type EventHandlerBase from '../common/EventHandlerBase';
+import { getEventHandler, getRegisteredEvents } from './registerEventHandler';
+import getTypedEvent from './getTypedEvent';
 
 export default async function processPastEvents(): Promise<void> {
   logger.info('Start processing past events. This might take a while...');
@@ -26,8 +25,8 @@ export default async function processPastEvents(): Promise<void> {
     registeredEvents.map(async (filterSignature) => {
       const { contract, name: contractName } =
         await getContractDetails(filterSignature);
-      const event = await getEventByFilterSignature(filterSignature);
-      const handler = getEventHandlerByFilterSignature(filterSignature);
+      const event = await getTypedEvent(filterSignature);
+      const handler = getEventHandler(filterSignature);
 
       let foundLogsOfType = 0;
       let processedLogsOfType = 0;

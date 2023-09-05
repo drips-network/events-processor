@@ -3,6 +3,7 @@ import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
 import sequelizeInstance from '../db/getSequelizeInstance';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
+import type { KnownAny } from '../common/types';
 import { HandleRequest } from '../common/types';
 import { logRequestInfo } from '../utils/logRequest';
 import EventHandlerBase from '../common/EventHandlerBase';
@@ -47,6 +48,6 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       OwnerUpdatedEvent.OutputObject
     >
   > = async (_accountId, _owner, eventLog) => {
-    await super.executeHandle(new HandleRequest((eventLog as any).log));
+    await super.executeHandle(new HandleRequest((eventLog as KnownAny).log));
   };
 }

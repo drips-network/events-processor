@@ -2,11 +2,11 @@ import { Sequelize } from 'sequelize';
 import logger from '../common/logger';
 import { SUPPORTED_NETWORKS } from '../common/constants';
 import sequelizeInstance from './getSequelizeInstance';
-import { MODELS } from '../common/registrations';
 import GitProjectModel from '../models/GitProjectModel';
 import AddressDriverSplitReceiverModel from '../models/AddressDriverSplitReceiverModel';
 import RepoDriverSplitReceiverModel from '../models/RepoDriverSplitReceiverModel';
 import config from './config';
+import { getRegisteredModels } from '../utils/registerModel';
 
 const {
   postgresHost,
@@ -71,7 +71,7 @@ function initializeEntities(): void {
   try {
     logger.info('Initializing database schema...');
 
-    MODELS.forEach(async (Model) => {
+    getRegisteredModels().forEach(async (Model) => {
       Model.initialize();
     });
 

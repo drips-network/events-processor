@@ -6,7 +6,7 @@ import AddressDriverSplitReceiverModel from '../AddressDriverSplitReceiverModel'
 import RepoDriverSplitReceiverModel from '../RepoDriverSplitReceiverModel';
 import { FORGES_MAP } from '../../common/constants';
 import shouldNeverHappen from '../../utils/shouldNeverHappen';
-import type { ProjectId } from '../../common/types';
+import type { KnownAny, ProjectId } from '../../common/types';
 import type { DependencyOfProjectType } from './isDependencyOfProjectType';
 import isDependencyOfProjectType from './isDependencyOfProjectType';
 import GitProjectModel, { ProjectVerificationStatus } from '../GitProjectModel';
@@ -101,7 +101,7 @@ async function createDbEntriesForProjectDependency(
           (f) => f.toLocaleLowerCase() === forge.toLowerCase(),
         ) ?? shouldNeverHappen(),
     },
-  } as any); // `as any` to avoid TS complaining about passing in the `requestId`.
+  } as KnownAny); // `as any` to avoid TS complaining about passing in the `requestId`.
 
   return RepoDriverSplitReceiverModel.create(
     {
@@ -109,6 +109,6 @@ async function createDbEntriesForProjectDependency(
       selfProjectId,
       funderProjectId,
     },
-    { transaction, requestId } as any, // `as any` to avoid TS complaining about passing in the `requestId`.
+    { transaction, requestId } as KnownAny, // `as any` to avoid TS complaining about passing in the `requestId`.
   );
 }

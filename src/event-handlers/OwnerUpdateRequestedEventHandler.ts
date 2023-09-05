@@ -5,6 +5,7 @@ import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import sequelizeInstance from '../db/getSequelizeInstance';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
 import { logRequestInfo } from '../utils/logRequest';
+import type { KnownAny } from '../common/types';
 import { HandleRequest } from '../common/types';
 import EventHandlerBase from '../common/EventHandlerBase';
 import { FORGES_MAP } from '../common/constants';
@@ -54,6 +55,6 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
     // It should be of `TypedEventLog<TypedContractEvent<...>>`, which TS infers by default.
     // When fixed, we won't need to pass event.log to `executeHandle`.
   > = async (_accountId, _forge, _name, eventLog) => {
-    await super.executeHandle(new HandleRequest((eventLog as any).log));
+    await super.executeHandle(new HandleRequest((eventLog as KnownAny).log));
   };
 }

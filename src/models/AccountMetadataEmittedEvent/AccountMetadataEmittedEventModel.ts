@@ -9,7 +9,7 @@ import {
   COMMON_EVENT_INIT_ATTRIBUTES,
   USER_METADATA_KEY,
 } from '../../common/constants';
-import type { IEventModel } from '../../common/types';
+import type { IEventModel, KnownAny } from '../../common/types';
 import getSchema from '../../utils/getSchema';
 import sequelizeInstance from '../../db/getSequelizeInstance';
 import { logRequestDebug, nameOfType } from '../../utils/logRequest';
@@ -79,7 +79,7 @@ async function afterCreate(
     >
   >,
 ): Promise<void> {
-  const { transaction, requestId } = options as any; // `as any` to avoid TS complaining about passing in the `requestId`.
+  const { transaction, requestId } = options as KnownAny; // `as any` to avoid TS complaining about passing in the `requestId`.
   const { transactionHash, logIndex, accountId, value } = instance;
 
   assertTransaction(transaction);
@@ -111,7 +111,7 @@ async function afterCreate(
       {
         transaction,
         requestId,
-      } as any, // `as any` to avoid TS complaining about passing in the `requestId`.
+      } as KnownAny, // `as any` to avoid TS complaining about passing in the `requestId`.
     );
 
     await createDbEntriesForProjectSplits(

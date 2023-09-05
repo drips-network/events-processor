@@ -1,8 +1,6 @@
-import {
-  OwnerUpdateRequestedEventHandler,
-  OwnerUpdatedEventHandler,
-} from '../event-handlers';
+import { OwnerUpdateRequestedEventHandler } from '../event-handlers';
 import AccountMetadataEmittedEventHandler from '../event-handlers/AccountMetadataEmittedHandler';
+import OwnerUpdatedEventHandler from '../event-handlers/OwnerUpdatedEventHandler';
 import {
   AccountMetadataEmittedEventModel,
   AddressDriverSplitReceiverModel,
@@ -11,28 +9,48 @@ import {
   OwnerUpdatedEventModel,
   RepoDriverSplitReceiverModel,
 } from '../models';
-import type {
-  EventHandlerConstructor,
-  EventSignature,
-  ModelStaticMembers,
-} from './types';
+import {
+  getEventHandler,
+  getRegisteredEvents,
+  registerEventHandler,
+} from '../utils/registerEventHandler';
+import { registerModel } from '../utils/registerModel';
 
 // Register event handlers here.
-export const EVENT_HANDLERS: Partial<{
-  [T in EventSignature]: EventHandlerConstructor<T>;
-}> = {
-  'AccountMetadataEmitted(uint256,bytes32,bytes)':
+function registerEventHandlers(): void {
+  registerEventHandler(
+    'OwnerUpdateRequested(uint256,uint8,bytes)',
+    OwnerUpdateRequestedEventHandler,
+  );
+  registerEventHandler(
+    'OwnerUpdated(uint256,address)',
+    OwnerUpdatedEventHandler,
+  );
+  registerEventHandler(
+    'AccountMetadataEmitted(uint256,bytes32,bytes)',
     AccountMetadataEmittedEventHandler,
-  'OwnerUpdated(uint256,address)': OwnerUpdatedEventHandler,
-  'OwnerUpdateRequested(uint256,uint8,bytes)': OwnerUpdateRequestedEventHandler,
-} as const;
+  );
+}
 
 // Register models here.
-export const MODELS: ModelStaticMembers[] = [
-  GitProjectModel,
-  OwnerUpdatedEventModel,
-  RepoDriverSplitReceiverModel,
-  OwnerUpdateRequestedEventModel,
-  AddressDriverSplitReceiverModel,
-  AccountMetadataEmittedEventModel,
-];
+function registerModels(): void {
+  registerModel(GitProjectModel);
+  registerModel(OwnerUpdatedEventModel);
+  registerModel(RepoDriverSplitReceiverModel);
+  registerModel(OwnerUpdateRequestedEventModel);
+  registerModel(AddressDriverSplitReceiverModel);
+  registerModel(AccountMetadataEmittedEventModel);
+}
+
+// Event listeners registration.
+async function registerEventListeners(): Promise<void> {
+  getRegisteredEvents().forEach(async (filterSignature) =>
+    getEventHandler(filterSignature).registerEventListener(),
+  );
+}
+
+export default function registerServices() {
+  registerEventHandlers();
+  registerModels();
+  registerEventListeners();
+}

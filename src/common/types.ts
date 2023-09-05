@@ -13,6 +13,7 @@ import type EventHandlerBase from './EventHandlerBase';
 
 export type IpfsHash = string & { __brand: 'IpfsHash' };
 export type ProjectId = string & { __brand: 'ProjectId' };
+export type KnownAny = any;
 
 export type ValuesOf<T> = T[keyof T];
 

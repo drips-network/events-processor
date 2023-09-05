@@ -6,7 +6,7 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
-import type { IEventModel } from '../common/types';
+import type { IEventModel, KnownAny } from '../common/types';
 import getSchema from '../utils/getSchema';
 import sequelizeInstance from '../db/getSequelizeInstance';
 import { logRequestDebug, nameOfType } from '../utils/logRequest';
@@ -67,7 +67,7 @@ async function afterCreate(
     >
   >,
 ): Promise<void> {
-  const { transaction, requestId } = options as any; // `as any` to avoid TS complaining about passing in the `requestId`.
+  const { transaction, requestId } = options as KnownAny; // `as any` to avoid TS complaining about passing in the `requestId`.
   const { owner, logIndex, accountId: projectId, transactionHash } = instance;
 
   assertTransaction(transaction);
@@ -88,7 +88,7 @@ async function afterCreate(
         owner,
         verificationStatus: ProjectVerificationStatus.OwnerUpdated,
       },
-      { transaction, requestId } as any, // `as any` to avoid TS complaining about passing in the `requestId`.
+      { transaction, requestId } as KnownAny, // `as any` to avoid TS complaining about passing in the `requestId`.
     );
   }
 }
