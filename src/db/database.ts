@@ -1,7 +1,7 @@
 import { Sequelize } from 'sequelize';
+import sequelizeInstance from './getSequelizeInstance';
 import logger from '../common/logger';
 import { SUPPORTED_NETWORKS } from '../common/constants';
-import sequelizeInstance from './getSequelizeInstance';
 import GitProjectModel from '../models/GitProjectModel';
 import AddressDriverSplitReceiverModel from '../models/AddressDriverSplitReceiverModel';
 import RepoDriverSplitReceiverModel from '../models/RepoDriverSplitReceiverModel';
@@ -22,6 +22,7 @@ export default async function connectToDb(): Promise<void> {
   await authenticate();
   initializeEntities();
   defineAssociations();
+
   await sequelizeInstance.sync();
 
   logger.info('Database initialized.');

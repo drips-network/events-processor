@@ -6,7 +6,7 @@ import sequelizeInstance from '../db/getSequelizeInstance';
 import { logRequestInfo } from '../utils/logRequest';
 import EventHandlerBase from '../common/EventHandlerBase';
 import AccountMetadataEmittedEventModel from '../models/AccountMetadataEmittedEvent/AccountMetadataEmittedEventModel';
-import saveEventProcessingJob from '../common/jobQueue';
+import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignature =

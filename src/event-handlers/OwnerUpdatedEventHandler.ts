@@ -5,7 +5,7 @@ import sequelizeInstance from '../db/getSequelizeInstance';
 import type { KnownAny, HandleContext } from '../common/types';
 import { logRequestInfo } from '../utils/logRequest';
 import EventHandlerBase from '../common/EventHandlerBase';
-import saveEventProcessingJob from '../common/jobQueue';
+import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
   public readonly eventSignature = 'OwnerUpdated(uint256,address)' as const;

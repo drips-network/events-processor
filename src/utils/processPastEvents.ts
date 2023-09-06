@@ -3,7 +3,7 @@ import { getContractDetails } from './getContract';
 import getTypedEvent from './getTypedEvent';
 import { getNetworkSettings } from './getNetworkSettings';
 import logger from '../common/logger';
-import saveEventProcessingJob from '../common/jobQueue';
+import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 
 export default async function processPastEvents(): Promise<void> {
   logger.info('Start processing past events. This might take a while...');

@@ -11,6 +11,14 @@ export function assertTransaction(
   }
 }
 
+export function assertUUID(uuid: string): asserts uuid is UUID {
+  const regex =
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+  if (!regex.test(uuid)) {
+    throw new Error('Not a valid UUID');
+  }
+}
+
 export function assertRequestId(requestId: string): asserts requestId is UUID {
   const uuidRegExp =
     /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;

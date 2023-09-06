@@ -6,6 +6,7 @@ import type {
 import type { getDrips, getRepoDriver } from './getContract';
 
 // TODO: refactor and add support for other contracts.
+// TODO:  const s = eventLog.interface.hasEvent('OwnerUpdated(uint256,address)');
 export function isDripsEvent(
   event: EventSignature,
   drips: typeof getDrips extends (...args: any[]) => Promise<infer T>

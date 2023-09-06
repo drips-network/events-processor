@@ -7,7 +7,7 @@ import { logRequestInfo } from '../utils/logRequest';
 import type { KnownAny, HandleContext } from '../common/types';
 import EventHandlerBase from '../common/EventHandlerBase';
 import { FORGES_MAP } from '../common/constants';
-import saveEventProcessingJob from '../common/jobQueue';
+import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 
 export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'OwnerUpdateRequested(uint256,uint8,bytes)'> {
   public readonly eventSignature =
