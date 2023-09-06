@@ -14,11 +14,10 @@ import getSchema from '../../utils/getSchema';
 import sequelizeInstance from '../../db/getSequelizeInstance';
 import { logRequestDebug, nameOfType } from '../../utils/logRequest';
 import createDbEntriesForProjectSplits from './createDbEntriesForProjectSplits';
-import retryFindProject from '../../utils/retryFindProject';
 import getProjectMetadata from './getProjectMetadata';
 import isProjectId from './isProjectId';
 import validateProjectMetadata from './validateProjectMetadata';
-import { ProjectVerificationStatus } from '../GitProjectModel';
+import GitProjectModel from '../GitProjectModel';
 import { assertRequestId, assertTransaction } from '../../utils/assert';
 
 export default class AccountMetadataEmittedEventModel
@@ -80,7 +79,7 @@ async function afterCreate(
   >,
 ): Promise<void> {
   const { transaction, requestId } = options as KnownAny; // `as any` to avoid TS complaining about passing in the `requestId`.
-  const { transactionHash, logIndex, accountId, value } = instance;
+  const { transactionHash, logIndex, accountId: projectId, value } = instance;
 
   assertTransaction(transaction);
   assertRequestId(requestId);
@@ -92,31 +91,37 @@ async function afterCreate(
     requestId,
   );
 
-  if (isProjectId(accountId) && (await isLatestEvent(instance, transaction))) {
-    const project = await retryFindProject(accountId, transaction, requestId);
+  if (isProjectId(projectId) && (await isLatestEvent(instance, transaction))) {
+    const project = await GitProjectModel.findByPk(projectId, {
+      transaction,
+      lock: true,
+    });
 
-    const metadata = await getProjectMetadata(accountId, value);
+    if (!project) {
+      const errorMessage = `Git project with ID ${projectId} was not found, but it was expected to exist. The event that should have created the project may not have been processed yet.`;
+
+      logRequestDebug(errorMessage, requestId);
+      throw new Error(errorMessage);
+    }
+
+    const metadata = await getProjectMetadata(projectId, value);
 
     validateProjectMetadata(project, metadata);
 
-    await project.update(
-      {
-        color: metadata.color,
-        emoji: metadata.emoji,
-        url: metadata.source.url,
-        description: metadata.description,
-        ownerName: metadata.source.ownerName,
-        verificationStatus: ProjectVerificationStatus.Claimed,
-      },
-      {
-        transaction,
-        requestId,
-      } as KnownAny, // `as any` to avoid TS complaining about passing in the `requestId`.
-    );
+    const { color, emoji, source, splits, description } = metadata;
+
+    project.color = color;
+    project.emoji = emoji;
+    project.url = source.url;
+    project.ownerName = source.ownerName;
+    project.description = description ?? null;
+    project.verificationStatus = GitProjectModel.calculateStatus(project);
+
+    await project.save({ transaction, requestId } as KnownAny); // `as any` to avoid TS complaining about passing in the `requestId`.
 
     await createDbEntriesForProjectSplits(
       project.id,
-      metadata.splits,
+      splits,
       requestId,
       transaction,
     );

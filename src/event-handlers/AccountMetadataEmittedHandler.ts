@@ -1,25 +1,26 @@
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import type { AccountMetadataEmittedEvent } from '../../contracts/Drips';
-import type { KnownAny } from '../common/types';
-import { HandleRequest } from '../common/types';
+import type { KnownAny, HandleContext } from '../common/types';
 
 import sequelizeInstance from '../db/getSequelizeInstance';
-import shouldNeverHappen from '../utils/shouldNeverHappen';
 import { logRequestInfo } from '../utils/logRequest';
 import EventHandlerBase from '../common/EventHandlerBase';
 import AccountMetadataEmittedEventModel from '../models/AccountMetadataEmittedEvent/AccountMetadataEmittedEventModel';
+import saveEventProcessingJob from '../common/jobQueue';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignature =
     'AccountMetadataEmitted(uint256,bytes32,bytes)' as const;
 
   protected async _handle(
-    request: HandleRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
+    request: HandleContext<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
   ): Promise<void> {
     await sequelizeInstance.transaction(async (transaction) => {
-      const { eventLog, id: requestId } = request;
-      const { accountId, key, value } =
-        eventLog.args as AccountMetadataEmittedEvent.OutputObject;
+      const { event, id: requestId } = request;
+      const { args, logIndex, blockNumber, blockTimestamp, transactionHash } =
+        event;
+      const [accountId, key, value] =
+        args as AccountMetadataEmittedEvent.OutputTuple;
 
       logRequestInfo(
         `Event args: accountId ${accountId}, key ${key}, value ${value}}.`,
@@ -30,12 +31,11 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         {
           key,
           value,
-          logIndex: eventLog.index,
+          logIndex,
+          blockNumber,
+          blockTimestamp,
+          transactionHash,
           accountId: accountId.toString(),
-          blockNumber: eventLog.blockNumber,
-          blockTimestamp:
-            (await eventLog.getBlock()).date ?? shouldNeverHappen(),
-          transactionHash: eventLog.transactionHash,
         },
         { transaction, requestId },
       );
@@ -49,6 +49,9 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       AccountMetadataEmittedEvent.OutputObject
     >
   > = async (_accountId, _key, _value, eventLog) => {
-    await super.executeHandle(new HandleRequest((eventLog as KnownAny).log));
+    await saveEventProcessingJob(
+      (eventLog as KnownAny).log,
+      this.eventSignature,
+    );
   };
 }

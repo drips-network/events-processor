@@ -14,10 +14,11 @@ import getChangedProperties from '../utils/getChangedProperties';
 import { assertRequestId, assertTransaction } from '../utils/assert';
 
 export enum ProjectVerificationStatus {
-  Unclaimed = 'Unclaimed',
-  OwnerUpdateRequested = 'OwnerUpdateRequested',
-  OwnerUpdated = 'OwnerUpdated',
   Claimed = 'Claimed',
+  Started = 'Started',
+  Unclaimed = 'Unclaimed',
+  PendingOwner = 'PendingOwner',
+  PendingMetadata = 'PendingMetadata',
 }
 
 export default class GitProjectModel extends Model<
@@ -37,6 +38,58 @@ export default class GitProjectModel extends Model<
   public declare ownerName: string | null;
   public declare description: string | null;
   public declare verificationStatus: ProjectVerificationStatus;
+
+  public static calculateStatus(
+    project: GitProjectModel,
+  ): ProjectVerificationStatus {
+    if (
+      project.owner === null &&
+      !project.url &&
+      !project.emoji &&
+      !project.color &&
+      !project.ownerName
+    ) {
+      return ProjectVerificationStatus.Unclaimed;
+    }
+
+    if (
+      project.owner &&
+      project.url &&
+      project.emoji &&
+      project.color &&
+      project.ownerName
+    ) {
+      return ProjectVerificationStatus.Claimed;
+    }
+
+    if (
+      project.owner &&
+      !project.url &&
+      !project.emoji &&
+      !project.color &&
+      !project.ownerName
+    ) {
+      return ProjectVerificationStatus.PendingMetadata;
+    }
+
+    if (
+      project.owner === null &&
+      project.url &&
+      project.emoji &&
+      project.color &&
+      project.ownerName
+    ) {
+      return ProjectVerificationStatus.PendingOwner;
+    }
+
+    throw new Error(
+      `Unexpected Git project verification status for project ${JSON.stringify(
+        project,
+        null,
+        2,
+      )}.`,
+    );
+  }
 
   public static initialize(): void {
     this.init(

@@ -10,8 +10,7 @@ import type { IEventModel, KnownAny } from '../common/types';
 import getSchema from '../utils/getSchema';
 import sequelizeInstance from '../db/getSequelizeInstance';
 import { logRequestDebug, nameOfType } from '../utils/logRequest';
-import { ProjectVerificationStatus } from './GitProjectModel';
-import retryFindProject from '../utils/retryFindProject';
+import GitProjectModel from './GitProjectModel';
 import { assertRequestId, assertTransaction } from '../utils/assert';
 
 export default class OwnerUpdatedEventModel
@@ -81,15 +80,22 @@ async function afterCreate(
   );
 
   if (await isLatestEvent(instance, transaction)) {
-    const project = await retryFindProject(projectId, transaction, requestId);
+    const project = await GitProjectModel.findByPk(projectId, {
+      transaction,
+      lock: true,
+    });
 
-    await project.update(
-      {
-        owner,
-        verificationStatus: ProjectVerificationStatus.OwnerUpdated,
-      },
-      { transaction, requestId } as KnownAny, // `as any` to avoid TS complaining about passing in the `requestId`.
-    );
+    if (!project) {
+      const errorMessage = `Git project with ID ${projectId} was not found, but it was expected to exist. The event that should have created the project may not have been processed yet.`;
+
+      logRequestDebug(errorMessage, requestId);
+      throw new Error(errorMessage);
+    }
+
+    project.owner = owner;
+    project.verificationStatus = GitProjectModel.calculateStatus(project);
+
+    await project.save({ transaction, requestId } as KnownAny); // `as any` to avoid TS complaining about passing in the `requestId`.
   }
 }
 

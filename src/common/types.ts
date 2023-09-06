@@ -8,12 +8,15 @@ import type {
   FORGES_MAP,
   SUPPORTED_NETWORKS,
 } from './constants';
-import type { TypedEventLog } from '../../contracts/common';
+import type {
+  TypedContractEvent,
+  TypedLogDescription,
+} from '../../contracts/common';
 import type EventHandlerBase from './EventHandlerBase';
 
+export type KnownAny = any;
 export type IpfsHash = string & { __brand: 'IpfsHash' };
 export type ProjectId = string & { __brand: 'ProjectId' };
-export type KnownAny = any;
 
 export type ValuesOf<T> = T[keyof T];
 
@@ -76,12 +79,32 @@ export type EventSignatureToEventMap = {
 
 export type DripsEvent = ValuesOf<EventSignatureToEventMap>;
 
-export class HandleRequest<T extends EventSignature> {
-  public readonly id: UUID = randomUUID();
-  public readonly eventLog: TypedEventLog<EventSignatureToEventMap[T]>;
+export type ExtractOutputObject<T> = T extends TypedContractEvent<
+  any,
+  infer TOutputTuple,
+  any
+>
+  ? TOutputTuple
+  : never;
 
-  constructor(eventLog: TypedEventLog<EventSignatureToEventMap[T]>) {
-    this.eventLog = eventLog;
+export type EventArgs<T extends DripsEvent> = TypedLogDescription<T>['args'];
+
+export type EventData<T extends EventSignature> = {
+  logIndex: number;
+  eventSignature: T;
+  blockNumber: number;
+  blockTimestamp: Date;
+  transactionHash: string;
+  args: EventArgs<EventSignatureToEventMap[T]>;
+};
+
+export class HandleContext<T extends EventSignature> {
+  public readonly id: UUID;
+  public readonly event: EventData<T>;
+
+  constructor(event: EventData<T>, id: UUID = randomUUID()) {
+    this.id = id;
+    this.event = event;
   }
 }
 

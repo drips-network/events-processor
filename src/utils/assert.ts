@@ -1,7 +1,7 @@
 import type { UUID } from 'crypto';
 import type { Transaction } from 'sequelize';
 import isProjectId from '../models/AccountMetadataEmittedEvent/isProjectId';
-import type { ProjectId } from '../common/types';
+import type { EventSignature, ProjectId } from '../common/types';
 
 export function assertTransaction(
   transaction: Transaction | null | undefined,
@@ -22,5 +22,16 @@ export function assertRequestId(requestId: string): asserts requestId is UUID {
 export function assertProjectId(id: string): asserts id is ProjectId {
   if (!isProjectId(id)) {
     throw new Error(`Project ID ${id} is not a valid ProjectId.`);
+  }
+}
+
+export function assertEventSignature<T extends EventSignature>(
+  eventSignature: string,
+  expectedEventSignature: EventSignature,
+): asserts eventSignature is T {
+  if (eventSignature !== expectedEventSignature) {
+    throw new Error(
+      `Event signature ${eventSignature} does not match expected event signature ${expectedEventSignature}.`,
+    );
   }
 }

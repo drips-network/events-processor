@@ -1,14 +1,13 @@
 import type { TypedListener } from '../../contracts/common';
 import { getContractDetails } from '../utils/getContract';
 import getResult from '../utils/getResult';
-import { logRequestError, logRequestInfo } from '../utils/logRequest';
-import { isRetryError } from '../utils/retryOperation';
+import { logRequestInfo } from '../utils/logRequest';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
 import type {
   Result,
   EventSignature,
   EventSignatureToEventMap,
-  HandleRequest,
+  HandleContext,
   DripsContractEvent,
   RepoDriverContractEvent,
   DripsEventSignature,
@@ -18,7 +17,7 @@ import type {
 export default abstract class EventHandlerBase<T extends EventSignature> {
   public readonly name = Object.getPrototypeOf(this).constructor.name;
 
-  protected abstract readonly eventSignature: T;
+  public abstract readonly eventSignature: T;
 
   /**
    * The callback function that will be called when the event is received.
@@ -34,35 +33,25 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
    *
    * Usually, you'd call {@link executeHandle} from the {@link onReceive} to process the event.
    */
-  protected abstract _handle(request: HandleRequest<T>): Promise<void>;
+  protected abstract _handle(request: HandleContext<T>): Promise<void>;
 
   /**
    * Executes the handler.
    */
-  public async executeHandle(request: HandleRequest<T>): Promise<Result<void>> {
+  public async executeHandle(request: HandleContext<T>): Promise<Result<void>> {
     const {
-      id: requestId,
-      eventLog: { eventName, transactionHash, index, blockNumber },
+      event: { eventSignature, transactionHash, logIndex, blockNumber },
     } = request;
 
     logRequestInfo(
-      `${this.name} is processing ${eventName} event with transaction hash ${transactionHash}, block number ${blockNumber} and log index ${index}.`,
+      `${this.name} is processing ${eventSignature} event with transaction hash ${transactionHash}, block number ${blockNumber} and log index ${logIndex}.`,
       request.id,
     );
 
     const result = await getResult(this._handle.bind(this))(request);
 
-    if (result.ok) {
-      logRequestInfo(`Successfully processed event.`, request.id);
-    } else {
-      logRequestError(
-        `Failed to process event with error '${
-          isRetryError(result.error)
-            ? JSON.stringify(result.error)
-            : result.error
-        }'.`,
-        requestId,
-      );
+    if (!result.ok) {
+      throw result.error;
     }
 
     return result;

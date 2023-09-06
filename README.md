@@ -22,9 +22,11 @@ docker-compose up
 
 This will spin up:
 
-1. **Postgres**: the (PostgreSQL) database for the application.
+1. **Postgres**: the database for the application.
 
 2. **pgAdmin**: the GUI for managing the PostgreSQL database.
+
+3. **Redis**: the database for storing processing jobs (required for `BeeQueue`).
 
 ## 🔌 Connecting to pgAdmin
 

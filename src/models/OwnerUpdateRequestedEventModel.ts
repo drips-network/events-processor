@@ -94,7 +94,7 @@ async function afterCreate(
       forge,
       id: accountId,
       name: ethers.toUtf8String(name),
-      verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
+      verificationStatus: ProjectVerificationStatus.Started,
     },
     { transaction, requestId },
   );

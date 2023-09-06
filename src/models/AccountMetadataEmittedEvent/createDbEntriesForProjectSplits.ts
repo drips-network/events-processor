@@ -34,7 +34,7 @@ export default async function createDbEntriesForProjectSplits(
 
   const dependencyPromises = dependencies.map(async (dependency) => {
     if (isDependencyOfProjectType(dependency)) {
-      await createDbEntriesForProjectDependency(
+      return createDbEntriesForProjectDependency(
         funderProjectId,
         dependency,
         transaction,

@@ -2,21 +2,22 @@ import type { OwnerUpdatedEvent } from '../../contracts/RepoDriver';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
 import sequelizeInstance from '../db/getSequelizeInstance';
-import shouldNeverHappen from '../utils/shouldNeverHappen';
-import type { KnownAny } from '../common/types';
-import { HandleRequest } from '../common/types';
+import type { KnownAny, HandleContext } from '../common/types';
 import { logRequestInfo } from '../utils/logRequest';
 import EventHandlerBase from '../common/EventHandlerBase';
+import saveEventProcessingJob from '../common/jobQueue';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
-  protected readonly eventSignature = 'OwnerUpdated(uint256,address)' as const;
+  public readonly eventSignature = 'OwnerUpdated(uint256,address)' as const;
 
   protected async _handle(
-    request: HandleRequest<'OwnerUpdated(uint256,address)'>,
+    request: HandleContext<'OwnerUpdated(uint256,address)'>,
   ): Promise<void> {
     await sequelizeInstance.transaction(async (transaction) => {
-      const { eventLog, id: requestId } = request;
-      const { accountId, owner } = eventLog.args;
+      const { event, id: requestId } = request;
+      const { args, logIndex, blockNumber, blockTimestamp, transactionHash } =
+        event;
+      const [accountId, owner] = args as OwnerUpdatedEvent.OutputTuple;
 
       logRequestInfo(
         `Event args: accountId ${accountId}, owner ${owner}.`,
@@ -26,12 +27,11 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       await OwnerUpdatedEventModel.create(
         {
           owner,
-          logIndex: eventLog.index,
+          logIndex,
+          blockNumber,
+          blockTimestamp,
+          transactionHash,
           accountId: accountId.toString(),
-          blockNumber: eventLog.blockNumber,
-          blockTimestamp:
-            (await eventLog.getBlock()).date ?? shouldNeverHappen(),
-          transactionHash: eventLog.transactionHash,
         },
         {
           transaction,
@@ -48,6 +48,9 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       OwnerUpdatedEvent.OutputObject
     >
   > = async (_accountId, _owner, eventLog) => {
-    await super.executeHandle(new HandleRequest((eventLog as KnownAny).log));
+    await saveEventProcessingJob(
+      (eventLog as KnownAny).log,
+      this.eventSignature,
+    );
   };
 }
