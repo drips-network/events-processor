@@ -9,6 +9,11 @@ import sequelizeInstance from '../db/getSequelizeInstance';
 import GitProjectModel from './GitProjectModel';
 import type { ProjectId } from '../common/types';
 
+export enum AddressDriverSplitReceiverType {
+  Maintainer = 'Maintainer',
+  Dependency = 'Dependency',
+}
+
 export default class AddressDriverSplitReceiverModel extends Model<
   InferAttributes<AddressDriverSplitReceiverModel>,
   InferCreationAttributes<AddressDriverSplitReceiverModel>
@@ -18,6 +23,7 @@ export default class AddressDriverSplitReceiverModel extends Model<
 
   public declare weight: number;
   public declare accountId: string;
+  public declare type: AddressDriverSplitReceiverType;
 
   public static initialize(): void {
     this.init(
@@ -42,6 +48,12 @@ export default class AddressDriverSplitReceiverModel extends Model<
         },
         accountId: {
           type: DataTypes.STRING,
+          allowNull: true,
+        },
+        type: {
+          type: DataTypes.ENUM(
+            ...Object.values(AddressDriverSplitReceiverType),
+          ),
           allowNull: true,
         },
       },

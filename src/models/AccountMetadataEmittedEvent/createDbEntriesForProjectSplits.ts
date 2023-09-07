@@ -2,7 +2,9 @@ import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { UUID } from 'crypto';
 import type { repoDriverAccountMetadataParser } from '../../metadata/schemas';
-import AddressDriverSplitReceiverModel from '../AddressDriverSplitReceiverModel';
+import AddressDriverSplitReceiverModel, {
+  AddressDriverSplitReceiverType,
+} from '../AddressDriverSplitReceiverModel';
 import RepoDriverSplitReceiverModel from '../RepoDriverSplitReceiverModel';
 import { FORGES_MAP } from '../../common/constants';
 import shouldNeverHappen from '../../utils/shouldNeverHappen';
@@ -27,6 +29,7 @@ export default async function createDbEntriesForProjectSplits(
         funderProjectId,
         weight: maintainer.weight,
         accountId: maintainer.accountId,
+        type: AddressDriverSplitReceiverType.Maintainer,
       },
       { transaction, requestId },
     ),
@@ -47,6 +50,7 @@ export default async function createDbEntriesForProjectSplits(
         funderProjectId,
         weight: dependency.weight,
         accountId: dependency.accountId,
+        type: AddressDriverSplitReceiverType.Dependency,
       },
       { transaction, requestId },
     );
