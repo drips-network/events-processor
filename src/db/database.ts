@@ -73,7 +73,7 @@ function initializeEntities(): void {
     logger.info('Initializing database schema...');
 
     getRegisteredModels().forEach(async (Model) => {
-      Model.initialize();
+      Model.initialize(sequelizeInstance);
     });
 
     logger.info('Database schema initialized.');

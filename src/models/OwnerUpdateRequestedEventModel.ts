@@ -2,11 +2,11 @@ import type {
   InferAttributes,
   InferCreationAttributes,
   InstanceUpdateOptions,
+  Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import { ethers } from 'ethers';
 import type { Forge, IEventModel, KnownAny } from '../common/types';
-import sequelizeInstance from '../db/getSequelizeInstance';
 import getSchema from '../utils/getSchema';
 import { COMMON_EVENT_INIT_ATTRIBUTES, FORGES_MAP } from '../common/constants';
 import { logRequestDebug, nameOfType } from '../utils/logRequest';
@@ -35,7 +35,7 @@ export default class OwnerUpdateRequestedEventModel
   public declare blockTimestamp: Date;
   public declare transactionHash: string;
 
-  public static initialize(): void {
+  public static initialize(sequelize: Sequelize): void {
     this.init(
       {
         name: {
@@ -53,8 +53,8 @@ export default class OwnerUpdateRequestedEventModel
         ...COMMON_EVENT_INIT_ATTRIBUTES,
       },
       {
+        sequelize,
         schema: getSchema(),
-        sequelize: sequelizeInstance,
         tableName: 'OwnerUpdateRequestedEvents',
         hooks: {
           afterCreate,

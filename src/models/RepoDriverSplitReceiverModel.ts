@@ -2,10 +2,10 @@ import type {
   CreationOptional,
   InferAttributes,
   InferCreationAttributes,
+  Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
-import sequelizeInstance from '../db/getSequelizeInstance';
 import GitProjectModel from './GitProjectModel';
 import type { ProjectId } from '../common/types';
 
@@ -20,7 +20,7 @@ export default class RepoDriverSplitReceiverModel extends Model<
 
   public declare weight: number;
 
-  public static initialize(): void {
+  public static initialize(sequelize: Sequelize): void {
     this.init(
       {
         id: {
@@ -52,9 +52,9 @@ export default class RepoDriverSplitReceiverModel extends Model<
         },
       },
       {
+        sequelize,
         schema: getSchema(),
         tableName: 'RepoDriverSplitReceivers',
-        sequelize: sequelizeInstance,
       },
     );
   }

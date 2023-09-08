@@ -2,10 +2,10 @@ import type {
   CreationOptional,
   InferAttributes,
   InferCreationAttributes,
+  Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
-import sequelizeInstance from '../db/getSequelizeInstance';
 import GitProjectModel from './GitProjectModel';
 import type { ProjectId } from '../common/types';
 
@@ -25,7 +25,7 @@ export default class AddressDriverSplitReceiverModel extends Model<
   public declare accountId: string;
   public declare type: AddressDriverSplitReceiverType;
 
-  public static initialize(): void {
+  public static initialize(sequelize: Sequelize): void {
     this.init(
       {
         id: {
@@ -58,9 +58,9 @@ export default class AddressDriverSplitReceiverModel extends Model<
         },
       },
       {
+        sequelize,
         schema: getSchema(),
         tableName: 'AddressDriverSplitReceivers',
-        sequelize: sequelizeInstance,
       },
     );
   }

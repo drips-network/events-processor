@@ -2,6 +2,7 @@ import type {
   CreateOptions,
   InferAttributes,
   InferCreationAttributes,
+  Sequelize,
   Transaction,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
@@ -11,7 +12,6 @@ import {
 } from '../../common/constants';
 import type { IEventModel, KnownAny } from '../../common/types';
 import getSchema from '../../utils/getSchema';
-import sequelizeInstance from '../../db/getSequelizeInstance';
 import { logRequestDebug, nameOfType } from '../../utils/logRequest';
 import createDbEntriesForProjectSplits from './createDbEntriesForProjectSplits';
 import getProjectMetadata from './getProjectMetadata';
@@ -38,7 +38,7 @@ export default class AccountMetadataEmittedEventModel
   public declare blockTimestamp: Date;
   public declare transactionHash: string;
 
-  public static initialize(): void {
+  public static initialize(sequelize: Sequelize): void {
     this.init(
       {
         key: {
@@ -56,8 +56,8 @@ export default class AccountMetadataEmittedEventModel
         ...COMMON_EVENT_INIT_ATTRIBUTES,
       },
       {
+        sequelize,
         schema: getSchema(),
-        sequelize: sequelizeInstance,
         tableName: 'AccountMetadataEmittedEvents',
         hooks: {
           afterCreate,

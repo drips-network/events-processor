@@ -2,11 +2,11 @@ import type {
   InferAttributes,
   InferCreationAttributes,
   InstanceUpdateOptions,
+  Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
-import sequelizeInstance from '../db/getSequelizeInstance';
 import { logRequestDebug, nameOfType } from '../utils/logRequest';
 import type { Forge, KnownAny, ProjectId } from '../common/types';
 import { FORGES_MAP } from '../common/constants';
@@ -91,7 +91,7 @@ export default class GitProjectModel extends Model<
     );
   }
 
-  public static initialize(): void {
+  public static initialize(sequelize: Sequelize): void {
     this.init(
       {
         id: {
@@ -136,9 +136,9 @@ export default class GitProjectModel extends Model<
         },
       },
       {
+        sequelize,
         schema: getSchema(),
         tableName: 'GitProjects',
-        sequelize: sequelizeInstance,
         hooks: {
           afterCreate,
           afterUpdate,

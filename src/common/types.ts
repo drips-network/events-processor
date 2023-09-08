@@ -1,4 +1,4 @@
-import type { Model } from 'sequelize';
+import type { Model, Sequelize } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import type { UUID } from 'crypto';
 import { randomUUID } from 'crypto';
@@ -110,7 +110,7 @@ export class HandleContext<T extends EventSignature> {
 
 export type ModelStaticMembers = {
   new (): Model;
-  initialize(): void;
+  initialize(sequelize: Sequelize): void;
 };
 
 export type EventHandlerConstructor<T extends EventSignature> = {
