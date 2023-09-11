@@ -2,7 +2,7 @@ import type { Model, Sequelize } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import type { UUID } from 'crypto';
 import { randomUUID } from 'crypto';
-import type { Drips, RepoDriver } from '../../contracts';
+import type { Drips, NftDriver, RepoDriver } from '../../contracts';
 import type {
   DRIPS_CONTRACT_NAMES,
   FORGES_MAP,
@@ -17,6 +17,8 @@ import type EventHandlerBase from './EventHandlerBase';
 export type KnownAny = any;
 export type IpfsHash = string & { __brand: 'IpfsHash' };
 export type ProjectId = string & { __brand: 'ProjectId' };
+export type NftDriverAccountId = string & { __brand: 'NftDriverAccountId' };
+export type DripListId = NftDriverAccountId;
 
 export type ValuesOf<T> = T[keyof T];
 
@@ -47,10 +49,16 @@ export type ChainConfig = {
 
 // ! DO NOT EXPORT THESE. It will fail in runtime. This is a hack to get the filter types.
 const _dripsFilters = ({} as Drips).filters;
+const _nftDriverFilters = ({} as NftDriver).filters;
 const _repoDriverFilters = ({} as RepoDriver).filters;
-const _allFilters = { ..._dripsFilters, ..._repoDriverFilters };
+const _allFilters = {
+  ..._dripsFilters,
+  ..._nftDriverFilters,
+  ..._repoDriverFilters,
+};
 
 export type DripsContractEvent = ValuesOf<typeof _dripsFilters>;
+export type NftDriverContractEvent = ValuesOf<typeof _nftDriverFilters>;
 export type RepoDriverContractEvent = ValuesOf<typeof _repoDriverFilters>;
 
 type EventSignaturePattern = `${string}(${string})`;
@@ -63,6 +71,14 @@ export type DripsEventSignature = {
     : never;
 }[keyof typeof _dripsFilters];
 
+export type NftDriverEventSignature = {
+  [T in keyof typeof _nftDriverFilters]: T extends string
+    ? T extends EventSignaturePattern
+      ? T
+      : never
+    : never;
+}[keyof typeof _nftDriverFilters];
+
 export type RepoDriverEventSignature = {
   [T in keyof typeof _repoDriverFilters]: T extends string
     ? T extends EventSignaturePattern
@@ -71,7 +87,10 @@ export type RepoDriverEventSignature = {
     : never;
 }[keyof typeof _repoDriverFilters];
 
-export type EventSignature = DripsEventSignature | RepoDriverEventSignature;
+export type EventSignature =
+  | DripsEventSignature
+  | NftDriverEventSignature
+  | RepoDriverEventSignature;
 
 export type EventSignatureToEventMap = {
   [K in EventSignature]: (typeof _allFilters)[K];

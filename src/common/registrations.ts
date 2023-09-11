@@ -1,5 +1,8 @@
-import { OwnerUpdateRequestedEventHandler } from '../event-handlers';
-import AccountMetadataEmittedEventHandler from '../event-handlers/AccountMetadataEmittedHandler';
+import {
+  OwnerUpdateRequestedEventHandler,
+  TransferEventHandler,
+} from '../event-handlers';
+import AccountMetadataEmittedEventHandler from '../event-handlers/AccountMetadataEmittedEventHandler';
 import OwnerUpdatedEventHandler from '../event-handlers/OwnerUpdatedEventHandler';
 import {
   AccountMetadataEmittedEventModel,
@@ -9,6 +12,7 @@ import {
   OwnerUpdatedEventModel,
   RepoDriverSplitReceiverModel,
 } from '../models';
+import TransferEventModel from '../models/TransferEventModel';
 import {
   getEventHandler,
   getRegisteredEvents,
@@ -18,23 +22,28 @@ import { registerModel } from '../utils/registerModel';
 
 // Register event handlers here.
 function registerEventHandlers(): void {
-  registerEventHandler(
+  registerEventHandler<'OwnerUpdateRequested(uint256,uint8,bytes)'>(
     'OwnerUpdateRequested(uint256,uint8,bytes)',
     OwnerUpdateRequestedEventHandler,
   );
-  registerEventHandler(
+  registerEventHandler<'OwnerUpdated(uint256,address)'>(
     'OwnerUpdated(uint256,address)',
     OwnerUpdatedEventHandler,
   );
-  registerEventHandler(
+  registerEventHandler<'AccountMetadataEmitted(uint256,bytes32,bytes)'>(
     'AccountMetadataEmitted(uint256,bytes32,bytes)',
     AccountMetadataEmittedEventHandler,
+  );
+  registerEventHandler<'Transfer(address,address,uint256)'>(
+    'Transfer(address,address,uint256)',
+    TransferEventHandler,
   );
 }
 
 // Register models here.
 function registerModels(): void {
   registerModel(GitProjectModel);
+  registerModel(TransferEventModel);
   registerModel(OwnerUpdatedEventModel);
   registerModel(RepoDriverSplitReceiverModel);
   registerModel(OwnerUpdateRequestedEventModel);

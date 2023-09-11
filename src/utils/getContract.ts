@@ -1,12 +1,16 @@
 import {
   Drips__factory,
-  type Drips,
-  type RepoDriver,
   RepoDriver__factory,
+  NftDriver__factory,
 } from '../../contracts';
+import type { NftDriver, Drips, RepoDriver } from '../../contracts';
 import type { DripsContract, EventSignature } from '../common/types';
 import { getNetworkSettings } from './getNetworkSettings';
-import { isDripsEvent, isRepoDriverEvent } from './isEventOfContract';
+import {
+  isDripsEvent,
+  isNftDriverEvent,
+  isRepoDriverEvent,
+} from './isEventOfContract';
 
 export async function getDrips(): Promise<Drips> {
   const {
@@ -15,6 +19,15 @@ export async function getDrips(): Promise<Drips> {
   } = await getNetworkSettings();
 
   return Drips__factory.connect(drips.address as string, provider);
+}
+
+export async function getNftDriver(): Promise<NftDriver> {
+  const {
+    provider,
+    chainConfig: { nftDriver },
+  } = await getNetworkSettings();
+
+  return NftDriver__factory.connect(nftDriver.address as string, provider);
 }
 
 export async function getRepoDriver(): Promise<RepoDriver> {
@@ -34,6 +47,10 @@ export async function getContractDetails(
       contract: Drips;
     }
   | {
+      name: 'nftDriver';
+      contract: NftDriver;
+    }
+  | {
       name: 'repoDriver';
       contract: RepoDriver;
     }
@@ -43,6 +60,14 @@ export async function getContractDetails(
     return {
       contract: drips,
       name: 'drips',
+    };
+  }
+
+  const nftDriver = await getNftDriver();
+  if (isNftDriverEvent(eventSignature, nftDriver)) {
+    return {
+      contract: nftDriver,
+      name: 'nftDriver',
     };
   }
 

@@ -1,7 +1,12 @@
 import type { UUID } from 'crypto';
 import type { Transaction } from 'sequelize';
 import isProjectId from '../models/AccountMetadataEmittedEvent/isProjectId';
-import type { EventSignature, ProjectId } from '../common/types';
+import type {
+  EventSignature,
+  NftDriverAccountId,
+  ProjectId,
+} from '../common/types';
+import isNftDriverAccountId from '../models/AccountMetadataEmittedEvent/dripList/isNftDriverAccountId';
 
 export function assertTransaction(
   transaction: Transaction | null | undefined,
@@ -30,6 +35,14 @@ export function assertRequestId(requestId: string): asserts requestId is UUID {
 export function assertProjectId(id: string): asserts id is ProjectId {
   if (!isProjectId(id)) {
     throw new Error(`Project ID ${id} is not a valid ProjectId.`);
+  }
+}
+
+export function assertNftDriverAccountId(
+  id: string,
+): asserts id is NftDriverAccountId {
+  if (!isNftDriverAccountId(id)) {
+    throw new Error(`ID ${id} is not a valid NftDriverAccountId.`);
   }
 }
 

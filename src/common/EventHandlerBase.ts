@@ -12,6 +12,8 @@ import type {
   RepoDriverContractEvent,
   DripsEventSignature,
   RepoDriverEventSignature,
+  NftDriverEventSignature,
+  NftDriverContractEvent,
 } from './types';
 
 export default abstract class EventHandlerBase<T extends EventSignature> {
@@ -88,8 +90,19 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
 
         break;
       }
+      case 'nftDriver': {
+        const eventFilter =
+          contract.filters[this.eventSignature as NftDriverEventSignature];
+
+        await contract.on(
+          eventFilter,
+          this.onReceive as TypedListener<NftDriverContractEvent>,
+        );
+
+        break;
+      }
       default: {
-        shouldNeverHappen();
+        shouldNeverHappen('No contract found to register event listener on.');
       }
     }
   }
