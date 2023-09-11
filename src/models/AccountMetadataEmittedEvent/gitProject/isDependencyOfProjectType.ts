@@ -1,6 +1,6 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
-import type { repoDriverAccountMetadataParser } from '../../metadata/schemas';
-import type { ProjectId } from '../../common/types';
+import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
+import type { ProjectId } from '../../../common/types';
 
 type ArrayElement<ArrayType extends readonly unknown[]> =
   ArrayType extends readonly (infer ElementType)[] ? ElementType : never;

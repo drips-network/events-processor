@@ -1,27 +1,23 @@
 import type { DripsEvent, EventSignature } from '../common/types';
-import { getDrips, getNftDriver, getRepoDriver } from './getContract';
-import {
-  isDripsEvent,
-  isNftDriverEvent,
-  isRepoDriverEvent,
-} from './isEventOfContract';
+import { isDripsEvent, isNftDriverEvent, isRepoDriverEvent } from './assert';
+import { getDrips, getNftDriver, getRepoDriver } from './getContractClient';
 import shouldNeverHappen from './shouldNeverHappen';
 
 export default async function getTypedEvent(
   eventSignature: EventSignature,
 ): Promise<DripsEvent> {
-  const drips = await getDrips();
-  if (isDripsEvent(eventSignature, drips)) {
+  if (isDripsEvent(eventSignature)) {
+    const drips = await getDrips();
     return drips.filters[eventSignature];
   }
 
-  const nftDriver = await getNftDriver();
-  if (isNftDriverEvent(eventSignature, nftDriver)) {
+  if (isNftDriverEvent(eventSignature)) {
+    const nftDriver = await getNftDriver();
     return nftDriver.filters[eventSignature];
   }
 
-  const repoDriver = await getRepoDriver();
-  if (isRepoDriverEvent(eventSignature, repoDriver)) {
+  if (isRepoDriverEvent(eventSignature)) {
+    const repoDriver = await getRepoDriver();
     return repoDriver.filters[eventSignature];
   }
 

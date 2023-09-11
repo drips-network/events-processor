@@ -1,5 +1,5 @@
 import type { TypedListener } from '../../contracts/common';
-import { getContractDetails } from '../utils/getContract';
+import getContractDetails from '../utils/getContractDetails';
 import getResult from '../utils/getResult';
 import { logRequestInfo } from '../utils/logRequest';
 import shouldNeverHappen from '../utils/shouldNeverHappen';

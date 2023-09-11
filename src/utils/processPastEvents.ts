@@ -1,9 +1,9 @@
 import { getRegisteredEvents } from './registerEventHandler';
-import { getContractDetails } from './getContract';
 import getTypedEvent from './getTypedEvent';
 import { getNetworkSettings } from './getNetworkSettings';
 import logger from '../common/logger';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
+import getContractDetails from './getContractDetails';
 
 export default async function processPastEvents(): Promise<void> {
   logger.info('Start processing past events. This might take a while...');

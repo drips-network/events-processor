@@ -1,17 +1,19 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { UUID } from 'crypto';
-import type { repoDriverAccountMetadataParser } from '../../metadata/schemas';
+import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
 import AddressDriverSplitReceiverModel, {
   AddressDriverSplitReceiverType,
-} from '../AddressDriverSplitReceiverModel';
-import RepoDriverSplitReceiverModel from '../RepoDriverSplitReceiverModel';
-import { FORGES_MAP } from '../../common/constants';
-import shouldNeverHappen from '../../utils/shouldNeverHappen';
-import type { KnownAny, ProjectId } from '../../common/types';
+} from '../../AddressDriverSplitReceiverModel';
+import RepoDriverSplitReceiverModel from '../../RepoDriverSplitReceiverModel';
+import { FORGES_MAP } from '../../../common/constants';
+import shouldNeverHappen from '../../../utils/shouldNeverHappen';
+import type { KnownAny, ProjectId } from '../../../common/types';
 import type { DependencyOfProjectType } from './isDependencyOfProjectType';
 import isDependencyOfProjectType from './isDependencyOfProjectType';
-import GitProjectModel, { ProjectVerificationStatus } from '../GitProjectModel';
+import GitProjectModel, {
+  ProjectVerificationStatus,
+} from '../../GitProjectModel';
 
 export default async function createDbEntriesForProjectSplits(
   funderProjectId: ProjectId,

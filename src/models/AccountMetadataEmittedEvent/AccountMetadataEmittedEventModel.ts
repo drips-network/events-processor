@@ -13,12 +13,12 @@ import {
 import type { IEventModel, KnownAny } from '../../common/types';
 import getSchema from '../../utils/getSchema';
 import { logRequestDebug, nameOfType } from '../../utils/logRequest';
-import createDbEntriesForProjectSplits from './createDbEntriesForProjectSplits';
-import getProjectMetadata from './getProjectMetadata';
-import isProjectId from './isProjectId';
-import validateProjectMetadata from './validateProjectMetadata';
-import GitProjectModel from '../GitProjectModel';
-import { assertRequestId, assertTransaction } from '../../utils/assert';
+import isProjectId, {
+  assertRequestId,
+  assertTransaction,
+  isNftDriverAccountId,
+} from '../../utils/assert';
+import handleGitProjectMetadata from './gitProject/handleGitProjectMetadata';
 
 export default class AccountMetadataEmittedEventModel
   extends Model<
@@ -79,7 +79,7 @@ async function afterCreate(
   >,
 ): Promise<void> {
   const { transaction, requestId } = options as KnownAny; // `as any` to avoid TS complaining about passing in the `requestId`.
-  const { transactionHash, logIndex, accountId: projectId, value } = instance;
+  const { transactionHash, logIndex, accountId, value } = instance;
 
   assertTransaction(transaction);
   assertRequestId(requestId);
@@ -91,43 +91,13 @@ async function afterCreate(
     requestId,
   );
 
-  if (isProjectId(projectId) && (await isLatestEvent(instance, transaction))) {
-    const project = await GitProjectModel.findByPk(projectId, {
-      transaction,
-      lock: true,
-    });
+  const isLatest = await isLatestEvent(instance, transaction);
 
-    if (!project) {
-      const errorMessage = `Git project with ID ${projectId} was not found, but it was expected to exist. The event that should have created the project may not have been processed yet.`;
-
-      logRequestDebug(errorMessage, requestId);
-      throw new Error(errorMessage);
-    }
-
-    const metadata = await getProjectMetadata(projectId, value);
-
-    validateProjectMetadata(project, metadata);
-
-    const { color, emoji, source, splits, description } = metadata;
-
-    project.color = color;
-    project.emoji = emoji;
-    project.url = source.url;
-    project.ownerName = source.ownerName;
-    project.description = description ?? null;
-    project.verificationStatus = GitProjectModel.calculateStatus(project);
-
-    await project.save({ transaction, requestId } as KnownAny); // `as any` to avoid TS complaining about passing in the `requestId`.
-
-    await createDbEntriesForProjectSplits(
-      project.id,
-      splits,
-      requestId,
-      transaction,
-    );
+  if (isProjectId(accountId) && isLatest) {
+    await handleGitProjectMetadata(accountId, transaction, requestId, value);
+  } else if (isNftDriverAccountId(accountId)) {
+    logRequestDebug(`🌄🌄🌄🌄🌄🌄🌄🌄`, requestId);
   }
-
-  return Promise.resolve();
 }
 
 async function isLatestEvent(
