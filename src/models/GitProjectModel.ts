@@ -29,7 +29,7 @@ export default class GitProjectModel extends Model<
   public declare id: ProjectId; // The `accountId` from `OwnerUpdatedRequested` event.
   public declare name: string;
   public declare forge: Forge;
-  public declare owner: AddressLike | null;
+  public declare ownerAddress: AddressLike | null;
 
   // Properties from metadata.
   public declare url: string | null;
@@ -43,7 +43,7 @@ export default class GitProjectModel extends Model<
     project: GitProjectModel,
   ): ProjectVerificationStatus {
     if (
-      project.owner === null &&
+      project.ownerAddress === null &&
       !project.url &&
       !project.emoji &&
       !project.color &&
@@ -53,7 +53,7 @@ export default class GitProjectModel extends Model<
     }
 
     if (
-      project.owner &&
+      project.ownerAddress &&
       project.url &&
       project.emoji &&
       project.color &&
@@ -63,7 +63,7 @@ export default class GitProjectModel extends Model<
     }
 
     if (
-      project.owner &&
+      project.ownerAddress &&
       !project.url &&
       !project.emoji &&
       !project.color &&
@@ -73,7 +73,7 @@ export default class GitProjectModel extends Model<
     }
 
     if (
-      project.owner === null &&
+      project.ownerAddress === null &&
       project.url &&
       project.emoji &&
       project.color &&
@@ -83,7 +83,7 @@ export default class GitProjectModel extends Model<
     }
 
     throw new Error(
-      `Unexpected Git project verification status for project ${JSON.stringify(
+      `Unexpected Git Project verification status for project ${JSON.stringify(
         project,
         null,
         2,
@@ -102,7 +102,7 @@ export default class GitProjectModel extends Model<
           type: DataTypes.STRING,
           allowNull: false,
         },
-        owner: {
+        ownerAddress: {
           type: DataTypes.STRING,
           allowNull: true,
         },
@@ -187,7 +187,7 @@ async function afterUpdate(
   assertRequestId(requestId);
 
   logRequestDebug(
-    `Updated Git project with ID ${instance.id}: ${JSON.stringify(
+    `Updated Git Project with ID ${instance.id}: ${JSON.stringify(
       getChangedProperties(instance),
     )}.`,
     requestId,

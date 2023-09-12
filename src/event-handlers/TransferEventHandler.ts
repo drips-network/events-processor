@@ -3,7 +3,7 @@ import type { TransferEvent } from '../../contracts/NftDriver';
 import EventHandlerBase from '../common/EventHandlerBase';
 import type { HandleContext, KnownAny } from '../common/types';
 import sequelizeInstance from '../db/getSequelizeInstance';
-import TransferEventModel from '../models/TransferEventModel';
+import TransferEventModel from '../models/TransferEvent/TransferEventModel';
 import { saveEventProcessingJob } from '../queue';
 import { assertNftDriverAccountId } from '../utils/assert';
 import { logRequestInfo } from '../utils/logRequest';

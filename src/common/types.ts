@@ -2,6 +2,7 @@ import type { Model, Sequelize } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import type { UUID } from 'crypto';
 import { randomUUID } from 'crypto';
+import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Drips, NftDriver, RepoDriver } from '../../contracts';
 import type {
   DRIPS_CONTRACT_NAMES,
@@ -13,6 +14,10 @@ import type {
   TypedLogDescription,
 } from '../../contracts/common';
 import type EventHandlerBase from './EventHandlerBase';
+import type {
+  nftDriverAccountMetadataParser,
+  repoDriverAccountMetadataParser,
+} from '../metadata/schemas';
 
 export type KnownAny = any;
 export type IpfsHash = string & { __brand: 'IpfsHash' };
@@ -142,3 +147,23 @@ export interface IEventModel {
   blockTimestamp: Date;
   transactionHash: string;
 }
+
+type ArrayElement<ArrayType extends readonly unknown[]> =
+  ArrayType extends readonly (infer ElementType)[] ? ElementType : never;
+
+export type Dependency = ArrayElement<
+  | AnyVersion<typeof repoDriverAccountMetadataParser>['splits']['dependencies']
+  | AnyVersion<typeof nftDriverAccountMetadataParser>['projects']
+>;
+
+export type DependencyOfProjectType = {
+  type: 'repoDriver';
+  accountId: ProjectId;
+  source: {
+    forge: 'github';
+    repoName: string;
+    ownerName: string;
+    url: string;
+  };
+  weight: number;
+};

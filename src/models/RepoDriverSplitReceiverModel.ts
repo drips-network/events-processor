@@ -7,7 +7,8 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
 import GitProjectModel from './GitProjectModel';
-import type { ProjectId } from '../common/types';
+import type { DripListId, ProjectId } from '../common/types';
+import DripListModel from './DripListModel';
 
 export default class RepoDriverSplitReceiverModel extends Model<
   InferAttributes<RepoDriverSplitReceiverModel>,
@@ -16,7 +17,8 @@ export default class RepoDriverSplitReceiverModel extends Model<
   public declare id: CreationOptional<number>; // Primary key
 
   public declare selfProjectId: ProjectId; // Foreign key
-  public declare funderProjectId: ProjectId; // Foreign key
+  public declare funderProjectId: ProjectId | null; // Foreign key
+  public declare funderDripListId: DripListId | null; // Foreign key
 
   public declare weight: number;
 
@@ -44,7 +46,16 @@ export default class RepoDriverSplitReceiverModel extends Model<
             model: GitProjectModel,
             key: 'id',
           },
-          allowNull: false,
+          allowNull: true,
+        },
+        funderDripListId: {
+          // Foreign key
+          type: DataTypes.STRING,
+          references: {
+            model: DripListModel,
+            key: 'tokenId',
+          },
+          allowNull: true,
         },
         weight: {
           type: DataTypes.INTEGER,

@@ -4,16 +4,20 @@ import type {
   InferCreationAttributes,
   InstanceUpdateOptions,
   Sequelize,
+  Transaction,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type {
   IEventModel,
   KnownAny,
   NftDriverAccountId,
-} from '../common/types';
-import getSchema from '../utils/getSchema';
-import { assertRequestId, assertTransaction } from '../utils/assert';
-import { logRequestDebug, nameOfType } from '../utils/logRequest';
+} from '../../common/types';
+import getSchema from '../../utils/getSchema';
+import { assertRequestId, assertTransaction } from '../../utils/assert';
+import { logRequestDebug, nameOfType } from '../../utils/logRequest';
+import DripListModel from '../DripListModel';
+import IsDripList from './isDripList';
+import { COMMON_EVENT_INIT_ATTRIBUTES } from '../../common/constants';
 
 export default class TransferEventModel
   extends Model<
@@ -37,7 +41,7 @@ export default class TransferEventModel
       {
         tokenId: {
           type: DataTypes.STRING,
-          primaryKey: true,
+          allowNull: false,
         },
         from: {
           type: DataTypes.STRING,
@@ -47,22 +51,7 @@ export default class TransferEventModel
           type: DataTypes.STRING,
           allowNull: false,
         },
-        transactionHash: {
-          type: DataTypes.STRING,
-          allowNull: false,
-        },
-        logIndex: {
-          type: DataTypes.INTEGER,
-          allowNull: false,
-        },
-        blockTimestamp: {
-          type: DataTypes.DATE,
-          allowNull: false,
-        },
-        blockNumber: {
-          type: DataTypes.INTEGER,
-          allowNull: false,
-        },
+        ...COMMON_EVENT_INIT_ATTRIBUTES,
       },
       {
         sequelize,
@@ -97,4 +86,67 @@ async function afterCreate(
     }`,
     requestId,
   );
+
+  const { to, tokenId } = instance;
+
+  const totalOwnerNftAccounts = await TransferEventModel.count({
+    where: {
+      to,
+    },
+    transaction,
+  });
+
+  if (await IsDripList(tokenId, totalOwnerNftAccounts, to)) {
+    const [dripList] = await DripListModel.findOrCreate({
+      transaction,
+      lock: true,
+      requestId,
+      where: {
+        tokenId,
+      },
+      defaults: {
+        tokenId,
+        name: null,
+        isPublic: false,
+        ownerAddress: to,
+      },
+    } as KnownAny); // `as any` to avoid TS complaining about passing in the `requestId`.
+
+    if (await isLatestEvent(instance, transaction)) {
+      dripList.ownerAddress = to;
+
+      await dripList.save({ transaction });
+    }
+  }
+}
+
+async function isLatestEvent(
+  instance: TransferEventModel,
+  transaction: Transaction,
+): Promise<boolean> {
+  const latestEvent = await TransferEventModel.findOne({
+    where: {
+      tokenId: instance.tokenId,
+    },
+    order: [
+      ['blockNumber', 'DESC'],
+      ['logIndex', 'DESC'],
+    ],
+    transaction,
+    lock: true,
+  });
+
+  if (!latestEvent) {
+    return true;
+  }
+
+  if (
+    latestEvent.blockNumber > instance.blockNumber ||
+    (latestEvent.blockNumber === instance.blockNumber &&
+      latestEvent.logIndex > instance.logIndex)
+  ) {
+    return false;
+  }
+
+  return true;
 }

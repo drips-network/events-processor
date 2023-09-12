@@ -1,6 +1,8 @@
 import type { UUID } from 'crypto';
 import type { Transaction } from 'sequelize';
 import type {
+  Dependency,
+  DependencyOfProjectType,
   DripsEventSignature,
   EventSignature,
   NftDriverAccountId,
@@ -68,7 +70,7 @@ export function isRepoDriverEvent(
   return RepoDriver__factory.createInterface().hasEvent(event);
 }
 
-export default function isProjectId(id: string): id is ProjectId {
+export function isProjectId(id: string): id is ProjectId {
   const isNaN = Number.isNaN(Number(id));
   const isRepoDriverId = getContractNameByAccountId(id) === 'repoDriver';
 
@@ -83,6 +85,18 @@ export function assertProjectId(id: string): asserts id is ProjectId {
   if (!isProjectId(id)) {
     throw new Error(`Project ID ${id} is not a valid ProjectId.`);
   }
+}
+
+export function isDependencyOfProjectType(
+  dependency: Dependency,
+): dependency is DependencyOfProjectType {
+  return 'source' in dependency;
+}
+
+export function assertDependencyOfProjectType(
+  project: Dependency,
+): project is DependencyOfProjectType {
+  return isDependencyOfProjectType(project);
 }
 
 export function isNftDriverAccountId(id: string): id is NftDriverAccountId {

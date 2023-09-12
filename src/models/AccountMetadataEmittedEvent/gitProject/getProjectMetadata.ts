@@ -13,7 +13,7 @@ export default async function getProjectMetadata(
 
   if (!metadata) {
     throw new Error(
-      `Project metadata not found for Git project with ID ${id} but it was expected to exist.`,
+      `Project metadata not found for Git Project with ID ${id} but it was expected to exist.`,
     );
   }
 

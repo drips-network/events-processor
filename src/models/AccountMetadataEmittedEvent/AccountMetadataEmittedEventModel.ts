@@ -13,12 +13,14 @@ import {
 import type { IEventModel, KnownAny } from '../../common/types';
 import getSchema from '../../utils/getSchema';
 import { logRequestDebug, nameOfType } from '../../utils/logRequest';
-import isProjectId, {
+import {
+  isProjectId,
   assertRequestId,
   assertTransaction,
   isNftDriverAccountId,
 } from '../../utils/assert';
 import handleGitProjectMetadata from './gitProject/handleGitProjectMetadata';
+import handleNftDriverMetadata from './dripList/handleNftDriverMetadata';
 
 export default class AccountMetadataEmittedEventModel
   extends Model<
@@ -95,8 +97,8 @@ async function afterCreate(
 
   if (isProjectId(accountId) && isLatest) {
     await handleGitProjectMetadata(accountId, transaction, requestId, value);
-  } else if (isNftDriverAccountId(accountId)) {
-    logRequestDebug(`🌄🌄🌄🌄🌄🌄🌄🌄`, requestId);
+  } else if (isNftDriverAccountId(accountId) && isLatest) {
+    await handleNftDriverMetadata(accountId, transaction, requestId, value);
   }
 }
 

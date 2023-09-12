@@ -7,6 +7,8 @@ import AddressDriverSplitReceiverModel from '../models/AddressDriverSplitReceive
 import RepoDriverSplitReceiverModel from '../models/RepoDriverSplitReceiverModel';
 import config from './config';
 import { getRegisteredModels } from '../utils/registerModel';
+import DripListModel from '../models/DripListModel';
+import DripListSplitReceiverModel from '../models/DripListSplitReceiverModel';
 
 const {
   postgresHost,
@@ -97,10 +99,32 @@ function defineAssociations() {
   RepoDriverSplitReceiverModel.belongsTo(GitProjectModel, {
     foreignKey: 'funderProjectId',
   });
-  GitProjectModel.hasMany(RepoDriverSplitReceiverModel, {
+
+  GitProjectModel.hasOne(RepoDriverSplitReceiverModel, {
     foreignKey: 'selfProjectId',
   });
   RepoDriverSplitReceiverModel.belongsTo(GitProjectModel, {
     foreignKey: 'selfProjectId',
+  });
+
+  DripListModel.hasMany(RepoDriverSplitReceiverModel, {
+    foreignKey: 'funderProjectId',
+  });
+  RepoDriverSplitReceiverModel.belongsTo(DripListModel, {
+    foreignKey: 'funderProjectId',
+  });
+
+  DripListModel.hasMany(DripListSplitReceiverModel, {
+    foreignKey: 'funderDripListId',
+  });
+  DripListSplitReceiverModel.belongsTo(DripListModel, {
+    foreignKey: 'funderDripListId',
+  });
+
+  DripListModel.hasMany(AddressDriverSplitReceiverModel, {
+    foreignKey: 'funderDripListId',
+  });
+  AddressDriverSplitReceiverModel.belongsTo(DripListModel, {
+    foreignKey: 'funderDripListId',
   });
 }

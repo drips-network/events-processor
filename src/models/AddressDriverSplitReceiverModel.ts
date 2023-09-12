@@ -7,11 +7,13 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
 import GitProjectModel from './GitProjectModel';
-import type { ProjectId } from '../common/types';
+import type { DripListId, ProjectId } from '../common/types';
+import DripListModel from './DripListModel';
 
 export enum AddressDriverSplitReceiverType {
-  Maintainer = 'Maintainer',
-  Dependency = 'Dependency',
+  ProjectMaintainer = 'ProjectMaintainer',
+  ProjectDependency = 'ProjectDependency',
+  DripListDependency = 'DripListDependency',
 }
 
 export default class AddressDriverSplitReceiverModel extends Model<
@@ -19,7 +21,8 @@ export default class AddressDriverSplitReceiverModel extends Model<
   InferCreationAttributes<AddressDriverSplitReceiverModel>
 > {
   public declare id: CreationOptional<number>; // Primary key
-  public declare funderProjectId: ProjectId; // Foreign key
+  public declare funderProjectId: ProjectId | null; // Foreign key
+  public declare funderDripListId: DripListId | null; // Foreign key
 
   public declare weight: number;
   public declare accountId: string;
@@ -40,7 +43,16 @@ export default class AddressDriverSplitReceiverModel extends Model<
             model: GitProjectModel,
             key: 'id',
           },
-          allowNull: false,
+          allowNull: true,
+        },
+        funderDripListId: {
+          // Foreign key
+          type: DataTypes.STRING,
+          references: {
+            model: DripListModel,
+            key: 'tokenId',
+          },
+          allowNull: true,
         },
         weight: {
           type: DataTypes.INTEGER,

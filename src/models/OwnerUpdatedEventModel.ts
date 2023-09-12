@@ -86,13 +86,13 @@ async function afterCreate(
     });
 
     if (!project) {
-      const errorMessage = `Git project with ID ${projectId} was not found, but it was expected to exist. The event that should have created the project may not have been processed yet.`;
+      const errorMessage = `Git Project with ID ${projectId} was not found, but it was expected to exist. The event that should have created the project may not have been processed yet.`;
 
       logRequestDebug(errorMessage, requestId);
       throw new Error(errorMessage);
     }
 
-    project.owner = owner;
+    project.ownerAddress = owner;
     project.verificationStatus = GitProjectModel.calculateStatus(project);
 
     await project.save({ transaction, requestId } as KnownAny); // `as any` to avoid TS complaining about passing in the `requestId`.

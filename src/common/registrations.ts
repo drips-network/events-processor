@@ -12,7 +12,9 @@ import {
   OwnerUpdatedEventModel,
   RepoDriverSplitReceiverModel,
 } from '../models';
-import TransferEventModel from '../models/TransferEventModel';
+import DripListModel from '../models/DripListModel';
+import DripListSplitReceiverModel from '../models/DripListSplitReceiverModel';
+import TransferEventModel from '../models/TransferEvent/TransferEventModel';
 import {
   getEventHandler,
   getRegisteredEvents,
@@ -42,9 +44,11 @@ function registerEventHandlers(): void {
 
 // Register models here.
 function registerModels(): void {
+  registerModel(DripListModel);
   registerModel(GitProjectModel);
   registerModel(TransferEventModel);
   registerModel(OwnerUpdatedEventModel);
+  registerModel(DripListSplitReceiverModel);
   registerModel(RepoDriverSplitReceiverModel);
   registerModel(OwnerUpdateRequestedEventModel);
   registerModel(AddressDriverSplitReceiverModel);
