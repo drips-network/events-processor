@@ -7,7 +7,7 @@ import type {
   EventSignature,
   NftDriverAccountId,
   NftDriverEventSignature,
-  ProjectId,
+  RepoDriverAccountId,
   RepoDriverEventSignature,
 } from '../common/types';
 import {
@@ -70,23 +70,6 @@ export function isRepoDriverEvent(
   return RepoDriver__factory.createInterface().hasEvent(event);
 }
 
-export function isProjectId(id: string): id is ProjectId {
-  const isNaN = Number.isNaN(Number(id));
-  const isRepoDriverId = getContractNameByAccountId(id) === 'repoDriver';
-
-  if (isNaN || !isRepoDriverId) {
-    return false;
-  }
-
-  return true;
-}
-
-export function assertProjectId(id: string): asserts id is ProjectId {
-  if (!isProjectId(id)) {
-    throw new Error(`Project ID ${id} is not a valid ProjectId.`);
-  }
-}
-
 export function isDependencyOfProjectType(
   dependency: Dependency,
 ): dependency is DependencyOfProjectType {
@@ -114,6 +97,26 @@ export function assertNftDriverAccountId(
   id: string,
 ): asserts id is NftDriverAccountId {
   if (!isNftDriverAccountId(id)) {
-    throw new Error(`ID ${id} is not a valid NftDriverAccountId.`);
+    throw new Error(`String ${id} is not a valid NftDriverAccountId.`);
+  }
+}
+
+export function isRepoDiverAccountId(id: string): id is RepoDriverAccountId {
+  const isNaN = Number.isNaN(Number(id));
+  const isAccountIdOfRepoDriver =
+    getContractNameByAccountId(id) === 'repoDriver';
+
+  if (isNaN || !isAccountIdOfRepoDriver) {
+    return false;
+  }
+
+  return true;
+}
+
+export function assertRepoDiverAccountId(
+  id: string,
+): asserts id is RepoDriverAccountId {
+  if (!isRepoDiverAccountId(id)) {
+    throw new Error(`String ${id} is not a valid RepoDriverAccountId.`);
   }
 }

@@ -3,11 +3,18 @@ import type { OwnerUpdateRequestedEvent } from '../../contracts/RepoDriver';
 import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import sequelizeInstance from '../db/getSequelizeInstance';
-import { logRequestInfo } from '../utils/logRequest';
+import {
+  logRequestDebug,
+  logRequestInfo,
+  nameOfType,
+} from '../utils/logRequest';
 import type { KnownAny, HandleContext } from '../common/types';
 import EventHandlerBase from '../common/EventHandlerBase';
 import { FORGES_MAP } from '../common/constants';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
+import { GitProjectModel } from '../models';
+import { ProjectVerificationStatus } from '../models/GitProjectModel';
+import { assertRepoDiverAccountId } from '../utils/assert';
 
 export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'OwnerUpdateRequested(uint256,uint8,bytes)'> {
   public readonly eventSignature =
@@ -22,25 +29,74 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
     const [accountId, forge, name] =
       args as OwnerUpdateRequestedEvent.OutputTuple;
 
+    const logs: string[] = [];
+
+    const forgeAsString = FORGES_MAP[Number(forge) as keyof typeof FORGES_MAP];
+    const projectId = accountId.toString();
+    assertRepoDiverAccountId(projectId);
+
     logRequestInfo(
-      `Event args: accountId ${accountId}, forge ${forge}, name ${ethers.toUtf8String(
-        name,
-      )}.`,
+      `📥 ${this.name} is processing the following ${this.eventSignature}:
+      \r\t - forge:       ${forgeAsString}
+      \r\t - name:        ${ethers.toUtf8String(name)}
+      \r\t - accountId:   ${accountId},
+      \r\t - logIndex:    ${logIndex}
+      \r\t - blockNumber: ${blockNumber}
+      \r\t - tx hash:     ${transactionHash}`,
       requestId,
     );
 
     await sequelizeInstance.transaction(async (transaction) => {
-      await OwnerUpdateRequestedEventModel.create(
-        {
-          name,
-          logIndex,
-          blockNumber,
-          blockTimestamp,
-          transactionHash,
-          accountId: accountId.toString(),
-          forge: FORGES_MAP[Number(forge) as keyof typeof FORGES_MAP],
+      const ownerUpdateRequestedEvent =
+        await OwnerUpdateRequestedEventModel.create(
+          {
+            name,
+            logIndex,
+            blockNumber,
+            blockTimestamp,
+            transactionHash,
+            forge: forgeAsString,
+            accountId: projectId,
+          },
+          { transaction },
+        );
+
+      logs.push(
+        `Created a new ${nameOfType(OwnerUpdateRequestedEventModel)} with ID ${
+          ownerUpdateRequestedEvent.transactionHash
+        }-${ownerUpdateRequestedEvent.logIndex}.`,
+      );
+
+      const [project, created] = await GitProjectModel.findOrCreate({
+        transaction,
+        lock: true,
+        where: {
+          id: projectId,
         },
-        { transaction, requestId },
+        defaults: {
+          id: projectId,
+          splitsJson: null,
+          forge: forgeAsString,
+          name: ethers.toUtf8String(name),
+          verificationStatus: ProjectVerificationStatus.Started,
+        },
+      });
+
+      logs.push(
+        `${
+          created
+            ? `Created a new 💻 ${nameOfType(GitProjectModel)} with ID ${
+                project.id
+              }, forge ${project.forge} and name ${project.name}.`
+            : `Git Project with ID ${project.id} already exists. Probably, it was created by another event. Skipping creation.`
+        }`,
+      );
+
+      logRequestDebug(
+        `Completed successfully. The following changes occurred:\n\t - ${logs.join(
+          '\n\t - ',
+        )}`,
+        requestId,
       );
     });
   }

@@ -1,17 +1,13 @@
 import type {
   InferAttributes,
   InferCreationAttributes,
-  InstanceUpdateOptions,
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
-import { logRequestDebug, nameOfType } from '../utils/logRequest';
-import type { Forge, KnownAny, ProjectId } from '../common/types';
+import type { Forge, ProjectId } from '../common/types';
 import { FORGES_MAP } from '../common/constants';
-import getChangedProperties from '../utils/getChangedProperties';
-import { assertRequestId, assertTransaction } from '../utils/assert';
 
 export enum ProjectVerificationStatus {
   Claimed = 'Claimed',
@@ -36,6 +32,7 @@ export default class GitProjectModel extends Model<
   public declare emoji: string | null;
   public declare color: string | null;
   public declare ownerName: string | null;
+  public declare splitsJson: string | null;
   public declare description: string | null;
   public declare verificationStatus: ProjectVerificationStatus;
 
@@ -98,6 +95,10 @@ export default class GitProjectModel extends Model<
           type: DataTypes.STRING,
           primaryKey: true,
         },
+        splitsJson: {
+          type: DataTypes.JSON,
+          allowNull: true,
+        },
         name: {
           type: DataTypes.STRING,
           allowNull: false,
@@ -139,57 +140,7 @@ export default class GitProjectModel extends Model<
         sequelize,
         schema: getSchema(),
         tableName: 'GitProjects',
-        hooks: {
-          afterCreate,
-          afterUpdate,
-        },
       },
     );
   }
-}
-
-async function afterCreate(
-  instance: GitProjectModel,
-  options: InstanceUpdateOptions<
-    InferAttributes<
-      GitProjectModel,
-      {
-        omit: never;
-      }
-    >
-  >,
-): Promise<void> {
-  const { transaction, requestId } = options as KnownAny; // `as any` to avoid TS complaining about passing in the `requestId`.
-  assertTransaction(transaction);
-  assertRequestId(requestId);
-
-  logRequestDebug(
-    `Created a new ${nameOfType(GitProjectModel)} DB entry for ${
-      instance.name
-    } repo, with ID ${instance.id}.`,
-    requestId,
-  );
-}
-
-async function afterUpdate(
-  instance: GitProjectModel,
-  options: InstanceUpdateOptions<
-    InferAttributes<
-      GitProjectModel,
-      {
-        omit: never;
-      }
-    >
-  >,
-): Promise<void> {
-  const { transaction, requestId } = options as KnownAny; // `as any` to avoid TS complaining about passing in the `requestId`.
-  assertTransaction(transaction);
-  assertRequestId(requestId);
-
-  logRequestDebug(
-    `Updated Git Project with ID ${instance.id}: ${JSON.stringify(
-      getChangedProperties(instance),
-    )}.`,
-    requestId,
-  );
 }

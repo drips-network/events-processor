@@ -1,23 +1,24 @@
+import type { AddressLike } from 'ethers';
 import type {
   InferAttributes,
   InferCreationAttributes,
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
-import type { IEventModel, RepoDriverAccountId } from '../common/types';
+import type { IEventModel, NftDriverAccountId } from '../common/types';
 import getSchema from '../utils/getSchema';
+import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
 
-export default class OwnerUpdatedEventModel
+export default class TransferEventModel
   extends Model<
-    InferAttributes<OwnerUpdatedEventModel>,
-    InferCreationAttributes<OwnerUpdatedEventModel>
+    InferAttributes<TransferEventModel>,
+    InferCreationAttributes<TransferEventModel>
   >
   implements IEventModel
 {
-  // Properties from event output.
-  public declare owner: string;
-  public declare accountId: RepoDriverAccountId;
+  public declare tokenId: NftDriverAccountId; // The `tokenId` from `Transfer` event.
+  public declare from: AddressLike;
+  public declare to: AddressLike;
 
   // Common event log properties.
   public declare logIndex: number;
@@ -28,11 +29,15 @@ export default class OwnerUpdatedEventModel
   public static initialize(sequelize: Sequelize): void {
     this.init(
       {
-        owner: {
+        tokenId: {
           type: DataTypes.STRING,
           allowNull: false,
         },
-        accountId: {
+        from: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        to: {
           type: DataTypes.STRING,
           allowNull: false,
         },
@@ -41,7 +46,7 @@ export default class OwnerUpdatedEventModel
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'OwnerUpdatedEvents',
+        tableName: 'TransferEvents',
       },
     );
   }

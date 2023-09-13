@@ -1,7 +1,7 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
-import type DripListModel from '../../DripListModel';
 import shouldNeverHappen from '../../../utils/shouldNeverHappen';
+import type DripListModel from '../../../models/DripListModel';
 
 export default function validateDripListMetadata(
   dripList: DripListModel,
@@ -9,14 +9,14 @@ export default function validateDripListMetadata(
 ): void {
   if (!metadata) {
     throw new Error(
-      `Drip List metadata not found for Drip List with (token) ID ${dripList.tokenId} but it was expected to exist.`,
+      `Drip List metadata not found for Drip List with (token) ID ${dripList.id} but it was expected to exist.`,
     );
   }
 
   const errors = [];
 
   const { describes, isDripList } = metadata;
-  const { tokenId: dripListId } = dripList;
+  const { id: dripListId } = dripList;
 
   if (describes.accountId !== dripListId) {
     errors.push(

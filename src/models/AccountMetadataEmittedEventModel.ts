@@ -5,19 +5,20 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
-import type { IEventModel, RepoDriverAccountId } from '../common/types';
+import type { IEventModel } from '../common/types';
 import getSchema from '../utils/getSchema';
 
-export default class OwnerUpdatedEventModel
+export default class AccountMetadataEmittedEventModel
   extends Model<
-    InferAttributes<OwnerUpdatedEventModel>,
-    InferCreationAttributes<OwnerUpdatedEventModel>
+    InferAttributes<AccountMetadataEmittedEventModel>,
+    InferCreationAttributes<AccountMetadataEmittedEventModel>
   >
   implements IEventModel
 {
   // Properties from event output.
-  public declare owner: string;
-  public declare accountId: RepoDriverAccountId;
+  public declare key: string;
+  public declare value: string;
+  public declare accountId: string;
 
   // Common event log properties.
   public declare logIndex: number;
@@ -28,7 +29,11 @@ export default class OwnerUpdatedEventModel
   public static initialize(sequelize: Sequelize): void {
     this.init(
       {
-        owner: {
+        key: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        value: {
           type: DataTypes.STRING,
           allowNull: false,
         },
@@ -41,7 +46,7 @@ export default class OwnerUpdatedEventModel
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'OwnerUpdatedEvents',
+        tableName: 'AccountMetadataEmittedEvents',
       },
     );
   }

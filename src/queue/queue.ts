@@ -13,18 +13,18 @@ const eventProcessingQueue = new BeeQueue<{
 }>(`${config.network}_events`, { activateDelayedJobs: true });
 
 eventProcessingQueue.on('succeeded', (job) => {
-  logger.info(`SUCCESS: Job with ID ${job.id} completed successfully.`);
+  logger.info(`✅ SUCCESS: Job with ID ${job.id} completed successfully.`);
 });
 
 eventProcessingQueue.on('job failed', (job, err) => {
   logger.error(
-    `FAILED: Job with ID ${job} failed with error '${err.message}'.`,
+    `❌ FAILED: Job with ID ${job} failed with error '${err.message}'.`,
   );
 });
 
 eventProcessingQueue.on('job retrying', (job, err) => {
   logger.warn(
-    `Job with ID ${job} failed with error ${err.message} but is being retried...`,
+    `♻️ Job with ID ${job} failed with error ${err.message} but is being retried...`,
   );
 });
 

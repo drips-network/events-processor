@@ -1,6 +1,6 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
-import type GitProjectModel from '../../GitProjectModel';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
+import type { GitProjectModel } from '../../../models';
 
 export default function validateProjectMetadata(
   project: GitProjectModel,

@@ -1,19 +1,19 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
-import type { UUID } from 'crypto';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
-import AddressDriverSplitReceiverModel, {
-  AddressDriverSplitReceiverType,
-} from '../../AddressDriverSplitReceiverModel';
-import RepoDriverSplitReceiverModel from '../../RepoDriverSplitReceiverModel';
-import type { ProjectId } from '../../../common/types';
-import createDbEntriesForProjectDependency from '../createDbEntriesForProjectDependency';
 import { isDependencyOfProjectType } from '../../../utils/assert';
+import type { ProjectId } from '../../../common/types';
+import {
+  AddressDriverSplitReceiverModel,
+  RepoDriverSplitReceiverModel,
+} from '../../../models';
+import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
+import createDbEntriesForProjectDependency from '../createDbEntriesForProjectDependency';
 
 export default async function createDbEntriesForProjectSplits(
   funderProjectId: ProjectId,
   splits: AnyVersion<typeof repoDriverAccountMetadataParser>['splits'],
-  requestId: UUID,
+  logs: string[],
   transaction: Transaction,
 ) {
   await clearCurrentEntries(funderProjectId, transaction);
@@ -28,7 +28,7 @@ export default async function createDbEntriesForProjectSplits(
         accountId: maintainer.accountId,
         type: AddressDriverSplitReceiverType.ProjectMaintainer,
       },
-      { transaction, requestId },
+      { transaction },
     ),
   );
 
@@ -38,7 +38,6 @@ export default async function createDbEntriesForProjectSplits(
         funderProjectId,
         dependency,
         transaction,
-        requestId,
       );
     }
 
@@ -49,11 +48,20 @@ export default async function createDbEntriesForProjectSplits(
         accountId: dependency.accountId,
         type: AddressDriverSplitReceiverType.ProjectDependency,
       },
-      { transaction, requestId },
+      { transaction },
     );
   });
 
-  await Promise.all([...maintainerPromises, ...dependencyPromises]);
+  const result = await Promise.all([
+    ...maintainerPromises,
+    ...dependencyPromises,
+  ]);
+
+  logs.push(
+    `AccountMetadataEmitted(uint256,bytes32,bytes) was the latest event for Git Project with ID ${funderProjectId}. Created DB entries for its splits:
+    ${result.map((p) => JSON.stringify(p)).join(`, `)}
+    `,
+  );
 }
 
 async function clearCurrentEntries(

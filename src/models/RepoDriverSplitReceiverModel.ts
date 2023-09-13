@@ -53,7 +53,7 @@ export default class RepoDriverSplitReceiverModel extends Model<
           type: DataTypes.STRING,
           references: {
             model: DripListModel,
-            key: 'tokenId',
+            key: 'id',
           },
           allowNull: true,
         },

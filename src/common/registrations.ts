@@ -2,7 +2,7 @@ import {
   OwnerUpdateRequestedEventHandler,
   TransferEventHandler,
 } from '../event-handlers';
-import AccountMetadataEmittedEventHandler from '../event-handlers/AccountMetadataEmittedEventHandler';
+import AccountMetadataEmittedEventHandler from '../event-handlers/AccountMetadataEmittedEvent/AccountMetadataEmittedEventHandler';
 import OwnerUpdatedEventHandler from '../event-handlers/OwnerUpdatedEventHandler';
 import {
   AccountMetadataEmittedEventModel,
@@ -14,7 +14,7 @@ import {
 } from '../models';
 import DripListModel from '../models/DripListModel';
 import DripListSplitReceiverModel from '../models/DripListSplitReceiverModel';
-import TransferEventModel from '../models/TransferEvent/TransferEventModel';
+import TransferEventModel from '../models/TransferEventModel';
 import {
   getEventHandler,
   getRegisteredEvents,

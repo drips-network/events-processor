@@ -1,7 +1,6 @@
 import type { TypedListener } from '../../contracts/common';
 import getContractDetails from '../utils/getContractDetails';
 import getResult from '../utils/getResult';
-import { logRequestInfo } from '../utils/logRequest';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
 import type {
   Result,
@@ -41,15 +40,6 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
    * Executes the handler.
    */
   public async executeHandle(request: HandleContext<T>): Promise<Result<void>> {
-    const {
-      event: { eventSignature, transactionHash, logIndex, blockNumber },
-    } = request;
-
-    logRequestInfo(
-      `${this.name} is processing ${eventSignature} event with transaction hash ${transactionHash}, block number ${blockNumber} and log index ${logIndex}.`,
-      request.id,
-    );
-
     const result = await getResult(this._handle.bind(this))(request);
 
     if (!result.ok) {

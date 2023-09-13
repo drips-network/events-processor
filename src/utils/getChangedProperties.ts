@@ -1,6 +1,6 @@
 import type { Model } from 'sequelize';
 
-type ChangedProperties = {
+export type ChangedProperties = {
   [key: string]: { old: any; new: any };
 };
 

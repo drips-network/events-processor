@@ -29,7 +29,7 @@ export default async function saveEventProcessingJob<T extends EventSignature>(
       }),
     })
     .setId(randomUUID())
-    .retries(5)
+    .retries(3)
     .backoff('exponential', 1000)
     .save();
 }
