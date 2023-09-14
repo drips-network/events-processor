@@ -9,7 +9,9 @@ import GitProjectModel, {
 } from '../../models/GitProjectModel';
 import { FORGES_MAP } from '../../common/constants';
 import shouldNeverHappen from '../../utils/shouldNeverHappen';
-import RepoDriverSplitReceiverModel from '../../models/RepoDriverSplitReceiverModel';
+import RepoDriverSplitReceiverModel, {
+  RepoDriverSplitReceiverType,
+} from '../../models/RepoDriverSplitReceiverModel';
 import { isNftDriverAccountId, isRepoDiverAccountId } from '../../utils/assert';
 
 export default async function createDbEntriesForProjectDependency(
@@ -19,7 +21,7 @@ export default async function createDbEntriesForProjectDependency(
 ) {
   const {
     weight,
-    accountId: selfProjectId,
+    accountId: fundeeProjectId,
     source: { forge, ownerName, repoName, url },
   } = projectDependency;
 
@@ -27,12 +29,12 @@ export default async function createDbEntriesForProjectDependency(
     lock: true,
     transaction,
     where: {
-      id: selfProjectId,
+      id: fundeeProjectId,
     },
     defaults: {
       url,
       splitsJson: null,
-      id: selfProjectId,
+      id: fundeeProjectId,
       name: `${ownerName}/${repoName}`,
       verificationStatus: ProjectVerificationStatus.Unclaimed,
       forge:
@@ -42,10 +44,13 @@ export default async function createDbEntriesForProjectDependency(
     },
   });
 
-  return RepoDriverSplitReceiverModel.create(
+  await RepoDriverSplitReceiverModel.create(
     {
       weight,
-      selfProjectId,
+      fundeeProjectId,
+      type: isNftDriverAccountId(funderAccountId)
+        ? RepoDriverSplitReceiverType.DripListDependency
+        : RepoDriverSplitReceiverType.ProjectDependency,
       funderDripListId: isNftDriverAccountId(funderAccountId)
         ? funderAccountId
         : null,

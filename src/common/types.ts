@@ -21,6 +21,9 @@ import type {
 
 export type KnownAny = any;
 export type IpfsHash = string & { __brand: 'IpfsHash' };
+export type AddressDriverAccountId = string & {
+  __brand: 'AddressDriverAccountId';
+};
 export type NftDriverAccountId = string & { __brand: 'NftDriverAccountId' };
 export type DripListId = NftDriverAccountId;
 export type RepoDriverAccountId = string & { __brand: 'RepoDriverAccountId' };

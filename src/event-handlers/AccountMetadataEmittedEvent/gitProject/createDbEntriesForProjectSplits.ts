@@ -1,7 +1,12 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
-import { isDependencyOfProjectType } from '../../../utils/assert';
+import {
+  assertAddressDiverAccountId,
+  assertDependencyOfProjectType,
+  isAddressDriverAccountId,
+  isRepoDiverAccountId,
+} from '../../../utils/assert';
 import type { ProjectId } from '../../../common/types';
 import {
   AddressDriverSplitReceiverModel,
@@ -9,6 +14,7 @@ import {
 } from '../../../models';
 import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
 import createDbEntriesForProjectDependency from '../createDbEntriesForProjectDependency';
+import shouldNeverHappen from '../../../utils/shouldNeverHappen';
 
 export default async function createDbEntriesForProjectSplits(
   funderProjectId: ProjectId,
@@ -20,20 +26,24 @@ export default async function createDbEntriesForProjectSplits(
 
   const { dependencies, maintainers } = splits;
 
-  const maintainerPromises = maintainers.map((maintainer) =>
-    AddressDriverSplitReceiverModel.create(
+  const maintainerPromises = maintainers.map((maintainer) => {
+    assertAddressDiverAccountId(maintainer.accountId);
+
+    return AddressDriverSplitReceiverModel.create(
       {
         funderProjectId,
         weight: maintainer.weight,
-        accountId: maintainer.accountId,
+        fundeeAccountId: maintainer.accountId,
         type: AddressDriverSplitReceiverType.ProjectMaintainer,
       },
       { transaction },
-    ),
-  );
+    );
+  });
 
   const dependencyPromises = dependencies.map(async (dependency) => {
-    if (isDependencyOfProjectType(dependency)) {
+    if (isRepoDiverAccountId(dependency.accountId)) {
+      assertDependencyOfProjectType(dependency);
+
       return createDbEntriesForProjectDependency(
         funderProjectId,
         dependency,
@@ -41,14 +51,20 @@ export default async function createDbEntriesForProjectSplits(
       );
     }
 
-    return AddressDriverSplitReceiverModel.create(
-      {
-        funderProjectId,
-        weight: dependency.weight,
-        accountId: dependency.accountId,
-        type: AddressDriverSplitReceiverType.ProjectDependency,
-      },
-      { transaction },
+    if (isAddressDriverAccountId(dependency.accountId)) {
+      return AddressDriverSplitReceiverModel.create(
+        {
+          funderProjectId,
+          weight: dependency.weight,
+          fundeeAccountId: dependency.accountId,
+          type: AddressDriverSplitReceiverType.ProjectDependency,
+        },
+        { transaction },
+      );
+    }
+
+    return shouldNeverHappen(
+      `Dependency with account ID ${dependency.accountId} is not an Address nor a Git Project.`,
     );
   });
 

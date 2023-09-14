@@ -101,17 +101,17 @@ function defineAssociations() {
   });
 
   GitProjectModel.hasOne(RepoDriverSplitReceiverModel, {
-    foreignKey: 'selfProjectId',
+    foreignKey: 'fundeeProjectId',
   });
   RepoDriverSplitReceiverModel.belongsTo(GitProjectModel, {
-    foreignKey: 'selfProjectId',
+    foreignKey: 'fundeeProjectId',
   });
 
   DripListModel.hasMany(RepoDriverSplitReceiverModel, {
-    foreignKey: 'funderProjectId',
+    foreignKey: 'funderDripListId',
   });
   RepoDriverSplitReceiverModel.belongsTo(DripListModel, {
-    foreignKey: 'funderProjectId',
+    foreignKey: 'funderDripListId',
   });
 
   DripListModel.hasMany(DripListSplitReceiverModel, {
@@ -126,5 +126,12 @@ function defineAssociations() {
   });
   AddressDriverSplitReceiverModel.belongsTo(DripListModel, {
     foreignKey: 'funderDripListId',
+  });
+
+  DripListModel.hasOne(DripListSplitReceiverModel, {
+    foreignKey: 'fundeeDripListId',
+  });
+  DripListSplitReceiverModel.belongsTo(DripListModel, {
+    foreignKey: 'fundeeDripListId',
   });
 }

@@ -1,18 +1,16 @@
 import type { Transaction } from 'sequelize';
-import type { UUID } from 'crypto';
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { DripListId } from '../../../common/types';
 import getNftDriverMetadata from './getNftDriverMetadata';
 import validateDripListMetadata from './validateDripListMetadata';
 import DripListModel from '../../../models/DripListModel';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
-import { logRequestDebug } from '../../../utils/logRequest';
 import getChangedProperties from '../../../utils/getChangedProperties';
 
 export default async function updateDripListMetadata(
   dripListId: DripListId,
   transaction: Transaction,
-  requestId: UUID,
+  logs: string[],
   ipfsHashBytes: string,
 ): Promise<AnyVersion<typeof nftDriverAccountMetadataParser>> {
   const dripList = await DripListModel.findByPk(dripListId, {
@@ -35,11 +33,10 @@ export default async function updateDripListMetadata(
   dripList.name = name ?? null;
   dripList.projectsJson = JSON.stringify(projects);
 
-  logRequestDebug(
+  logs.push(
     `Incoming event was the latest for Drip List with ID ${dripListId}. The Drip List metadata was updated: ${JSON.stringify(
       getChangedProperties(dripList),
     )}.`,
-    requestId,
   );
 
   await dripList.save({ transaction });

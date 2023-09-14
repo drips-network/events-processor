@@ -101,14 +101,14 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         const metadata = await updateDripListMetadata(
           projectOrNftDriverId,
           transaction,
-          requestId,
+          logs,
           value,
         );
 
         await createDbEntriesForDripListSplits(
           projectOrNftDriverId,
           metadata.projects,
-          requestId,
+          logs,
           transaction,
         );
       }

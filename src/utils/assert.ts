@@ -1,6 +1,7 @@
 import type { UUID } from 'crypto';
 import type { Transaction } from 'sequelize';
 import type {
+  AddressDriverAccountId,
   Dependency,
   DependencyOfProjectType,
   DripsEventSignature,
@@ -78,8 +79,12 @@ export function isDependencyOfProjectType(
 
 export function assertDependencyOfProjectType(
   project: Dependency,
-): project is DependencyOfProjectType {
-  return isDependencyOfProjectType(project);
+): asserts project is DependencyOfProjectType {
+  if (!isDependencyOfProjectType(project)) {
+    throw new Error(
+      `Dependency with account ID ${project.accountId} is not a valid DependencyOfProjectType.`,
+    );
+  }
 }
 
 export function isNftDriverAccountId(id: string): id is NftDriverAccountId {
@@ -118,5 +123,27 @@ export function assertRepoDiverAccountId(
 ): asserts id is RepoDriverAccountId {
   if (!isRepoDiverAccountId(id)) {
     throw new Error(`String ${id} is not a valid RepoDriverAccountId.`);
+  }
+}
+
+export function isAddressDriverAccountId(
+  id: string,
+): id is AddressDriverAccountId {
+  const isNaN = Number.isNaN(Number(id));
+  const isAccountIdOfAddressDriver =
+    getContractNameByAccountId(id) === 'addressDriver';
+
+  if (isNaN || !isAccountIdOfAddressDriver) {
+    return false;
+  }
+
+  return true;
+}
+
+export function assertAddressDiverAccountId(
+  id: string,
+): asserts id is AddressDriverAccountId {
+  if (!isAddressDriverAccountId(id)) {
+    throw new Error(`String ${id} is not a valid AddressDriverAccountId.`);
   }
 }

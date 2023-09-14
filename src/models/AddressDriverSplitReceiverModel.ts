@@ -7,7 +7,11 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
 import GitProjectModel from './GitProjectModel';
-import type { DripListId, ProjectId } from '../common/types';
+import type {
+  AddressDriverAccountId,
+  DripListId,
+  ProjectId,
+} from '../common/types';
 import DripListModel from './DripListModel';
 
 export enum AddressDriverSplitReceiverType {
@@ -25,8 +29,8 @@ export default class AddressDriverSplitReceiverModel extends Model<
   public declare funderDripListId: DripListId | null; // Foreign key
 
   public declare weight: number;
-  public declare accountId: string;
   public declare type: AddressDriverSplitReceiverType;
+  public declare fundeeAccountId: AddressDriverAccountId;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
@@ -35,6 +39,10 @@ export default class AddressDriverSplitReceiverModel extends Model<
           type: DataTypes.INTEGER,
           autoIncrement: true,
           primaryKey: true,
+        },
+        fundeeAccountId: {
+          type: DataTypes.STRING,
+          allowNull: false,
         },
         funderProjectId: {
           // Foreign key
@@ -58,15 +66,11 @@ export default class AddressDriverSplitReceiverModel extends Model<
           type: DataTypes.INTEGER,
           allowNull: true,
         },
-        accountId: {
-          type: DataTypes.STRING,
-          allowNull: true,
-        },
         type: {
           type: DataTypes.ENUM(
             ...Object.values(AddressDriverSplitReceiverType),
           ),
-          allowNull: true,
+          allowNull: false,
         },
       },
       {
