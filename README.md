@@ -43,6 +43,12 @@ After you have ensured that the Docker containers are up and running, to connect
 To launch the application, run:
 
 ```bash
+npm install
+```
+
+and then:
+
+```bash
 npm run start:dev
 ```
 
