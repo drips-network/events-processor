@@ -36,6 +36,16 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
     const [accountId, key, value] =
       args as AccountMetadataEmittedEvent.OutputTuple;
 
+    // TODO: maybe change the key to something more app specific.
+    if (key !== USER_METADATA_KEY) {
+      logRequestInfo(
+        `Skipping processing because the metadata key is not ${USER_METADATA_KEY} ('ifps'), meaning the update does not come from the Drips App.`,
+        requestId,
+      );
+
+      return;
+    }
+
     const projectOrNftDriverId = accountId.toString();
 
     const logs: string[] = [];

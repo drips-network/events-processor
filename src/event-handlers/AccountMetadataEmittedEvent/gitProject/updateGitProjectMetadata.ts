@@ -20,7 +20,10 @@ export default async function updateGitProjectMetadata(
 
   if (!project) {
     throw new Error(
-      `Git Project with ID ${project} was not found, but it was expected to exist. The event that should have created the Git Project may not have been processed yet.`,
+      `Attempted to update metadata for Git Project with ID ${projectId} but this project does not exist in the database. 
+      This could happen if the event that should have created the Git Project was not processed yet, or if the account metadata were emitted manually with the same key the Drips App is using. 
+      If it's the first case, the event should be processed successfully after retrying. 
+      If it's the second case, processing will fail. Check the logs for more details.`,
     );
   }
 

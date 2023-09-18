@@ -12,6 +12,8 @@ export default function validateProjectMetadata(
     );
   }
 
+  // ! TODO (IMPORTANT): populate splits from SetSplits event and validate them here.
+
   const errors = [];
 
   const { describes, source } = metadata;
