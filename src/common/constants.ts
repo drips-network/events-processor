@@ -11,7 +11,8 @@ export const DRIPS_CONTRACT_NAMES = [
   'immutableSplitsDriver',
 ] as const;
 
-export const USER_METADATA_KEY = ethers.encodeBytes32String('ipfs');
+export const DRIPS_APP_USER_METADATA_KEY_ENCODED =
+  ethers.encodeBytes32String('ipfs');
 
 export const COMMON_EVENT_INIT_ATTRIBUTES = {
   transactionHash: {

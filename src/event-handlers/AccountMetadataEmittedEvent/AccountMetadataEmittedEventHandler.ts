@@ -15,7 +15,7 @@ import {
 import EventHandlerBase from '../../common/EventHandlerBase';
 import AccountMetadataEmittedEventModel from '../../models/AccountMetadataEmittedEventModel';
 import saveEventProcessingJob from '../../queue/saveEventProcessingJob';
-import { USER_METADATA_KEY } from '../../common/constants';
+import { DRIPS_APP_USER_METADATA_KEY_ENCODED } from '../../common/constants';
 import { isNftDriverAccountId, isRepoDiverAccountId } from '../../utils/assert';
 import updateDripListMetadata from './dripList/updateDripListMetadata';
 import createDbEntriesForProjectSplits from './gitProject/createDbEntriesForProjectSplits';
@@ -37,9 +37,9 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       args as AccountMetadataEmittedEvent.OutputTuple;
 
     // TODO: maybe change the key to something more app specific.
-    if (key !== USER_METADATA_KEY) {
+    if (key !== DRIPS_APP_USER_METADATA_KEY_ENCODED) {
       logRequestInfo(
-        `Skipping processing because the metadata key is not ${USER_METADATA_KEY} ('ifps'), meaning the update does not come from the Drips App.`,
+        `Skipping processing because metadata were not emitted by the Drips App.`,
         requestId,
       );
 
@@ -139,7 +139,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
     const latestEvent = await AccountMetadataEmittedEventModel.findOne({
       where: {
         accountId: instance.accountId,
-        key: USER_METADATA_KEY,
+        key: DRIPS_APP_USER_METADATA_KEY_ENCODED,
       },
       order: [
         ['blockNumber', 'DESC'],

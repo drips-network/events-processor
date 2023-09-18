@@ -18,16 +18,24 @@ export default async function updateGitProjectMetadata(
     lock: true,
   });
 
+  // Because we filter on metadata emitted only by the Drips App we expect the project and the metadata to (eventually) exist.
+
   if (!project) {
     throw new Error(
-      `Attempted to update metadata for Git Project with ID ${projectId} but this project does not exist in the database. 
-      This could happen if the event that should have created the Git Project was not processed yet, or if the account metadata were emitted manually with the same key the Drips App is using. 
-      If it's the first case, the event should be processed successfully after retrying. 
-      If it's the second case, processing will fail. Check the logs for more details.`,
+      `Attempted to update metadata for Git Project with ID ${projectId}, but this project does not exist in the database. 
+      The event that should have created the project may still need to be processed. 
+      If the error persists and the job fails after completing all retries, ensure the account metadata were not emitted MANUALLY (having the same key as the Drips App). 
+      Check the logs for more details.`,
     );
   }
 
-  const metadata = await getProjectMetadata(projectId, ipfsHashBytes);
+  const metadata = await getProjectMetadata(ipfsHashBytes);
+
+  if (!metadata) {
+    throw new Error(
+      `Project metadata not found for Git Project with ID ${projectId} but it was expected to exist.`,
+    );
+  }
 
   validateProjectMetadata(project, metadata);
 
