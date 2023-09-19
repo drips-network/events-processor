@@ -18,6 +18,7 @@ export default class DripListModel extends Model<
   public declare isPublic: false;
   public declare name: string | null;
   public declare ownerAddress: AddressLike;
+  public declare previousOwnerAddress: AddressLike;
   public declare projectsJson: string | null;
   // TODO: add description after metadata v3 is updated.
 
@@ -33,6 +34,10 @@ export default class DripListModel extends Model<
           allowNull: true,
         },
         ownerAddress: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        previousOwnerAddress: {
           type: DataTypes.STRING,
           allowNull: false,
         },

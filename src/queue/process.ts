@@ -1,6 +1,6 @@
 import { getEventHandler } from '../utils/registerEventHandler';
 import type { KnownAny } from '../common/types';
-import { HandleContext } from '../common/types';
+import { HandleRequest } from '../common/types';
 import eventProcessingQueue from './queue';
 import { assertUUID } from '../utils/assert';
 
@@ -19,7 +19,7 @@ export default async function startQueueProcessing() {
 
     assertUUID(job.id);
 
-    const handleContext = new HandleContext(
+    const handleContext = new HandleRequest(
       {
         args: JSON.parse(args, (_, value) => {
           if (typeof value === 'bigint') {

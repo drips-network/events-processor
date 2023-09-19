@@ -6,7 +6,7 @@ import type {
   Result,
   EventSignature,
   EventSignatureToEventMap,
-  HandleContext,
+  HandleRequest,
   DripsContractEvent,
   RepoDriverContractEvent,
   DripsEventSignature,
@@ -28,18 +28,18 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
   >;
 
   /**
-   * Implements the handler's logic.
+   * Contains the handler's logic.
    *
    * **IMPORTANT: ⚠️ do NOT call this method directly**. Use {@link executeHandle} instead.
    *
    * Usually, you'd call {@link executeHandle} from the {@link onReceive} to process the event.
    */
-  protected abstract _handle(request: HandleContext<T>): Promise<void>;
+  protected abstract _handle(request: HandleRequest<T>): Promise<void>;
 
   /**
    * Executes the handler.
    */
-  public async executeHandle(request: HandleContext<T>): Promise<Result<void>> {
+  public async executeHandle(request: HandleRequest<T>): Promise<Result<void>> {
     const result = await getResult(this._handle.bind(this))(request);
 
     if (!result.ok) {

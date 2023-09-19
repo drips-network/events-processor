@@ -16,7 +16,3 @@ export function logRequestWarn(message: string, requestId: UUID): void {
 export function logRequestError(message: string, requestId: UUID): void {
   logger.error(`${message}`, { requestId });
 }
-
-export function nameOfType<T>(type: { new (): T }) {
-  return type.prototype.constructor.name;
-}

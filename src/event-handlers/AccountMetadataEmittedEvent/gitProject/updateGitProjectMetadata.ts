@@ -4,12 +4,13 @@ import type { ProjectId } from '../../../common/types';
 import { GitProjectModel } from '../../../models';
 import getProjectMetadata from './getProjectMetadata';
 import validateProjectMetadata from './validateProjectMetadata';
-import getChangedProperties from '../../../utils/getChangedProperties';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
+import type LogManager from '../../../common/LogManager';
+import { GitProjectUtils } from '../../../utils/GitProjectUtils';
 
 export default async function updateGitProjectMetadata(
   projectId: ProjectId,
-  logs: string[],
+  logManager: LogManager,
   transaction: Transaction,
   ipfsHashBytes: string,
 ): Promise<AnyVersion<typeof repoDriverAccountMetadataParser>> {
@@ -18,14 +19,10 @@ export default async function updateGitProjectMetadata(
     lock: true,
   });
 
-  // Because we filter on metadata emitted only by the Drips App we expect the project and the metadata to (eventually) exist.
-
   if (!project) {
     throw new Error(
-      `Attempted to update metadata for Git Project with ID ${projectId}, but this project does not exist in the database. 
-      The event that should have created the project may still need to be processed. 
-      If the error persists and the job fails after completing all retries, ensure the account metadata were not emitted MANUALLY (having the same key as the Drips App). 
-      Check the logs for more details.`,
+      `Failed to update the metadata of Git Project with ID ${projectId}: the project does not exist in the database. 
+      Make sure the 'OwnerUpdatedRequested' event that should have created the project was processed or the account metadata were not emitted manually.`,
     );
   }
 
@@ -47,13 +44,9 @@ export default async function updateGitProjectMetadata(
   project.ownerName = source.ownerName;
   project.description = description ?? null;
   project.splitsJson = JSON.stringify(metadata.splits);
-  project.verificationStatus = GitProjectModel.calculateStatus(project);
+  project.verificationStatus = GitProjectUtils.calculateStatus(project);
 
-  logs.push(
-    `Incoming event was the latest for Git Project with ID ${projectId}. The Git Project metadata was updated: ${JSON.stringify(
-      getChangedProperties(project),
-    )}.`,
-  );
+  logManager.appendUpdateLog(project, GitProjectModel, project.id);
 
   await project.save({ transaction });
 

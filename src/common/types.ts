@@ -28,6 +28,10 @@ export type NftDriverAccountId = string & { __brand: 'NftDriverAccountId' };
 export type DripListId = NftDriverAccountId;
 export type RepoDriverAccountId = string & { __brand: 'RepoDriverAccountId' };
 export type ProjectId = RepoDriverAccountId;
+export type AccountId =
+  | AddressDriverAccountId
+  | NftDriverAccountId
+  | RepoDriverAccountId;
 
 export type ValuesOf<T> = T[keyof T];
 
@@ -126,7 +130,7 @@ export type EventData<T extends EventSignature> = {
   args: EventArgs<EventSignatureToEventMap[T]>;
 };
 
-export class HandleContext<T extends EventSignature> {
+export class HandleRequest<T extends EventSignature> {
   public readonly id: UUID;
   public readonly event: EventData<T>;
 

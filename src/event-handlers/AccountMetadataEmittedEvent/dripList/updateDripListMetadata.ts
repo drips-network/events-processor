@@ -5,12 +5,12 @@ import getNftDriverMetadata from './getNftDriverMetadata';
 import validateDripListMetadata from './validateDripListMetadata';
 import DripListModel from '../../../models/DripListModel';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
-import getChangedProperties from '../../../utils/getChangedProperties';
+import type LogManager from '../../../common/LogManager';
 
 export default async function updateDripListMetadata(
   dripListId: DripListId,
   transaction: Transaction,
-  logs: string[],
+  logManager: LogManager,
   ipfsHashBytes: string,
 ): Promise<AnyVersion<typeof nftDriverAccountMetadataParser>> {
   const dripList = await DripListModel.findByPk(dripListId, {
@@ -33,11 +33,7 @@ export default async function updateDripListMetadata(
   dripList.name = name ?? null;
   dripList.projectsJson = JSON.stringify(projects);
 
-  logs.push(
-    `Incoming event was the latest for Drip List with ID ${dripListId}. The Drip List metadata was updated: ${JSON.stringify(
-      getChangedProperties(dripList),
-    )}.`,
-  );
+  logManager.appendUpdateLog(dripList, DripListModel, dripList.id);
 
   await dripList.save({ transaction });
 

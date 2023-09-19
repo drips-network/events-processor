@@ -16,11 +16,13 @@ import {
 } from '../../../models';
 import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
 import shouldNeverHappen from '../../../utils/shouldNeverHappen';
+import LogManager from '../../../common/LogManager';
+import DripListModel from '../../../models/DripListModel';
 
 export default async function createDbEntriesForDripListSplits(
   funderDripListId: DripListId,
   projects: AnyVersion<typeof nftDriverAccountMetadataParser>['projects'],
-  logs: string[],
+  logManager: LogManager,
   transaction: Transaction,
 ) {
   await clearCurrentEntries(funderDripListId, transaction);
@@ -66,8 +68,10 @@ export default async function createDbEntriesForDripListSplits(
 
   const result = await Promise.all([...splitsPromises]);
 
-  logs.push(
-    `AccountMetadataEmitted(uint256,bytes32,bytes) was the latest event for Drip List with ID ${funderDripListId}. Created DB entries for its splits:${result
+  logManager.appendLog(
+    `Updated ${LogManager.nameOfType(
+      DripListModel,
+    )} with ID ${funderDripListId} splits: ${result
       .map((p) => JSON.stringify(p))
       .join(`, `)}
     `,

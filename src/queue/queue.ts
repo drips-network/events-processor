@@ -23,8 +23,8 @@ eventProcessingQueue.on('job failed', (job, err) => {
 });
 
 eventProcessingQueue.on('job retrying', (job, err) => {
-  logger.warn(
-    `♻️ Job with ID ${job} failed with error '${err.message}' but is being retried...`,
+  logger.debug(
+    `♻️  Job with ID ${job} failed with error '${err.message}' but is being retried...`,
   );
 });
 

@@ -10,16 +10,18 @@ import {
 import type { ProjectId } from '../../../common/types';
 import {
   AddressDriverSplitReceiverModel,
+  GitProjectModel,
   RepoDriverSplitReceiverModel,
 } from '../../../models';
 import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
 import createDbEntriesForProjectDependency from '../createDbEntriesForProjectDependency';
 import shouldNeverHappen from '../../../utils/shouldNeverHappen';
+import LogManager from '../../../common/LogManager';
 
 export default async function createDbEntriesForProjectSplits(
   funderProjectId: ProjectId,
   splits: AnyVersion<typeof repoDriverAccountMetadataParser>['splits'],
-  logs: string[],
+  logManager: LogManager,
   transaction: Transaction,
 ) {
   await clearCurrentEntries(funderProjectId, transaction);
@@ -73,9 +75,12 @@ export default async function createDbEntriesForProjectSplits(
     ...dependencyPromises,
   ]);
 
-  logs.push(
-    `AccountMetadataEmitted(uint256,bytes32,bytes) was the latest event for Git Project with ID ${funderProjectId}. Created DB entries for its splits:
-    ${result.map((p) => JSON.stringify(p)).join(`, `)}
+  logManager.appendLog(
+    `Updated ${LogManager.nameOfType(
+      GitProjectModel,
+    )} with ID ${funderProjectId} splits: ${result
+      .map((p) => JSON.stringify(p))
+      .join(`, `)}
     `,
   );
 }

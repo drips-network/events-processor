@@ -49,16 +49,16 @@ async function getAccountsCountByOwner(
   transaction: Transaction,
 ) {
   const total = await TransferEventModel.count({
+    transaction,
     where: {
       to: ownerAddress,
     },
-    transaction,
   });
 
   if (total === 0) {
     if (!total) {
       throw new Error(
-        `No TransferEvent was found for owner ${ownerAddress} but at least one expected to exist. The event that should have created the entry may not have been processed yet.`,
+        `No 'TransferEvent' was found for owner ${ownerAddress} but at least one expected to exist. The event that should have created the entry may not have been processed yet.`,
       );
     }
   }
@@ -71,14 +71,14 @@ async function getOwnerAddressByAccountId(
   transaction: Transaction,
 ): Promise<AddressLike> {
   const transferEvent = await TransferEventModel.findOne({
-    where: { tokenId: accountId },
-    transaction,
     lock: true,
+    transaction,
+    where: { tokenId: accountId },
   });
 
   if (!transferEvent) {
     throw new Error(
-      `No TransferEvent was found for the account ID ${accountId} but at least one expected to exist. The event that should have created the entry may not have been processed yet.`,
+      `No 'TransferEvent' was found for the account ID ${accountId} but at least one expected to exist. The event that should have created the entry may not have been processed yet.`,
     );
   }
 

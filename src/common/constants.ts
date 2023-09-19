@@ -11,8 +11,8 @@ export const DRIPS_CONTRACT_NAMES = [
   'immutableSplitsDriver',
 ] as const;
 
-export const DRIPS_APP_USER_METADATA_KEY_ENCODED =
-  ethers.encodeBytes32String('ipfs');
+// TODO: maybe change the key to something more app specific.
+export const DRIPS_APP_USER_METADATA_KEY = ethers.encodeBytes32String('ipfs');
 
 export const COMMON_EVENT_INIT_ATTRIBUTES = {
   transactionHash: {
@@ -35,6 +35,7 @@ export const COMMON_EVENT_INIT_ATTRIBUTES = {
   },
 } as const;
 
+// TODO: add more forges when supported by the contracts.
 export const FORGES_MAP = {
   0: 'GitHub',
   1: 'GitLab',

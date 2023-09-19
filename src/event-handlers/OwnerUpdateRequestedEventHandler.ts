@@ -1,45 +1,43 @@
-import { ethers } from 'ethers';
 import type { OwnerUpdateRequestedEvent } from '../../contracts/RepoDriver';
 import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import sequelizeInstance from '../db/getSequelizeInstance';
-import {
-  logRequestDebug,
-  logRequestInfo,
-  nameOfType,
-} from '../utils/logRequest';
-import type { KnownAny, HandleContext } from '../common/types';
+import { logRequestInfo } from '../utils/logRequest';
+import type { KnownAny, HandleRequest } from '../common/types';
 import EventHandlerBase from '../common/EventHandlerBase';
-import { FORGES_MAP } from '../common/constants';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { GitProjectModel } from '../models';
 import { ProjectVerificationStatus } from '../models/GitProjectModel';
-import { assertRepoDiverAccountId } from '../utils/assert';
+import { GitProjectUtils } from '../utils/GitProjectUtils';
+import { AccountIdUtils } from '../utils/AccountIdUtils';
+import LogManager from '../common/LogManager';
+import isLatestEvent from '../utils/isLatestEvent';
 
 export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'OwnerUpdateRequested(uint256,uint8,bytes)'> {
   public readonly eventSignature =
     'OwnerUpdateRequested(uint256,uint8,bytes)' as const;
 
   protected async _handle(
-    request: HandleContext<'OwnerUpdateRequested(uint256,uint8,bytes)'>,
+    request: HandleRequest<'OwnerUpdateRequested(uint256,uint8,bytes)'>,
   ): Promise<void> {
-    const { event, id: requestId } = request;
-    const { args, logIndex, blockNumber, blockTimestamp, transactionHash } =
-      event;
+    const {
+      id: requestId,
+      event: { args, logIndex, blockNumber, blockTimestamp, transactionHash },
+    } = request;
+
     const [accountId, forge, name] =
       args as OwnerUpdateRequestedEvent.OutputTuple;
 
-    const logs: string[] = [];
-
-    const forgeAsString = FORGES_MAP[Number(forge) as keyof typeof FORGES_MAP];
-    const projectId = accountId.toString();
-    assertRepoDiverAccountId(projectId);
+    const repoDriverAccountId =
+      AccountIdUtils.repoDriverAccountIdFromBigInt(accountId);
+    const forgeAsString = GitProjectUtils.forgeFromBigInt(forge);
+    const decodedName = GitProjectUtils.nameFromBytes(name);
 
     logRequestInfo(
       `📥 ${this.name} is processing the following ${this.eventSignature}:
       \r\t - forge:       ${forgeAsString}
-      \r\t - name:        ${ethers.toUtf8String(name)}
-      \r\t - accountId:   ${accountId},
+      \r\t - name:        ${decodedName}
+      \r\t - accountId:   ${repoDriverAccountId},
       \r\t - logIndex:    ${logIndex}
       \r\t - blockNumber: ${blockNumber}
       \r\t - tx hash:     ${transactionHash}`,
@@ -47,57 +45,78 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
     );
 
     await sequelizeInstance.transaction(async (transaction) => {
-      const ownerUpdateRequestedEvent =
-        await OwnerUpdateRequestedEventModel.create(
-          {
-            name,
+      const logManager = new LogManager(requestId);
+
+      const [ownerUpdateRequestedEvent, isEventCreated] =
+        await OwnerUpdateRequestedEventModel.findOrCreate({
+          lock: true,
+          transaction,
+          where: {
+            logIndex,
+            transactionHash,
+          },
+          defaults: {
             logIndex,
             blockNumber,
             blockTimestamp,
             transactionHash,
+            name: decodedName,
             forge: forgeAsString,
-            accountId: projectId,
+            accountId: repoDriverAccountId,
           },
-          { transaction },
-        );
+        });
 
-      logs.push(
-        `Created a new ${nameOfType(OwnerUpdateRequestedEventModel)} with ID ${
-          ownerUpdateRequestedEvent.transactionHash
-        }-${ownerUpdateRequestedEvent.logIndex}.`,
+      logManager.appendFindOrCreateLog(
+        OwnerUpdateRequestedEventModel,
+        isEventCreated,
+        `${ownerUpdateRequestedEvent.transactionHash}-${ownerUpdateRequestedEvent.logIndex}`,
       );
 
-      const [project, created] = await GitProjectModel.findOrCreate({
+      const [project, isProjectCreated] = await GitProjectModel.findOrCreate({
         transaction,
         lock: true,
         where: {
-          id: projectId,
+          id: repoDriverAccountId,
         },
         defaults: {
-          id: projectId,
-          splitsJson: null,
+          name: decodedName,
           forge: forgeAsString,
-          name: ethers.toUtf8String(name),
-          verificationStatus: ProjectVerificationStatus.Started,
+          id: repoDriverAccountId,
+          verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
         },
       });
 
-      logs.push(
-        `${
-          created
-            ? `Created a new 💻 ${nameOfType(GitProjectModel)} with ID ${
-                project.id
-              }, forge ${project.forge} and name ${project.name}.`
-            : `Git Project with ID ${project.id} already exists. Probably, it was created by another event. Skipping creation.`
-        }`,
+      if (isProjectCreated) {
+        logManager
+          .appendFindOrCreateLog(GitProjectModel, isProjectCreated, project.id)
+          .logDebug();
+
+        return;
+      }
+
+      const isLatest = await isLatestEvent(
+        ownerUpdateRequestedEvent,
+        OwnerUpdateRequestedEventModel,
+        {
+          logIndex,
+          transactionHash,
+        },
+        transaction,
       );
 
-      logRequestDebug(
-        `Completed successfully. The following changes occurred:\n\t - ${logs.join(
-          '\n\t - ',
-        )}`,
-        requestId,
-      );
+      if (isLatest) {
+        project.name = decodedName;
+        project.forge = forgeAsString;
+        project.verificationStatus = GitProjectUtils.calculateStatus(project);
+
+        logManager
+          .appendIsLatestEventLog()
+          .appendUpdateLog(project, GitProjectModel, project.id);
+
+        await project.save({ transaction });
+
+        logManager.logDebug();
+      }
     });
   }
 

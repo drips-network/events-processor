@@ -1,60 +1,57 @@
-import type { Transaction } from 'sequelize';
+import { ethers } from 'ethers';
 import type {
   TypedContractEvent,
   TypedListener,
 } from '../../../contracts/common';
 import type { AccountMetadataEmittedEvent } from '../../../contracts/Drips';
-import type { KnownAny, HandleContext } from '../../common/types';
+import type { KnownAny, HandleRequest } from '../../common/types';
 
 import sequelizeInstance from '../../db/getSequelizeInstance';
-import {
-  logRequestDebug,
-  logRequestInfo,
-  nameOfType,
-} from '../../utils/logRequest';
+import { logRequestInfo } from '../../utils/logRequest';
 import EventHandlerBase from '../../common/EventHandlerBase';
 import AccountMetadataEmittedEventModel from '../../models/AccountMetadataEmittedEventModel';
 import saveEventProcessingJob from '../../queue/saveEventProcessingJob';
-import { DRIPS_APP_USER_METADATA_KEY_ENCODED } from '../../common/constants';
+import { DRIPS_APP_USER_METADATA_KEY } from '../../common/constants';
 import { isNftDriverAccountId, isRepoDiverAccountId } from '../../utils/assert';
 import updateDripListMetadata from './dripList/updateDripListMetadata';
 import createDbEntriesForProjectSplits from './gitProject/createDbEntriesForProjectSplits';
 import updateGitProjectMetadata from './gitProject/updateGitProjectMetadata';
 import IsDripList from '../../utils/isDripList';
 import createDbEntriesForDripListSplits from './dripList/createDbEntriesForDripListSplits';
+import { AccountIdUtils } from '../../utils/AccountIdUtils';
+import LogManager from '../../common/LogManager';
+import isLatestEvent from '../../utils/isLatestEvent';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignature =
     'AccountMetadataEmitted(uint256,bytes32,bytes)' as const;
 
   protected async _handle(
-    request: HandleContext<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
+    request: HandleRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
   ): Promise<void> {
-    const { event, id: requestId } = request;
-    const { args, logIndex, blockNumber, blockTimestamp, transactionHash } =
-      event;
+    const {
+      id: requestId,
+      event: { args, logIndex, blockNumber, blockTimestamp, transactionHash },
+    } = request;
+
     const [accountId, key, value] =
       args as AccountMetadataEmittedEvent.OutputTuple;
 
-    // TODO: maybe change the key to something more app specific.
-    if (key !== DRIPS_APP_USER_METADATA_KEY_ENCODED) {
+    if (key !== DRIPS_APP_USER_METADATA_KEY) {
       logRequestInfo(
-        `Skipping processing because metadata were not emitted by the Drips App.`,
+        `Skipping ${this.eventSignature} event because the metadata were not emitted by the Drips App.`,
         requestId,
       );
-
       return;
     }
 
-    const projectOrNftDriverId = accountId.toString();
-
-    const logs: string[] = [];
+    const typedAccountId = AccountIdUtils.accountIdFromBigInt(accountId);
 
     logRequestInfo(
       `📥 ${this.name} is processing the following ${this.eventSignature}:
       \r\t - key:         ${key}
-      \r\t - value:       ${value}
-      \r\t - accountId:   ${accountId},
+      \r\t - value:       ${value} (decoded: ${ethers.toUtf8String(value)})
+      \r\t - accountId:   ${typedAccountId},
       \r\t - logIndex:    ${logIndex}
       \r\t - blockNumber: ${blockNumber}
       \r\t - tx hash:     ${transactionHash}`,
@@ -62,106 +59,86 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
     );
 
     await sequelizeInstance.transaction(async (transaction) => {
-      const accountMetadataEmittedEventModel =
-        await AccountMetadataEmittedEventModel.create(
-          {
+      const logManager = new LogManager(requestId);
+
+      const [accountMetadataEmittedEventModel, isEventCreated] =
+        await AccountMetadataEmittedEventModel.findOrCreate({
+          lock: true,
+          transaction,
+          where: {
+            logIndex,
+            transactionHash,
+          },
+          defaults: {
             key,
             value,
             logIndex,
             blockNumber,
             blockTimestamp,
             transactionHash,
-            accountId: projectOrNftDriverId,
+            accountId: typedAccountId,
           },
-          { transaction },
-        );
+        });
 
-      logs.push(
-        `Created a new ${nameOfType(
-          AccountMetadataEmittedEventModel,
-        )} with ID ${accountMetadataEmittedEventModel.transactionHash}-${
-          accountMetadataEmittedEventModel.logIndex
-        }.`,
+      logManager.appendFindOrCreateLog(
+        AccountMetadataEmittedEventModel,
+        isEventCreated,
+        `${accountMetadataEmittedEventModel.transactionHash}-${accountMetadataEmittedEventModel.logIndex}`,
       );
 
-      const isLatest = await this._isLatestEvent(
+      const isLatest = await isLatestEvent(
         accountMetadataEmittedEventModel,
+        AccountMetadataEmittedEventModel,
+        {
+          transactionHash,
+          logIndex,
+        },
         transaction,
       );
 
-      if (isRepoDiverAccountId(projectOrNftDriverId) && isLatest) {
+      // `RepoDriver` account + Drips App metadata key => Git Project
+      if (isRepoDiverAccountId(typedAccountId) && isLatest) {
+        logManager.appendIsLatestEventLog();
+
         const metadata = await updateGitProjectMetadata(
-          projectOrNftDriverId,
-          logs,
+          typedAccountId,
+          logManager,
           transaction,
           value,
         );
 
         await createDbEntriesForProjectSplits(
-          projectOrNftDriverId,
+          typedAccountId,
           metadata.splits,
-          logs,
+          logManager,
           transaction,
         );
-      } else if (isNftDriverAccountId(projectOrNftDriverId) && isLatest) {
-        if (!(await IsDripList(projectOrNftDriverId, transaction))) {
+      }
+      // `NftDriver` account + Drips App metadata key => Drip List
+      else if (isNftDriverAccountId(typedAccountId) && isLatest) {
+        logManager.appendIsLatestEventLog();
+
+        if (!(await IsDripList(typedAccountId, transaction))) {
           return;
         }
 
         const metadata = await updateDripListMetadata(
-          projectOrNftDriverId,
+          typedAccountId,
           transaction,
-          logs,
+          logManager,
           value,
         );
 
         await createDbEntriesForDripListSplits(
-          projectOrNftDriverId,
+          typedAccountId,
           metadata.projects,
-          logs,
+          logManager,
           transaction,
         );
       }
 
-      logRequestDebug(
-        `Completed successfully. The following changes occurred:\n\t - ${logs.join(
-          '\n\t - ',
-        )}`,
-        requestId,
-      );
+      logManager.logDebug();
     });
-  }
-
-  private async _isLatestEvent(
-    instance: AccountMetadataEmittedEventModel,
-    transaction: Transaction,
-  ): Promise<boolean> {
-    const latestEvent = await AccountMetadataEmittedEventModel.findOne({
-      where: {
-        accountId: instance.accountId,
-        key: DRIPS_APP_USER_METADATA_KEY_ENCODED,
-      },
-      order: [
-        ['blockNumber', 'DESC'],
-        ['logIndex', 'DESC'],
-      ],
-      transaction,
-      lock: true,
-    });
-
-    if (!latestEvent) {
-      return true;
-    }
-
-    if (
-      latestEvent.blockNumber > instance.blockNumber ||
-      (latestEvent.blockNumber === instance.blockNumber &&
-        latestEvent.logIndex > instance.logIndex)
-    ) {
-      return false;
-    }
-
-    return true;
   }
 
   protected onReceive: TypedListener<
