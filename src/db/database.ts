@@ -86,6 +86,7 @@ function initializeEntities(): void {
 }
 
 function defineAssociations() {
+  // ********************* Git Project *********************
   GitProjectModel.hasMany(AddressDriverSplitReceiverModel, {
     foreignKey: 'funderProjectId',
   });
@@ -107,6 +108,14 @@ function defineAssociations() {
     foreignKey: 'fundeeProjectId',
   });
 
+  // ********************* Drip List *********************
+  DripListModel.hasMany(AddressDriverSplitReceiverModel, {
+    foreignKey: 'funderDripListId',
+  });
+  AddressDriverSplitReceiverModel.belongsTo(DripListModel, {
+    foreignKey: 'funderDripListId',
+  });
+
   DripListModel.hasMany(RepoDriverSplitReceiverModel, {
     foreignKey: 'funderDripListId',
   });
@@ -121,11 +130,11 @@ function defineAssociations() {
     foreignKey: 'funderDripListId',
   });
 
-  DripListModel.hasMany(AddressDriverSplitReceiverModel, {
-    foreignKey: 'funderDripListId',
+  DripListModel.hasOne(RepoDriverSplitReceiverModel, {
+    foreignKey: 'fundeeDripListId',
   });
-  AddressDriverSplitReceiverModel.belongsTo(DripListModel, {
-    foreignKey: 'funderDripListId',
+  RepoDriverSplitReceiverModel.belongsTo(DripListModel, {
+    foreignKey: 'fundeeDripListId',
   });
 
   DripListModel.hasOne(DripListSplitReceiverModel, {
