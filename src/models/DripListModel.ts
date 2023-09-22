@@ -13,8 +13,6 @@ export default class DripListModel extends Model<
   InferCreationAttributes<DripListModel>
 > {
   public declare id: DripListId; // The `tokenId` from `TransferEvent` event.
-
-  // Properties from metadata.
   public declare isPublic: false;
   public declare isValid: boolean;
   public declare name: string | null;
