@@ -71,8 +71,9 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           id: repoDriverId,
         },
         defaults: {
-          ownerAddress: owner,
           id: repoDriverId,
+          isValid: false, // It will turn true after the metadata is updated.
+          ownerAddress: owner,
           verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
         },
       });
@@ -80,7 +81,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       if (isProjectCreated) {
         logManager
           .appendFindOrCreateLog(GitProjectModel, isProjectCreated, project.id)
-          .logDebug();
+          .logAllDebug();
 
         return;
       }
@@ -105,7 +106,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
 
         await project.save({ transaction });
 
-        logManager.logDebug();
+        logManager.logAllDebug();
       }
     });
   }

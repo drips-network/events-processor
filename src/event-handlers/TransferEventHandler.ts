@@ -77,6 +77,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         },
         defaults: {
           id,
+          isValid: false, // It will turn true after the metadata is updated.
           isPublic: false,
           ownerAddress: to,
           previousOwnerAddress: from,
@@ -96,10 +97,11 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
       if (isDripListCreated) {
         logManager
           .appendFindOrCreateLog(DripListModel, isDripListCreated, dripList.id)
-          .logDebug();
+          .logAllDebug();
       } else if (isLatest) {
-        dripList.previousOwnerAddress = from;
+        dripList.isValid = false; // It will turn true after the metadata is updated.
         dripList.ownerAddress = to;
+        dripList.previousOwnerAddress = from;
 
         logManager
           .appendIsLatestEventLog()
@@ -107,7 +109,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
 
         await dripList.save({ transaction });
 
-        logManager.logDebug();
+        logManager.logAllDebug();
       }
     });
   }

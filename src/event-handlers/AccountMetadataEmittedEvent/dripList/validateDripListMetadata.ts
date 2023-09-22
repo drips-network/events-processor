@@ -3,10 +3,10 @@ import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import shouldNeverHappen from '../../../utils/shouldNeverHappen';
 import type DripListModel from '../../../models/DripListModel';
 
-export default function validateDripListMetadata(
+export default async function validateDripListMetadata(
   dripList: DripListModel,
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
-): void {
+): Promise<void> {
   if (!metadata) {
     throw new Error(
       `Drip List metadata not found for Drip List with (token) ID ${dripList.id} but it was expected to exist.`,
@@ -32,7 +32,7 @@ export default function validateDripListMetadata(
 
   if (errors.length > 0) {
     throw new Error(
-      `Git Project with ID ${dripListId} has metadata that does not match the metadata emitted by the contract (${errors.join(
+      `Drip List with ID ${dripListId} has metadata that does not match the metadata emitted by the contract (${errors.join(
         '; ',
       )}).`,
     );

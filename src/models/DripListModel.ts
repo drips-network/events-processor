@@ -16,6 +16,7 @@ export default class DripListModel extends Model<
 
   // Properties from metadata.
   public declare isPublic: false;
+  public declare isValid: boolean;
   public declare name: string | null;
   public declare ownerAddress: AddressLike;
   public declare previousOwnerAddress: AddressLike;
@@ -46,6 +47,10 @@ export default class DripListModel extends Model<
           allowNull: true,
         },
         isPublic: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+        },
+        isValid: {
           type: DataTypes.BOOLEAN,
           allowNull: false,
         },

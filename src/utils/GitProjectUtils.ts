@@ -6,7 +6,7 @@ import type { GitProjectModel } from '../models';
 import { ProjectVerificationStatus } from '../models/GitProjectModel';
 import shouldNeverHappen from './shouldNeverHappen';
 
-export function toOwnerAddress(address: string): AddressLike {
+export function toProjectOwnerAddress(address: string): AddressLike {
   if (!ethers.isAddress(address)) {
     throw new Error(`Invalid owner address: ${address}.`);
   }

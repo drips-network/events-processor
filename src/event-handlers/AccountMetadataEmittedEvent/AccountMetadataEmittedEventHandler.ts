@@ -1,4 +1,3 @@
-import { ethers } from 'ethers';
 import type {
   TypedContractEvent,
   TypedListener,
@@ -11,11 +10,8 @@ import EventHandlerBase from '../../common/EventHandlerBase';
 import AccountMetadataEmittedEventModel from '../../models/AccountMetadataEmittedEventModel';
 import saveEventProcessingJob from '../../queue/saveEventProcessingJob';
 import { DRIPS_APP_USER_METADATA_KEY } from '../../common/constants';
-import updateDripListMetadata from './dripList/updateDripListMetadata';
-import createDbEntriesForProjectSplits from './gitProject/createDbEntriesForProjectSplits';
-import updateGitProjectMetadata from './gitProject/updateGitProjectMetadata';
+import handleGitProjectMetadata from './gitProject/handleGitProjectMetadata';
 import IsDripList from '../../utils/dripListUtils';
-import createDbEntriesForDripListSplits from './dripList/createDbEntriesForDripListSplits';
 import LogManager from '../../common/LogManager';
 import {
   isNftDriverId,
@@ -23,6 +19,8 @@ import {
   toAccountId,
 } from '../../utils/accountIdUtils';
 import { isLatestEvent } from '../../utils/eventUtils';
+import { toIpfsHash } from '../../utils/metadataUtils';
+import handleDripListMetadata from './dripList/handleDripListMetadata';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignature =
@@ -48,11 +46,12 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
     }
 
     const typedAccountId = toAccountId(accountId);
+    const ipfsHash = toIpfsHash(value);
 
     LogManager.logRequestInfo(
       `📥 ${this.name} is processing the following ${this.eventSignature}:
       \r\t - key:         ${key}
-      \r\t - value:       ${value} (decoded: ${ethers.toUtf8String(value)})
+      \r\t - value:       ${value} (ipfs hash: ${ipfsHash})
       \r\t - accountId:   ${typedAccountId},
       \r\t - logIndex:    ${logIndex}
       \r\t - blockNumber: ${blockNumber}
@@ -92,8 +91,8 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         accountMetadataEmittedEventModel,
         AccountMetadataEmittedEventModel,
         {
-          transactionHash,
           logIndex,
+          transactionHash,
         },
         transaction,
       );
@@ -101,19 +100,11 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       // `RepoDriver` account + Drips App metadata key => Git Project
       if (isRepoDiverId(typedAccountId) && isLatest) {
         logManager.appendIsLatestEventLog();
-
-        const metadata = await updateGitProjectMetadata(
-          typedAccountId,
+        await handleGitProjectMetadata(
           logManager,
-          transaction,
-          value,
-        );
-
-        await createDbEntriesForProjectSplits(
           typedAccountId,
-          metadata.splits,
-          logManager,
           transaction,
+          ipfsHash,
         );
       }
       // `NftDriver` account + Drips App metadata key => Drip List
@@ -123,23 +114,15 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         if (!(await IsDripList(typedAccountId, transaction))) {
           return;
         }
-
-        const metadata = await updateDripListMetadata(
+        await handleDripListMetadata(
+          logManager,
           typedAccountId,
           transaction,
-          logManager,
-          value,
-        );
-
-        await createDbEntriesForDripListSplits(
-          typedAccountId,
-          metadata.projects,
-          logManager,
-          transaction,
+          ipfsHash,
         );
       }
 
-      logManager.logDebug();
+      logManager.logAllDebug();
     });
   }
 

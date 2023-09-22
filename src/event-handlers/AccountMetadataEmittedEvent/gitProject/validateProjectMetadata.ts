@@ -1,14 +1,15 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
 import type { GitProjectModel } from '../../../models';
+import shouldNeverHappen from '../../../utils/shouldNeverHappen';
 
-export default function validateProjectMetadata(
+export default async function validateProjectMetadata(
   project: GitProjectModel,
   metadata: AnyVersion<typeof repoDriverAccountMetadataParser>,
-): void {
+): Promise<void> {
   if (!metadata) {
-    throw new Error(
-      `Git Project metadata not found for project with ID ${project.id} but it was expected to exist.`,
+    shouldNeverHappen(
+      `Metadata for Git Project with ID ${project.id} is null.`,
     );
   }
 
