@@ -1,6 +1,6 @@
 import type { UUID } from 'crypto';
 import type { Model } from 'sequelize';
-import { logRequestDebug } from '../utils/logRequest';
+import logger from './logger';
 
 export type ChangedProperties = {
   [key: string]: { old: any; new: any };
@@ -83,11 +83,27 @@ export default class LogManager {
   }
 
   public logDebug(): void {
-    logRequestDebug(
+    LogManager.logRequestDebug(
       `Completed successfully. The following happened:\n\t - ${this._logs.join(
         '\n\t - ',
       )}`,
       this._requestId,
     );
+  }
+
+  public static logRequestDebug(message: string, requestId: UUID): void {
+    logger.debug(`${message}`, { requestId });
+  }
+
+  public static logRequestInfo(message: string, requestId: UUID): void {
+    logger.info(`${message}`, { requestId });
+  }
+
+  public static logRequestWarn(message: string, requestId: UUID): void {
+    logger.warn(`${message}`, { requestId });
+  }
+
+  public static logRequestError(message: string, requestId: UUID): void {
+    logger.error(`${message}`, { requestId });
   }
 }

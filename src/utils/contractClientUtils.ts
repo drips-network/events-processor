@@ -6,7 +6,7 @@ import {
 import type { NftDriver, Drips, RepoDriver } from '../../contracts';
 import { getNetworkSettings } from './getNetworkSettings';
 
-export async function getDrips(): Promise<Drips> {
+export async function getDripsClient(): Promise<Drips> {
   const {
     provider,
     chainConfig: { drips },
@@ -15,7 +15,7 @@ export async function getDrips(): Promise<Drips> {
   return Drips__factory.connect(drips.address as string, provider);
 }
 
-export async function getNftDriver(): Promise<NftDriver> {
+export async function getNftDriverClient(): Promise<NftDriver> {
   const {
     provider,
     chainConfig: { nftDriver },
@@ -24,7 +24,7 @@ export async function getNftDriver(): Promise<NftDriver> {
   return NftDriver__factory.connect(nftDriver.address as string, provider);
 }
 
-export async function getRepoDriver(): Promise<RepoDriver> {
+export async function getRepoDriverClient(): Promise<RepoDriver> {
   const {
     provider,
     chainConfig: { repoDriver },

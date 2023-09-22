@@ -7,11 +7,7 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
 import GitProjectModel from './GitProjectModel';
-import type {
-  AddressDriverAccountId,
-  DripListId,
-  ProjectId,
-} from '../common/types';
+import type { AddressDriverId, DripListId, ProjectId } from '../common/types';
 import DripListModel from './DripListModel';
 
 export enum AddressDriverSplitReceiverType {
@@ -30,7 +26,7 @@ export default class AddressDriverSplitReceiverModel extends Model<
 
   public declare weight: number;
   public declare type: AddressDriverSplitReceiverType;
-  public declare fundeeAccountId: AddressDriverAccountId;
+  public declare fundeeAccountId: AddressDriverId;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(

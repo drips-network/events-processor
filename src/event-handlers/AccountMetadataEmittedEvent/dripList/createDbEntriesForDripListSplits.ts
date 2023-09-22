@@ -3,12 +3,6 @@ import type { Transaction } from 'sequelize';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import type { DripListId } from '../../../common/types';
 import createDbEntriesForProjectDependency from '../createDbEntriesForProjectDependency';
-import {
-  isNftDriverAccountId,
-  isAddressDriverAccountId,
-  isRepoDiverAccountId,
-  assertDependencyOfProjectType,
-} from '../../../utils/assert';
 import DripListSplitReceiverModel from '../../../models/DripListSplitReceiverModel';
 import {
   AddressDriverSplitReceiverModel,
@@ -18,6 +12,12 @@ import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSpl
 import shouldNeverHappen from '../../../utils/shouldNeverHappen';
 import LogManager from '../../../common/LogManager';
 import DripListModel from '../../../models/DripListModel';
+import {
+  isAddressDriverId,
+  isNftDriverId,
+  isRepoDiverId,
+} from '../../../utils/accountIdUtils';
+import { assertDependencyOfProjectType } from '../../../utils/assert';
 
 export default async function createDbEntriesForDripListSplits(
   funderDripListId: DripListId,
@@ -28,7 +28,7 @@ export default async function createDbEntriesForDripListSplits(
   await clearCurrentEntries(funderDripListId, transaction);
 
   const splitsPromises = projects.map((project) => {
-    if (isRepoDiverAccountId(project.accountId)) {
+    if (isRepoDiverId(project.accountId)) {
       assertDependencyOfProjectType(project);
 
       return createDbEntriesForProjectDependency(
@@ -38,7 +38,7 @@ export default async function createDbEntriesForDripListSplits(
       );
     }
 
-    if (isNftDriverAccountId(project.accountId)) {
+    if (isNftDriverId(project.accountId)) {
       return DripListSplitReceiverModel.create(
         {
           funderDripListId,
@@ -49,7 +49,7 @@ export default async function createDbEntriesForDripListSplits(
       );
     }
 
-    if (isAddressDriverAccountId(project.accountId)) {
+    if (isAddressDriverId(project.accountId)) {
       return AddressDriverSplitReceiverModel.create(
         {
           funderDripListId,

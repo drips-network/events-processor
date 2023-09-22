@@ -1,10 +1,10 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
-import type { NftDriverAccountId } from '../../../common/types';
+import type { NftDriverId } from '../../../common/types';
 import { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
-import { createIpfsHash, getIpfsFile } from '../../../utils/ipfs';
+import { createIpfsHash, getIpfsFile } from '../../../utils/ipfsUtils';
 
 export default async function getNftDriverMetadata(
-  id: NftDriverAccountId,
+  id: NftDriverId,
   ipfsHashBytes: string,
 ): Promise<AnyVersion<typeof nftDriverAccountMetadataParser>> {
   const ipfsHash = createIpfsHash(ipfsHashBytes);

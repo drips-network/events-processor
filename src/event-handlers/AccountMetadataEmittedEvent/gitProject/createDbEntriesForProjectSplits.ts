@@ -1,12 +1,7 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
-import {
-  assertAddressDiverAccountId,
-  assertDependencyOfProjectType,
-  isAddressDriverAccountId,
-  isRepoDiverAccountId,
-} from '../../../utils/assert';
+import { assertDependencyOfProjectType } from '../../../utils/assert';
 import type { ProjectId } from '../../../common/types';
 import {
   AddressDriverSplitReceiverModel,
@@ -17,6 +12,11 @@ import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSpl
 import createDbEntriesForProjectDependency from '../createDbEntriesForProjectDependency';
 import shouldNeverHappen from '../../../utils/shouldNeverHappen';
 import LogManager from '../../../common/LogManager';
+import {
+  assertAddressDiverId,
+  isAddressDriverId,
+  isRepoDiverId,
+} from '../../../utils/accountIdUtils';
 
 export default async function createDbEntriesForProjectSplits(
   funderProjectId: ProjectId,
@@ -29,7 +29,7 @@ export default async function createDbEntriesForProjectSplits(
   const { dependencies, maintainers } = splits;
 
   const maintainerPromises = maintainers.map((maintainer) => {
-    assertAddressDiverAccountId(maintainer.accountId);
+    assertAddressDiverId(maintainer.accountId);
 
     return AddressDriverSplitReceiverModel.create(
       {
@@ -43,7 +43,7 @@ export default async function createDbEntriesForProjectSplits(
   });
 
   const dependencyPromises = dependencies.map(async (dependency) => {
-    if (isRepoDiverAccountId(dependency.accountId)) {
+    if (isRepoDiverId(dependency.accountId)) {
       assertDependencyOfProjectType(dependency);
 
       return createDbEntriesForProjectDependency(
@@ -53,7 +53,7 @@ export default async function createDbEntriesForProjectSplits(
       );
     }
 
-    if (isAddressDriverAccountId(dependency.accountId)) {
+    if (isAddressDriverId(dependency.accountId)) {
       return AddressDriverSplitReceiverModel.create(
         {
           funderProjectId,

@@ -2,7 +2,7 @@ import { getEventHandler } from '../utils/registerEventHandler';
 import type { KnownAny } from '../common/types';
 import { HandleRequest } from '../common/types';
 import eventProcessingQueue from './queue';
-import { assertUUID } from '../utils/assert';
+import { assertRequestId } from '../utils/assert';
 
 export default async function startQueueProcessing() {
   eventProcessingQueue.process(async (job) => {
@@ -17,7 +17,7 @@ export default async function startQueueProcessing() {
       blockTimestamp,
     } = job.data;
 
-    assertUUID(job.id);
+    assertRequestId(job.id);
 
     const handleContext = new HandleRequest(
       {

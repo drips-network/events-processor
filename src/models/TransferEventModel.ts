@@ -5,7 +5,7 @@ import type {
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import type { IEventModel, NftDriverAccountId } from '../common/types';
+import type { IEventModel, NftDriverId } from '../common/types';
 import getSchema from '../utils/getSchema';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
 
@@ -16,7 +16,7 @@ export default class TransferEventModel
   >
   implements IEventModel
 {
-  public declare tokenId: NftDriverAccountId; // The `tokenId` from `Transfer` event.
+  public declare tokenId: NftDriverId; // The `tokenId` from `Transfer` event.
   public declare from: AddressLike;
   public declare to: AddressLike;
 

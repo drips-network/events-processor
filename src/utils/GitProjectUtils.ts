@@ -4,79 +4,74 @@ import { FORGES_MAP } from '../common/constants';
 import type { Forge } from '../common/types';
 import type { GitProjectModel } from '../models';
 import { ProjectVerificationStatus } from '../models/GitProjectModel';
+import shouldNeverHappen from './shouldNeverHappen';
 
-export namespace GitProjectUtils {
-  export function ownerAddressFromString(address: string): AddressLike {
-    if (!ethers.isAddress(address)) {
-      throw new Error(`Invalid owner address: ${address}.`);
-    }
-
-    return address as AddressLike;
+export function toOwnerAddress(address: string): AddressLike {
+  if (!ethers.isAddress(address)) {
+    throw new Error(`Invalid owner address: ${address}.`);
   }
 
-  export function forgeFromBigInt(forge: bigint): Forge {
-    const forgeAsString = FORGES_MAP[Number(forge) as keyof typeof FORGES_MAP];
+  return address as AddressLike;
+}
 
-    if (!forgeAsString) {
-      throw new Error(`Invalid forge value: ${forge}.`);
-    }
+export function toForge(forge: bigint): Forge {
+  const forgeAsString = FORGES_MAP[Number(forge) as keyof typeof FORGES_MAP];
 
-    return forgeAsString;
+  if (!forgeAsString) {
+    throw new Error(`Invalid forge value: ${forge}.`);
   }
 
-  export function nameFromBytes(bytes: string): string {
-    return ethers.toUtf8String(bytes);
+  return forgeAsString;
+}
+
+export function toReadable(bytes: string): string {
+  return ethers.toUtf8String(bytes);
+}
+
+export function calculateProjectStatus(
+  project: GitProjectModel,
+): ProjectVerificationStatus {
+  if (
+    project.ownerAddress === null &&
+    !project.url &&
+    !project.emoji &&
+    !project.color &&
+    !project.ownerName
+  ) {
+    return ProjectVerificationStatus.Unclaimed;
   }
 
-  export function calculateStatus(
-    project: GitProjectModel,
-  ): ProjectVerificationStatus {
-    if (
-      project.ownerAddress === null &&
-      !project.url &&
-      !project.emoji &&
-      !project.color &&
-      !project.ownerName
-    ) {
-      return ProjectVerificationStatus.Unclaimed;
-    }
-
-    if (
-      project.ownerAddress &&
-      project.url &&
-      project.emoji &&
-      project.color &&
-      project.ownerName
-    ) {
-      return ProjectVerificationStatus.Claimed;
-    }
-
-    if (
-      project.ownerAddress &&
-      !project.url &&
-      !project.emoji &&
-      !project.color &&
-      !project.ownerName
-    ) {
-      return ProjectVerificationStatus.PendingMetadata;
-    }
-
-    if (
-      project.ownerAddress === null &&
-      project.url &&
-      project.emoji &&
-      project.color &&
-      project.ownerName
-    ) {
-      return ProjectVerificationStatus.PendingOwner;
-    }
-
-    throw new Error(
-      `Unexpected Git Project verification status for project ${JSON.stringify(
-        project,
-        null,
-        2,
-      )}.`,
-    );
+  if (
+    project.ownerAddress &&
+    project.url &&
+    project.emoji &&
+    project.color &&
+    project.ownerName
+  ) {
+    return ProjectVerificationStatus.Claimed;
   }
+
+  if (
+    project.ownerAddress &&
+    !project.url &&
+    !project.emoji &&
+    !project.color &&
+    !project.ownerName
+  ) {
+    return ProjectVerificationStatus.PendingMetadata;
+  }
+
+  if (
+    project.ownerAddress === null &&
+    project.url &&
+    project.emoji &&
+    project.color &&
+    project.ownerName
+  ) {
+    return ProjectVerificationStatus.PendingOwner;
+  }
+
+  return shouldNeverHappen(
+    `Project with ID ${project.id} has an invalid status.`,
+  );
 }

@@ -3,15 +3,14 @@ import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
 import sequelizeInstance from '../db/getSequelizeInstance';
 import type { KnownAny, HandleRequest } from '../common/types';
-import { logRequestInfo } from '../utils/logRequest';
 import EventHandlerBase from '../common/EventHandlerBase';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { GitProjectModel } from '../models';
-import { AccountIdUtils } from '../utils/AccountIdUtils';
-import { GitProjectUtils } from '../utils/GitProjectUtils';
 import LogManager from '../common/LogManager';
 import { ProjectVerificationStatus } from '../models/GitProjectModel';
-import isLatestEvent from '../utils/isLatestEvent';
+import { toRepoDriverId } from '../utils/accountIdUtils';
+import { calculateProjectStatus } from '../utils/gitProjectUtils';
+import { isLatestEvent } from '../utils/eventUtils';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
   public readonly eventSignature = 'OwnerUpdated(uint256,address)' as const;
@@ -26,13 +25,12 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
 
     const [accountId, owner] = args as OwnerUpdatedEvent.OutputTuple;
 
-    const repoDriverAccountId =
-      AccountIdUtils.repoDriverAccountIdFromBigInt(accountId);
+    const repoDriverId = toRepoDriverId(accountId);
 
-    logRequestInfo(
+    LogManager.logRequestInfo(
       `📥 ${this.name} is processing the following ${this.eventSignature}:
       \r\t - owner:       ${owner}
-      \r\t - accountId:   ${repoDriverAccountId},
+      \r\t - accountId:   ${repoDriverId},
       \r\t - logIndex:    ${logIndex}
       \r\t - blockNumber: ${blockNumber}
       \r\t - tx hash:     ${transactionHash}`,
@@ -56,7 +54,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
             blockNumber,
             blockTimestamp,
             transactionHash,
-            accountId: repoDriverAccountId,
+            accountId: repoDriverId,
           },
         });
 
@@ -70,11 +68,11 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
         transaction,
         lock: true,
         where: {
-          id: repoDriverAccountId,
+          id: repoDriverId,
         },
         defaults: {
           ownerAddress: owner,
-          id: repoDriverAccountId,
+          id: repoDriverId,
           verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
         },
       });
@@ -99,7 +97,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
 
       if (isLatest) {
         project.ownerAddress = owner;
-        project.verificationStatus = GitProjectUtils.calculateStatus(project);
+        project.verificationStatus = calculateProjectStatus(project);
 
         logManager
           .appendIsLatestEventLog()

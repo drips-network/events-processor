@@ -6,7 +6,7 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
-import type { IEventModel, RepoDriverAccountId } from '../common/types';
+import type { IEventModel, RepoDriverId } from '../common/types';
 import getSchema from '../utils/getSchema';
 
 export default class OwnerUpdatedEventModel
@@ -18,7 +18,7 @@ export default class OwnerUpdatedEventModel
 {
   // Properties from event output.
   public declare owner: AddressLike;
-  public declare accountId: RepoDriverAccountId;
+  public declare accountId: RepoDriverId;
 
   // Common event log properties.
   public declare logIndex: number;

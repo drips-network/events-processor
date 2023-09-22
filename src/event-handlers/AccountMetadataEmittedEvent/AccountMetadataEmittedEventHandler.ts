@@ -7,20 +7,22 @@ import type { AccountMetadataEmittedEvent } from '../../../contracts/Drips';
 import type { KnownAny, HandleRequest } from '../../common/types';
 
 import sequelizeInstance from '../../db/getSequelizeInstance';
-import { logRequestInfo } from '../../utils/logRequest';
 import EventHandlerBase from '../../common/EventHandlerBase';
 import AccountMetadataEmittedEventModel from '../../models/AccountMetadataEmittedEventModel';
 import saveEventProcessingJob from '../../queue/saveEventProcessingJob';
 import { DRIPS_APP_USER_METADATA_KEY } from '../../common/constants';
-import { isNftDriverAccountId, isRepoDiverAccountId } from '../../utils/assert';
 import updateDripListMetadata from './dripList/updateDripListMetadata';
 import createDbEntriesForProjectSplits from './gitProject/createDbEntriesForProjectSplits';
 import updateGitProjectMetadata from './gitProject/updateGitProjectMetadata';
-import IsDripList from '../../utils/isDripList';
+import IsDripList from '../../utils/dripListUtils';
 import createDbEntriesForDripListSplits from './dripList/createDbEntriesForDripListSplits';
-import { AccountIdUtils } from '../../utils/AccountIdUtils';
 import LogManager from '../../common/LogManager';
-import isLatestEvent from '../../utils/isLatestEvent';
+import {
+  isNftDriverId,
+  isRepoDiverId,
+  toAccountId,
+} from '../../utils/accountIdUtils';
+import { isLatestEvent } from '../../utils/eventUtils';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignature =
@@ -38,16 +40,16 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       args as AccountMetadataEmittedEvent.OutputTuple;
 
     if (key !== DRIPS_APP_USER_METADATA_KEY) {
-      logRequestInfo(
+      LogManager.logRequestInfo(
         `Skipping ${this.eventSignature} event because the metadata were not emitted by the Drips App.`,
         requestId,
       );
       return;
     }
 
-    const typedAccountId = AccountIdUtils.accountIdFromBigInt(accountId);
+    const typedAccountId = toAccountId(accountId);
 
-    logRequestInfo(
+    LogManager.logRequestInfo(
       `📥 ${this.name} is processing the following ${this.eventSignature}:
       \r\t - key:         ${key}
       \r\t - value:       ${value} (decoded: ${ethers.toUtf8String(value)})
@@ -97,7 +99,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       );
 
       // `RepoDriver` account + Drips App metadata key => Git Project
-      if (isRepoDiverAccountId(typedAccountId) && isLatest) {
+      if (isRepoDiverId(typedAccountId) && isLatest) {
         logManager.appendIsLatestEventLog();
 
         const metadata = await updateGitProjectMetadata(
@@ -115,7 +117,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         );
       }
       // `NftDriver` account + Drips App metadata key => Drip List
-      else if (isNftDriverAccountId(typedAccountId) && isLatest) {
+      else if (isNftDriverId(typedAccountId) && isLatest) {
         logManager.appendIsLatestEventLog();
 
         if (!(await IsDripList(typedAccountId, transaction))) {

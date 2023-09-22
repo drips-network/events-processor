@@ -21,17 +21,14 @@ import type {
 
 export type KnownAny = any;
 export type IpfsHash = string & { __brand: 'IpfsHash' };
-export type AddressDriverAccountId = string & {
-  __brand: 'AddressDriverAccountId';
+export type AddressDriverId = string & {
+  __brand: 'AddressDriverId';
 };
-export type NftDriverAccountId = string & { __brand: 'NftDriverAccountId' };
-export type DripListId = NftDriverAccountId;
-export type RepoDriverAccountId = string & { __brand: 'RepoDriverAccountId' };
-export type ProjectId = RepoDriverAccountId;
-export type AccountId =
-  | AddressDriverAccountId
-  | NftDriverAccountId
-  | RepoDriverAccountId;
+export type NftDriverId = string & { __brand: 'NftDriverId' };
+export type DripListId = NftDriverId;
+export type RepoDriverId = string & { __brand: 'RepoDriverId' };
+export type ProjectId = RepoDriverId;
+export type AccountId = AddressDriverId | NftDriverId | RepoDriverId;
 
 export type ValuesOf<T> = T[keyof T];
 

@@ -1,9 +1,9 @@
 import { getRegisteredEvents } from './registerEventHandler';
-import getTypedEvent from './getTypedEvent';
 import { getNetworkSettings } from './getNetworkSettings';
 import logger from '../common/logger';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
-import getContractDetails from './getContractDetails';
+import { getOriginContractByEvent } from './contractUtils';
+import { getTypedEvent } from './eventUtils';
 
 export default async function processPastEvents(): Promise<void> {
   logger.info('Start processing past events. This might take a while...');
@@ -15,7 +15,7 @@ export default async function processPastEvents(): Promise<void> {
   await Promise.all(
     getRegisteredEvents().map(async (eventSignature) => {
       const { contract, name: contractName } =
-        await getContractDetails(eventSignature);
+        await getOriginContractByEvent(eventSignature);
       const event = await getTypedEvent(eventSignature);
 
       let i;

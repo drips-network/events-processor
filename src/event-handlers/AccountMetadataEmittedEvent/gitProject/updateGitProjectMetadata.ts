@@ -6,7 +6,7 @@ import getProjectMetadata from './getProjectMetadata';
 import validateProjectMetadata from './validateProjectMetadata';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
 import type LogManager from '../../../common/LogManager';
-import { GitProjectUtils } from '../../../utils/GitProjectUtils';
+import { calculateProjectStatus } from '../../../utils/gitProjectUtils';
 
 export default async function updateGitProjectMetadata(
   projectId: ProjectId,
@@ -44,7 +44,7 @@ export default async function updateGitProjectMetadata(
   project.ownerName = source.ownerName;
   project.description = description ?? null;
   project.splitsJson = JSON.stringify(metadata.splits);
-  project.verificationStatus = GitProjectUtils.calculateStatus(project);
+  project.verificationStatus = calculateProjectStatus(project);
 
   logManager.appendUpdateLog(project, GitProjectModel, project.id);
 

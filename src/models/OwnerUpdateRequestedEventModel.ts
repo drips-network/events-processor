@@ -4,7 +4,7 @@ import type {
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import type { Forge, IEventModel, RepoDriverAccountId } from '../common/types';
+import type { Forge, IEventModel, RepoDriverId } from '../common/types';
 import getSchema from '../utils/getSchema';
 import { COMMON_EVENT_INIT_ATTRIBUTES, FORGES_MAP } from '../common/constants';
 
@@ -18,7 +18,7 @@ export default class OwnerUpdateRequestedEventModel
   // Properties from event output.
   public declare forge: Forge;
   public declare name: string;
-  public declare accountId: RepoDriverAccountId;
+  public declare accountId: RepoDriverId;
 
   // Common event log properties.
   public declare logIndex: number;

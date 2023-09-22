@@ -1,6 +1,6 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
-import { createIpfsHash, getIpfsFile } from '../../../utils/ipfs';
+import { createIpfsHash, getIpfsFile } from '../../../utils/ipfsUtils';
 
 export default async function getProjectMetadata(
   ipfsHashBytes: string,

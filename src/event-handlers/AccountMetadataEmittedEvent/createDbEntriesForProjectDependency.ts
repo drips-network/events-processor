@@ -12,7 +12,7 @@ import shouldNeverHappen from '../../utils/shouldNeverHappen';
 import RepoDriverSplitReceiverModel, {
   RepoDriverSplitReceiverType,
 } from '../../models/RepoDriverSplitReceiverModel';
-import { isNftDriverAccountId, isRepoDiverAccountId } from '../../utils/assert';
+import { isNftDriverId, isRepoDiverId } from '../../utils/accountIdUtils';
 
 export default async function createDbEntriesForProjectDependency(
   funderAccountId: ProjectId | DripListId,
@@ -48,15 +48,11 @@ export default async function createDbEntriesForProjectDependency(
     {
       weight,
       fundeeProjectId,
-      type: isNftDriverAccountId(funderAccountId)
+      type: isNftDriverId(funderAccountId)
         ? RepoDriverSplitReceiverType.DripListDependency
         : RepoDriverSplitReceiverType.ProjectDependency,
-      funderDripListId: isNftDriverAccountId(funderAccountId)
-        ? funderAccountId
-        : null,
-      funderProjectId: isRepoDiverAccountId(funderAccountId)
-        ? funderAccountId
-        : null,
+      funderDripListId: isNftDriverId(funderAccountId) ? funderAccountId : null,
+      funderProjectId: isRepoDiverId(funderAccountId) ? funderAccountId : null,
     },
     { transaction },
   );

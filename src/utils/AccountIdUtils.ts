@@ -1,50 +1,104 @@
 import type {
   AccountId,
-  NftDriverAccountId,
-  RepoDriverAccountId,
+  AddressDriverId,
+  NftDriverId,
+  RepoDriverId,
 } from '../common/types';
-import {
-  isAddressDriverAccountId,
-  isNftDriverAccountId,
-  isRepoDiverAccountId,
-} from './assert';
+import { getOriginContractByAccountId } from './contractUtils';
 
-export namespace AccountIdUtils {
-  export function repoDriverAccountIdFromBigInt(
-    accountId: bigint,
-  ): RepoDriverAccountId {
-    const repoDriverAccountId = accountId.toString();
+export function toRepoDriverId(id: bigint): RepoDriverId {
+  const repoDriverId = id.toString();
 
-    if (!isRepoDiverAccountId(repoDriverAccountId)) {
-      throw new Error(`Invalid 'RepoDriver' account ID: ${accountId}.`);
-    }
-
-    return repoDriverAccountId as RepoDriverAccountId;
+  if (!isRepoDiverId(repoDriverId)) {
+    throw new Error(`Invalid 'RepoDriver' account ID: ${id}.`);
   }
 
-  export function nftDriverAccountIdFromBigInt(
-    accountId: bigint,
-  ): NftDriverAccountId {
-    const nftDriverAccountId = accountId.toString();
+  return repoDriverId as RepoDriverId;
+}
 
-    if (!isNftDriverAccountId(nftDriverAccountId)) {
-      throw new Error(`Invalid 'NftDriver' account ID: ${accountId}.`);
-    }
+export function toNftDriverId(id: bigint): NftDriverId {
+  const nftDriverId = id.toString();
 
-    return nftDriverAccountId as NftDriverAccountId;
+  if (!isNftDriverId(nftDriverId)) {
+    throw new Error(`Invalid 'NftDriver' account ID: ${id}.`);
   }
 
-  export function accountIdFromBigInt(accountId: bigint): AccountId {
-    const accountIdAsString = accountId.toString();
+  return nftDriverId as NftDriverId;
+}
 
-    if (
-      isRepoDiverAccountId(accountIdAsString) ||
-      isNftDriverAccountId(accountIdAsString) ||
-      isAddressDriverAccountId(accountIdAsString)
-    ) {
-      return accountIdAsString as RepoDriverAccountId;
-    }
+export function toAccountId(id: bigint): AccountId {
+  const accountIdAsString = id.toString();
 
-    throw new Error(`Invalid account ID: ${accountId}.`);
+  if (
+    isRepoDiverId(accountIdAsString) ||
+    isNftDriverId(accountIdAsString) ||
+    isAddressDriverId(accountIdAsString)
+  ) {
+    return accountIdAsString as AccountId;
+  }
+
+  throw new Error(`Invalid account ID: ${id}.`);
+}
+
+export function isAddressDriverId(
+  idAsString: string,
+): idAsString is AddressDriverId {
+  const isNaN = Number.isNaN(Number(idAsString));
+
+  const isAccountIdOfAddressDriver =
+    getOriginContractByAccountId(idAsString) === 'addressDriver';
+
+  if (isNaN || !isAccountIdOfAddressDriver) {
+    return false;
+  }
+
+  return true;
+}
+
+export function assertAddressDiverId(
+  id: string,
+): asserts id is AddressDriverId {
+  if (!isAddressDriverId(id)) {
+    throw new Error(`String ${id} is not a valid 'AddressDriverId'.`);
+  }
+}
+
+export function isNftDriverId(id: string): id is NftDriverId {
+  const isNaN = Number.isNaN(Number(id));
+  const isAccountIdOfNftDriver =
+    getOriginContractByAccountId(id) === 'nftDriver';
+
+  if (isNaN || !isAccountIdOfNftDriver) {
+    return false;
+  }
+
+  return true;
+}
+
+export function assertNftDriverAccountId(
+  id: string,
+): asserts id is NftDriverId {
+  if (!isNftDriverId(id)) {
+    throw new Error(`String ${id} is not a valid 'NftDriverId'.`);
+  }
+}
+
+export function isRepoDiverId(id: string): id is RepoDriverId {
+  const isNaN = Number.isNaN(Number(id));
+  const isAccountIdOfRepoDriver =
+    getOriginContractByAccountId(id) === 'repoDriver';
+
+  if (isNaN || !isAccountIdOfRepoDriver) {
+    return false;
+  }
+
+  return true;
+}
+
+export function assertRepoDiverAccountId(
+  id: string,
+): asserts id is RepoDriverId {
+  if (!isRepoDiverId(id)) {
+    throw new Error(`String ${id} is not a valid 'RepoDriverId'.`);
   }
 }
