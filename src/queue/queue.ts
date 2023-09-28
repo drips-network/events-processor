@@ -10,7 +10,10 @@ const eventProcessingQueue = new BeeQueue<{
   blockTimestamp: Date;
   transactionHash: string;
   args: string;
-}>(`${config.network}_events`, { activateDelayedJobs: true });
+}>(`${config.network}_events`, {
+  activateDelayedJobs: true,
+  redis: { url: config.redisConnectionString },
+});
 
 eventProcessingQueue.on('succeeded', (job) => {
   logger.info(`✅ SUCCESS: Job with ID ${job.id} completed successfully.`);

@@ -15,8 +15,7 @@ export default function setupQueueUI() {
           type: 'bee',
           name: `${config.network}_events`,
           redis: {
-            host: config.redisHost,
-            port: config.redisPort as unknown as number,
+            url: config.redisConnectionString,
           },
           hostId: 'drips_queue',
         },
