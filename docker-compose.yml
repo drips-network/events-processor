@@ -40,9 +40,19 @@ services:
     networks:
       - backend
 
+  redisinsight:
+    image: redislabs/redisinsight:latest
+    container_name: redisinsight_container
+    restart: unless-stopped
+    volumes:
+      - redisinsight:/db
+    ports:
+      - '8001:8001'
+
 volumes:
   postgres_data:
   pgadmin_data:
+  redisinsight:
 
 networks:
   backend:
