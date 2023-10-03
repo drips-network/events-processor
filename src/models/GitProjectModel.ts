@@ -53,7 +53,7 @@ export default class GitProjectModel extends Model<
         },
         name: {
           type: DataTypes.STRING,
-          allowNull: false,
+          allowNull: true,
         },
         ownerAddress: {
           type: DataTypes.STRING,
@@ -85,7 +85,7 @@ export default class GitProjectModel extends Model<
         },
         forge: {
           type: DataTypes.ENUM(...Object.values(FORGES_MAP)),
-          allowNull: false,
+          allowNull: true,
         },
       },
       {

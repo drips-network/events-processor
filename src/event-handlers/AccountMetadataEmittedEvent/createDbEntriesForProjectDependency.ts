@@ -33,7 +33,7 @@ export default async function createDbEntriesForProjectDependency(
     },
     defaults: {
       url,
-      isValid: false, // It will turn true after the metadata is updated.
+      isValid: true, // There are no receivers yet, so the project is valid.
       splitsJson: null,
       id: fundeeProjectId,
       name: `${ownerName}/${repoName}`,

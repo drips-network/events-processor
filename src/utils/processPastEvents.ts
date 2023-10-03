@@ -11,6 +11,7 @@ export default async function processPastEvents(): Promise<void> {
   const { chainConfig, provider } = await getNetworkSettings();
 
   const endBlock = await provider.getBlockNumber();
+  logger.info(`Current block number: ${endBlock}`);
 
   await Promise.all(
     getRegisteredEvents().map(async (eventSignature) => {
