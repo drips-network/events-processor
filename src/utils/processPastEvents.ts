@@ -11,7 +11,7 @@ export default async function processPastEvents(): Promise<void> {
   const { chainConfig, provider } = await getNetworkSettings();
 
   const endBlock = await provider.getBlockNumber();
-  logger.info(`Current block number: ${endBlock}`);
+  logger.info(`End block number: ${endBlock}`);
 
   await Promise.all(
     getRegisteredEvents().map(async (eventSignature) => {
@@ -22,6 +22,7 @@ export default async function processPastEvents(): Promise<void> {
       let i;
       const batchSize = 5000;
       const startBlock = chainConfig[contractName].block;
+      logger.info(`Start block number for ${contractName}: ${startBlock}`);
 
       for (i = startBlock; i < endBlock; i += batchSize) {
         const eventLogs = await contract.queryFilter(

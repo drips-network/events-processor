@@ -9,9 +9,9 @@ import { setupQueueUi, startQueueProcessing } from './queue';
 // ! Benchmark, and if we need to scale and process in parallel, prevent duplicate processing of events.
 (async () => {
   try {
+    registerServices();
     await validateNetworkSettings();
     await startQueueProcessing();
-    registerServices();
     await connectToDb();
     setupQueueUi();
     await processPastEvents();
