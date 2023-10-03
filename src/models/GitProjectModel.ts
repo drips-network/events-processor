@@ -32,6 +32,7 @@ export default class GitProjectModel extends Model<
   public declare emoji: string | null;
   public declare color: string | null;
   public declare ownerName: string | null;
+  public declare repoName: string | null;
   public declare splitsJson: string | null;
   public declare description: string | null;
   public declare verificationStatus: ProjectVerificationStatus;
@@ -76,6 +77,10 @@ export default class GitProjectModel extends Model<
           allowNull: true,
         },
         ownerName: {
+          type: DataTypes.STRING,
+          allowNull: true,
+        },
+        repoName: {
           type: DataTypes.STRING,
           allowNull: true,
         },

@@ -20,18 +20,18 @@ export default async function validateProjectMetadata(
   const { name: projectName, id: projectId } = project;
 
   if (`${ownerName}/${repoName}` !== `${projectName}`) {
-    errors.push(`repoName mismatch: got ${repoName}, expected ${projectName}`);
+    errors.push(`repoName mismatch: got ${repoName}, expected ${projectName}.`);
   }
 
   if (!url.includes(repoName)) {
     errors.push(
-      `URL does not include repoName: ${projectName} not found in ${url}`,
+      `URL does not include repoName: ${projectName} not found in ${url}.`,
     );
   }
 
   if (describes.accountId !== projectId) {
     errors.push(
-      `accountId mismatch with: got ${describes.accountId}, expected ${projectId}`,
+      `accountId mismatch with: got ${describes.accountId}, expected ${projectId}.`,
     );
   }
 

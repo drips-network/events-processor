@@ -69,6 +69,7 @@ async function updateGitProjectMetadata(
   project.emoji = emoji;
   project.url = source.url;
   project.ownerName = source.ownerName;
+  project.repoName = source.repoName;
   project.description = description ?? null;
   project.splitsJson = JSON.stringify(metadata.splits);
   project.verificationStatus = calculateProjectStatus(project);

@@ -7,7 +7,7 @@
     "prepare": "husky install",
     "format": "prettier --write .",
     "docker:clean": "docker-compose down && docker volume rm drips-events-processor_postgres_data",
-    "start:dev": "NODE_ENV=development npx nodemon",
+    "start:dev": "NODE_ENV=local npx nodemon",
     "lint": "prettier --check . && eslint src/**/*.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build:contracts": "typechain --target=ethers-v6 --out-dir contracts ./src/abi/**.json",
