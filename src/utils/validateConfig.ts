@@ -2,6 +2,7 @@ import logger from '../common/logger';
 import { DRIPS_CONTRACT_NAMES, SUPPORTED_NETWORKS } from '../common/constants';
 import { getNetworkSettings } from './getNetworkSettings';
 import { getRegisteredEvents } from './registerEventHandler';
+import config from '../db/config';
 
 export default async function validateNetworkSettings(): Promise<void> {
   const { chainConfig, network, provider } = await getNetworkSettings();
@@ -29,6 +30,7 @@ export default async function validateNetworkSettings(): Promise<void> {
       {
         chainConfig,
         network,
+        config,
         registeredEvents: getRegisteredEvents(),
       },
       null,
