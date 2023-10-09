@@ -11,6 +11,7 @@ import { ProjectVerificationStatus } from '../models/GitProjectModel';
 import { toRepoDriverId } from '../utils/accountIdUtils';
 import { calculateProjectStatus } from '../utils/gitProjectUtils';
 import { isLatestEvent } from '../utils/eventUtils';
+import { getAddressDriverClient } from '../utils/contractClientUtils';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
   public readonly eventSignature = 'OwnerUpdated(uint256,address)' as const;
@@ -74,6 +75,9 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           id: repoDriverId,
           isValid: false, // It will turn true after the metadata is updated.
           ownerAddress: owner,
+          ownerAccountId: await (
+            await getAddressDriverClient()
+          ).calcAccountId(owner as string),
           verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
         },
       });
