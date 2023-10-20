@@ -37,6 +37,8 @@ export default async function createDbEntriesForProjectDependency(
       splitsJson: null,
       id: fundeeProjectId,
       name: `${ownerName}/${repoName}`,
+      ownerName,
+      repoName,
       verificationStatus: ProjectVerificationStatus.Unclaimed,
       forge:
         Object.values(FORGES_MAP).find(

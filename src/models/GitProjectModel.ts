@@ -6,7 +6,7 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
-import type { Forge, ProjectId } from '../common/types';
+import type { AccountId, Forge, ProjectId } from '../common/types';
 import { FORGES_MAP } from '../common/constants';
 
 export enum ProjectVerificationStatus {
@@ -27,7 +27,7 @@ export default class GitProjectModel extends Model<
   public declare name: string | null;
   public declare forge: Forge | null;
   public declare ownerAddress: AddressLike | null;
-  public declare ownerAccountId: bigint | null;
+  public declare ownerAccountId: AccountId | null;
 
   public declare url: string | null;
   public declare emoji: string | null;

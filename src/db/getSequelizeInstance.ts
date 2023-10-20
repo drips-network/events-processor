@@ -14,6 +14,7 @@ const sequelizeInstance = new Sequelize(
   `postgres://${postgresUsername}:${postgresPassword}@${postgresHost}:${postgresPort}/${postgresDatabase}`,
   {
     logging: shouldEnableSequelizeLogging ? (msg) => logger.debug(msg) : false,
+    timezone: 'UTC',
   },
 );
 

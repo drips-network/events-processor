@@ -2,7 +2,7 @@ import type { OwnerUpdatedEvent } from '../../contracts/RepoDriver';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
 import sequelizeInstance from '../db/getSequelizeInstance';
-import type { KnownAny, HandleRequest } from '../common/types';
+import type { KnownAny, HandleRequest, AccountId } from '../common/types';
 import EventHandlerBase from '../common/EventHandlerBase';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { GitProjectModel } from '../models';
@@ -75,9 +75,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           id: repoDriverId,
           isValid: false, // It will turn true after the metadata is updated.
           ownerAddress: owner,
-          ownerAccountId: await (
-            await getAddressDriverClient()
-          ).calcAccountId(owner as string),
+          ownerAccountId: await getOwnerAccountId(owner),
           verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
         },
       });
@@ -102,6 +100,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
 
       if (isLatest) {
         project.ownerAddress = owner;
+        project.ownerAccountId = (await getOwnerAccountId(owner)) ?? null;
         project.verificationStatus = calculateProjectStatus(project);
 
         logManager
@@ -127,4 +126,13 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       this.eventSignature,
     );
   };
+}
+async function getOwnerAccountId(
+  owner: string,
+): Promise<
+  AccountId | PromiseLike<AccountId | null | undefined> | null | undefined
+> {
+  return (
+    await (await getAddressDriverClient()).calcAccountId(owner as string)
+  ).toString() as AccountId;
 }

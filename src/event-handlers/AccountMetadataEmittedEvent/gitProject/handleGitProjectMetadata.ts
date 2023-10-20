@@ -13,6 +13,7 @@ import type { IpfsHash, ProjectId } from '../../../common/types';
 import {
   assertAddressDiverId,
   isAddressDriverId,
+  isNftDriverId,
   isRepoDiverId,
 } from '../../../utils/accountIdUtils';
 import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
@@ -22,6 +23,8 @@ import shouldNeverHappen from '../../../utils/shouldNeverHappen';
 import { getProjectMetadata } from '../../../utils/metadataUtils';
 import validateProjectMetadata from './validateProjectMetadata';
 import areReceiversValid from '../splitsValidator';
+import getUserAddress from '../../../utils/get-account-address';
+import logger from '../../../common/logger';
 
 export default async function handleGitProjectMetadata(
   logManager: LogManager,
@@ -117,6 +120,7 @@ async function createDbEntriesForProjectSplits(
         funderProjectId,
         weight: maintainer.weight,
         fundeeAccountId: maintainer.accountId,
+        fundeeAccountAddress: getUserAddress(maintainer.accountId),
         type: AddressDriverSplitReceiverType.ProjectMaintainer,
       },
       { transaction },
@@ -140,10 +144,19 @@ async function createDbEntriesForProjectSplits(
           funderProjectId,
           weight: dependency.weight,
           fundeeAccountId: dependency.accountId,
+          fundeeAccountAddress: getUserAddress(dependency.accountId),
           type: AddressDriverSplitReceiverType.ProjectDependency,
         },
         { transaction },
       );
+    }
+
+    if (isNftDriverId(dependency.accountId)) {
+      logger.warn(
+        `Dependency with account ID ${dependency.accountId} is not an Address nor a Git Project.`,
+      );
+
+      return Promise.resolve();
     }
 
     return shouldNeverHappen(

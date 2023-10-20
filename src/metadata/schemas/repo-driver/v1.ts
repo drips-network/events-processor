@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import sourceSchema from '../common/sources';
+import { sourceSchema } from '../common/sources';
 
 const addressDriverSplitReceiverSchema = z.object({
   weight: z.number(),
@@ -19,7 +19,8 @@ const repoDriverAccountSplitsSchema = z.object({
   ),
 });
 
-const repoDriverAccountMetadataSchemaV1 = z.object({
+// eslint-disable-next-line import/prefer-default-export
+export const repoDriverAccountMetadataSchemaV1 = z.object({
   driver: z.literal('repo'),
   describes: z.object({
     driver: z.literal('repo'),
@@ -31,5 +32,3 @@ const repoDriverAccountMetadataSchemaV1 = z.object({
   description: z.string().optional(),
   splits: repoDriverAccountSplitsSchema,
 });
-
-export default repoDriverAccountMetadataSchemaV1;

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import sourceSchema from '../common/sources';
+import { sourceSchema } from '../common/sources';
 
 const addressDriverSplitReceiverSchema = z.object({
   type: z.literal('address'),
@@ -23,7 +23,8 @@ const dripListSplitReceiverSchema = z.object({
   accountId: z.string(),
 });
 
-const nftDriverAccountMetadataSchemaV2 = z.object({
+// eslint-disable-next-line import/prefer-default-export
+export const nftDriverAccountMetadataSchemaV2 = z.object({
   driver: z.literal('nft'),
   describes: z.object({
     driver: z.literal('nft'),
@@ -39,5 +40,3 @@ const nftDriverAccountMetadataSchemaV2 = z.object({
   ),
   name: z.string().optional(),
 });
-
-export default nftDriverAccountMetadataSchemaV2;

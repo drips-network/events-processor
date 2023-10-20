@@ -7,6 +7,6 @@ const gitHubSourceSchema = z.object({
   url: z.string(),
 });
 
-const sourceSchema = gitHubSourceSchema;
-
-export default sourceSchema;
+// This will be a union type when we add support for other forges.
+// eslint-disable-next-line import/prefer-default-export
+export const sourceSchema = gitHubSourceSchema;

@@ -5,6 +5,7 @@ import type {
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
+import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
 import GitProjectModel from './GitProjectModel';
 import type { AddressDriverId, DripListId, ProjectId } from '../common/types';
@@ -27,6 +28,7 @@ export default class AddressDriverSplitReceiverModel extends Model<
   public declare weight: number;
   public declare type: AddressDriverSplitReceiverType;
   public declare fundeeAccountId: AddressDriverId;
+  public declare fundeeAccountAddress: AddressLike;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
@@ -37,6 +39,10 @@ export default class AddressDriverSplitReceiverModel extends Model<
           primaryKey: true,
         },
         fundeeAccountId: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        fundeeAccountAddress: {
           type: DataTypes.STRING,
           allowNull: false,
         },

@@ -10,7 +10,7 @@ const ethAddressSchema = z.preprocess((v) => {
 }, z.string());
 
 const bigintSchema = z.preprocess(
-  (v) => typeof v === 'string' && BigInt(v),
+  (v) => (typeof v === 'string' ? BigInt(v) : v),
   z.bigint(),
 );
 
@@ -47,7 +47,8 @@ const assetConfigMetadataSchema = z.object({
   streams: z.array(streamMetadataSchema),
 });
 
-const addressDriverAccountMetadataSchemaV1 = z.object({
+// eslint-disable-next-line import/prefer-default-export
+export const addressDriverAccountMetadataSchemaV1 = z.object({
   describes: z.object({
     driver: z.literal('address'),
     accountId: z.string(),
@@ -59,5 +60,3 @@ const addressDriverAccountMetadataSchemaV1 = z.object({
   timestamp: z.number(),
   writtenByAddress: ethAddressSchema,
 });
-
-export default addressDriverAccountMetadataSchemaV1;

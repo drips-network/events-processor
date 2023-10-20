@@ -10,6 +10,7 @@ declare global {
       POSTGRES_PASSWORD: string;
       INFURA_API_KEY: string;
       NETWORK: SupportedNetwork;
+      PROCESS_PAST_EVENTS: boolean;
       REDIS_CONNECTION_STRING: string;
     }
   }

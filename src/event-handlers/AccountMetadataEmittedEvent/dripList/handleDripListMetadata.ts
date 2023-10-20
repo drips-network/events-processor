@@ -22,6 +22,7 @@ import {
 import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
 import shouldNeverHappen from '../../../utils/shouldNeverHappen';
 import areReceiversValid from '../splitsValidator';
+import getUserAddress from '../../../utils/get-account-address';
 
 export default async function handleDripListMetadata(
   logManager: LogManager,
@@ -91,40 +92,41 @@ async function updateDripListMetadata(
 
 async function createDbEntriesForDripListSplits(
   funderDripListId: DripListId,
-  projects: AnyVersion<typeof nftDriverAccountMetadataParser>['projects'],
+  splits: AnyVersion<typeof nftDriverAccountMetadataParser>['projects'],
   logManager: LogManager,
   transaction: Transaction,
 ) {
   await clearCurrentEntries(funderDripListId, transaction);
 
-  const splitsPromises = projects.map((project) => {
-    if (isRepoDiverId(project.accountId)) {
-      assertDependencyOfProjectType(project);
+  const splitsPromises = splits.map((split) => {
+    if (isRepoDiverId(split.accountId)) {
+      assertDependencyOfProjectType(split);
 
       return createDbEntriesForProjectDependency(
         funderDripListId,
-        project,
+        split,
         transaction,
       );
     }
 
-    if (isNftDriverId(project.accountId)) {
+    if (isNftDriverId(split.accountId)) {
       return DripListSplitReceiverModel.create(
         {
           funderDripListId,
-          fundeeDripListId: project.accountId,
-          weight: project.weight,
+          fundeeDripListId: split.accountId,
+          weight: split.weight,
         },
         { transaction },
       );
     }
 
-    if (isAddressDriverId(project.accountId)) {
+    if (isAddressDriverId(split.accountId)) {
       return AddressDriverSplitReceiverModel.create(
         {
           funderDripListId,
-          weight: project.weight,
-          fundeeAccountId: project.accountId,
+          weight: split.weight,
+          fundeeAccountId: split.accountId,
+          fundeeAccountAddress: getUserAddress(split.accountId),
           type: AddressDriverSplitReceiverType.DripListDependency,
         },
         { transaction },
@@ -132,7 +134,7 @@ async function createDbEntriesForDripListSplits(
     }
 
     return shouldNeverHappen(
-      `Split with account ID ${project.accountId} is not an Address, Drip List, or a Git Project.`,
+      `Split with account ID ${split.accountId} is not an Address, Drip List, or a Git Project.`,
     );
   });
 
