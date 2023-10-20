@@ -10,6 +10,7 @@ export default {
   postgresDatabase: process.env.POSTGRES_DB,
   postgresUsername: process.env.POSTGRES_USER,
   postgresPassword: process.env.POSTGRES_PASSWORD,
-  shouldProcessPastEvents: process.env.PROCESS_PAST_EVENTS,
   redisConnectionString: process.env.REDIS_CONNECTION_STRING,
+  shouldProcessPastEvents:
+    (process.env.PROCESS_PAST_EVENTS as unknown as string) === 'true',
 };
