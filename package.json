@@ -12,7 +12,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build:contracts": "typechain --target=ethers-v6 --out-dir contracts ./src/abi/**.json",
     "build": "tsc",
-    "start": "node dist/src/index.js"
+    "start:prod": "NODE_ENV=production node dist/src/index.js",
+    "postbuild": "rm -rf ./dist/src/config && cp -r ./src/config ./dist/src/config"
   },
   "keywords": [],
   "author": "",
