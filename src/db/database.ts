@@ -1,22 +1,11 @@
-import { Sequelize } from 'sequelize';
 import sequelizeInstance from './getSequelizeInstance';
 import logger from '../common/logger';
-import { SUPPORTED_NETWORKS } from '../common/constants';
 import GitProjectModel from '../models/GitProjectModel';
 import AddressDriverSplitReceiverModel from '../models/AddressDriverSplitReceiverModel';
 import RepoDriverSplitReceiverModel from '../models/RepoDriverSplitReceiverModel';
-import config from './config';
 import { getRegisteredModels } from '../utils/registerModel';
 import DripListModel from '../models/DripListModel';
 import DripListSplitReceiverModel from '../models/DripListSplitReceiverModel';
-
-const {
-  postgresHost,
-  postgresPort,
-  postgresDatabase,
-  postgresPassword,
-  postgresUsername,
-} = config;
 
 export default async function connectToDb(): Promise<void> {
   logger.info('Initializing database...');
@@ -37,35 +26,7 @@ async function authenticate(): Promise<void> {
     logger.info('Connection has been established successfully.');
   } catch (error: any) {
     if (error.name === 'SequelizeConnectionError') {
-      logger.info('Database does not exist. Attempting to create...');
-
-      try {
-        const tempSequelize = new Sequelize(
-          `postgres://${postgresUsername}:${postgresPassword}@${postgresHost}:${postgresPort}/postgres`,
-          {
-            logging: (msg) => logger.debug(msg),
-          },
-        );
-        await tempSequelize.query(
-          `DROP DATABASE IF EXISTS ${postgresDatabase};`,
-        );
-        await tempSequelize.query(`CREATE DATABASE ${postgresDatabase};`);
-
-        await tempSequelize.close();
-
-        logger.info('Database created successfully.');
-
-        for (const network of SUPPORTED_NETWORKS) {
-          await sequelizeInstance.query(
-            `CREATE SCHEMA IF NOT EXISTS ${network};`,
-          );
-        }
-        await sequelizeInstance.authenticate();
-      } catch (e: any) {
-        logger.error('Unable to create the database:', e);
-      }
-    } else {
-      logger.error('Unable to connect to the database:', error);
+      logger.error('Database does not exist.');
     }
   }
 }

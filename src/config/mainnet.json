@@ -2,22 +2,22 @@
   "network": "mainnet",
   "drips": {
     "address": "0xd0Dd053392db676D57317CD4fe96Fc2cCf42D0b4",
-    "block": 17684572
+    "block": 16840977
   },
   "repoDriver": {
     "address": "0x770023d55D09A9C110694827F1a6B32D5c2b373E",
-    "block": 17684572
+    "block": 16840977
   },
   "addressDriver": {
     "address": "0x1455d9bD6B98f95dd8FEB2b3D60ed825fcef0610",
-    "block": 17684572
+    "block": 16840977
   },
   "nftDriver": {
     "address": "0xcf9c49B0962EDb01Cdaa5326299ba85D72405258",
-    "block": 17684572
+    "block": 16840977
   },
   "immutableSplitsDriver": {
     "address": "0x1212975c0642B07F696080ec1916998441c2b774",
-    "block": 17684572
+    "block": 16840977
   }
 }

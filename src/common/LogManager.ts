@@ -20,8 +20,13 @@ export default class LogManager {
 
   public static getChangedProperties<T extends Model>(
     instance: T,
-  ): ChangedProperties {
+  ): ChangedProperties | null {
     const changedKeys = instance.changed();
+
+    if (!changedKeys) {
+      return null;
+    }
+
     const changedProps: ChangedProperties = {};
 
     if (changedKeys && changedKeys.length > 0) {
@@ -74,9 +79,13 @@ export default class LogManager {
     id: string,
   ): this {
     this._logs.push(
-      `Updated ${LogManager.nameOfType(type)} with ID ${id}: ${JSON.stringify(
-        LogManager.getChangedProperties(instance),
-      )}`,
+      `Updated ${LogManager.nameOfType(type)} with ID ${id}:${
+        LogManager.getChangedProperties(instance)
+          ? `\n\t - ${JSON.stringify(
+              LogManager.getChangedProperties(instance),
+            )}`
+          : ''
+      }`,
     );
 
     return this;

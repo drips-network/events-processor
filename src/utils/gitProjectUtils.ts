@@ -31,47 +31,24 @@ export function toReadable(bytes: string): string {
 export function calculateProjectStatus(
   project: GitProjectModel,
 ): ProjectVerificationStatus {
-  if (
-    project.ownerAddress === null &&
-    !project.url &&
-    !project.emoji &&
-    !project.color &&
-    !project.ownerName
-  ) {
+  if (!project.ownerAddress && !project.url) {
     return ProjectVerificationStatus.Unclaimed;
   }
 
-  if (
-    project.ownerAddress &&
-    project.url &&
-    project.emoji &&
-    project.color &&
-    project.ownerName
-  ) {
+  if (project.ownerAddress && project.url) {
     return ProjectVerificationStatus.Claimed;
   }
 
-  if (
-    project.ownerAddress &&
-    !project.url &&
-    !project.emoji &&
-    !project.color &&
-    !project.ownerName
-  ) {
+  if (project.ownerAddress && !project.url) {
     return ProjectVerificationStatus.PendingMetadata;
   }
 
-  if (
-    project.ownerAddress === null &&
-    project.url &&
-    project.emoji &&
-    project.color &&
-    project.ownerName
-  ) {
+  if (!project.ownerAddress && project.url) {
     return ProjectVerificationStatus.PendingOwner;
   }
 
   return shouldNeverHappen(
-    `Project with ID ${project.id} has an invalid status.`,
+    `Project with ID ${project.id} (${project.name}) has an invalid status.
+    \r\tProject: ${JSON.stringify(project, null, 2)}`,
   );
 }

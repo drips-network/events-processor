@@ -8,6 +8,7 @@ import config from './db/config';
 
 (async () => {
   try {
+    logger.debug('Starting the application...');
     registerServices();
     await validateNetworkSettings();
     await startQueueProcessing();

@@ -49,12 +49,16 @@ export default class GitProjectModel extends Model<
           type: DataTypes.BOOLEAN,
           allowNull: false,
         },
-        splitsJson: {
-          type: DataTypes.JSON,
-          allowNull: true,
-        },
         name: {
           type: DataTypes.STRING,
+          allowNull: true,
+        },
+        verificationStatus: {
+          type: DataTypes.ENUM(...Object.values(ProjectVerificationStatus)),
+          allowNull: false,
+        },
+        forge: {
+          type: DataTypes.ENUM(...Object.values(FORGES_MAP)),
           allowNull: true,
         },
         ownerAddress: {
@@ -89,12 +93,8 @@ export default class GitProjectModel extends Model<
           type: DataTypes.STRING,
           allowNull: true,
         },
-        verificationStatus: {
-          type: DataTypes.ENUM(...Object.values(ProjectVerificationStatus)),
-          allowNull: false,
-        },
-        forge: {
-          type: DataTypes.ENUM(...Object.values(FORGES_MAP)),
+        splitsJson: {
+          type: DataTypes.JSON,
           allowNull: true,
         },
       },

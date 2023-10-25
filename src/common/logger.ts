@@ -1,5 +1,6 @@
 import winston from 'winston';
 import dotenv from 'dotenv';
+import config from '../db/config';
 
 dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
 
@@ -14,18 +15,19 @@ const format = winston.format.combine(
 );
 
 const developmentLogger = winston.createLogger({
-  level: 'debug',
+  level: config.logLevel,
   format,
   transports: [new winston.transports.Console()],
 });
 
 const productionLogger = winston.createLogger({
-  level: 'info',
+  level: config.logLevel,
   format,
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'combined.log' }),
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({
+      filename: `logs/${new Date().toISOString().slice(0, 10)}.log`,
+    }),
   ],
 });
 
