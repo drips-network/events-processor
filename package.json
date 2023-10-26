@@ -9,7 +9,7 @@
     "docker:clean": "docker-compose down && docker volume rm drips-events-processor_postgres_data",
     "lint": "prettier --check . && eslint src/**/*.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
+    "build": "npm run build:contracts && tsc",
     "build:contracts": "typechain --target=ethers-v6 --out-dir contracts ./src/abi/**.json",
     "postbuild": "rm -rf ./dist/src/config && cp -r ./src/config ./dist/src/config",
     "start:dev": "NODE_ENV=development npx nodemon",
