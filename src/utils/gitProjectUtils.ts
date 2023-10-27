@@ -14,6 +14,15 @@ export function toProjectOwnerAddress(address: string): AddressLike {
   return address as AddressLike;
 }
 
+export function toUrl(forge: Forge, projectName: string): string {
+  switch (forge) {
+    case 'GitHub':
+      return `https://github.com/${projectName}`;
+    default:
+      throw new Error(`Unsupported forge: ${forge}.`);
+  }
+}
+
 export function toForge(forge: bigint): Forge {
   const forgeAsString = FORGES_MAP[Number(forge) as keyof typeof FORGES_MAP];
 
@@ -31,19 +40,19 @@ export function toReadable(bytes: string): string {
 export function calculateProjectStatus(
   project: GitProjectModel,
 ): ProjectVerificationStatus {
-  if (!project.ownerAddress && !project.url) {
+  if (!project.ownerAddress && !project.emoji) {
     return ProjectVerificationStatus.Unclaimed;
   }
 
-  if (project.ownerAddress && project.url) {
+  if (project.ownerAddress && project.emoji) {
     return ProjectVerificationStatus.Claimed;
   }
 
-  if (project.ownerAddress && !project.url) {
+  if (project.ownerAddress && !project.emoji) {
     return ProjectVerificationStatus.PendingMetadata;
   }
 
-  if (!project.ownerAddress && project.url) {
+  if (!project.ownerAddress && project.emoji) {
     return ProjectVerificationStatus.PendingOwner;
   }
 

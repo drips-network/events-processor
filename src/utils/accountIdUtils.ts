@@ -9,7 +9,7 @@ import { getOriginContractByAccountId } from './contractUtils';
 export function toRepoDriverId(id: bigint): RepoDriverId {
   const repoDriverId = id.toString();
 
-  if (!isRepoDiverId(repoDriverId)) {
+  if (!isRepoDriverId(repoDriverId)) {
     throw new Error(`Invalid 'RepoDriver' account ID: ${id}.`);
   }
 
@@ -30,7 +30,7 @@ export function toAccountId(id: bigint): AccountId {
   const accountIdAsString = id.toString();
 
   if (
-    isRepoDiverId(accountIdAsString) ||
+    isRepoDriverId(accountIdAsString) ||
     isNftDriverId(accountIdAsString) ||
     isAddressDriverId(accountIdAsString)
   ) {
@@ -83,7 +83,7 @@ export function assertNftDriverAccountId(
   }
 }
 
-export function isRepoDiverId(id: string): id is RepoDriverId {
+export function isRepoDriverId(id: string): id is RepoDriverId {
   const isNaN = Number.isNaN(Number(id));
   const isAccountIdOfRepoDriver =
     getOriginContractByAccountId(id) === 'repoDriver';
@@ -98,7 +98,7 @@ export function isRepoDiverId(id: string): id is RepoDriverId {
 export function assertRepoDiverAccountId(
   id: string,
 ): asserts id is RepoDriverId {
-  if (!isRepoDiverId(id)) {
+  if (!isRepoDriverId(id)) {
     throw new Error(`String ${id} is not a valid 'RepoDriverId'.`);
   }
 }

@@ -10,7 +10,7 @@ import LogManager from '../../../common/LogManager';
 import {
   isAddressDriverId,
   isNftDriverId,
-  isRepoDiverId,
+  isRepoDriverId,
 } from '../../../utils/accountIdUtils';
 import { assertDependencyOfProjectType } from '../../../utils/assert';
 import createDbEntriesForProjectDependency from '../createDbEntriesForProjectDependency';
@@ -99,7 +99,7 @@ async function createDbEntriesForDripListSplits(
   await clearCurrentEntries(funderDripListId, transaction);
 
   const splitsPromises = splits.map((split) => {
-    if (isRepoDiverId(split.accountId)) {
+    if (isRepoDriverId(split.accountId)) {
       assertDependencyOfProjectType(split);
 
       return createDbEntriesForProjectDependency(

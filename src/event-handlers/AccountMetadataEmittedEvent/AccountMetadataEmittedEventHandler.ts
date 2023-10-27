@@ -15,7 +15,7 @@ import IsDripList from '../../utils/dripListUtils';
 import LogManager from '../../common/LogManager';
 import {
   isNftDriverId,
-  isRepoDiverId,
+  isRepoDriverId,
   toAccountId,
 } from '../../utils/accountIdUtils';
 import { isLatestEvent } from '../../utils/eventUtils';
@@ -98,7 +98,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       );
 
       // `RepoDriver` account + Drips App metadata key => Git Project
-      if (isRepoDiverId(typedAccountId) && isLatest) {
+      if (isRepoDriverId(typedAccountId) && isLatest) {
         logManager.appendIsLatestEventLog();
         await handleGitProjectMetadata(
           logManager,

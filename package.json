@@ -6,7 +6,7 @@
     "commit": "npx cz",
     "prepare": "husky install",
     "format": "prettier --write .",
-    "docker:clean": "docker-compose down && docker volume rm drips-events-processor_postgres_data",
+    "docker:clean": "docker-compose down && docker volume rm events-processor_postgres_data",
     "lint": "prettier --check . && eslint src/**/*.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm run build:contracts && tsc",

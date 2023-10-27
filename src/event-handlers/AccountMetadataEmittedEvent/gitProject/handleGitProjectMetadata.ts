@@ -14,7 +14,7 @@ import {
   assertAddressDiverId,
   isAddressDriverId,
   isNftDriverId,
-  isRepoDiverId,
+  isRepoDriverId,
 } from '../../../utils/accountIdUtils';
 import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
 import { assertDependencyOfProjectType } from '../../../utils/assert';
@@ -25,6 +25,7 @@ import validateProjectMetadata from './validateProjectMetadata';
 import areReceiversValid from '../splitsValidator';
 import getUserAddress from '../../../utils/get-account-address';
 import logger from '../../../common/logger';
+import DripListSplitReceiverModel from '../../../models/DripListSplitReceiverModel';
 
 export default async function handleGitProjectMetadata(
   logManager: LogManager,
@@ -71,10 +72,7 @@ async function updateGitProjectMetadata(
   project.color = color;
   project.emoji = emoji;
   project.url = source.url;
-  project.ownerName = source.ownerName;
-  project.repoName = source.repoName;
   project.description = description ?? null;
-  project.splitsJson = JSON.stringify(metadata.splits);
   project.verificationStatus = calculateProjectStatus(project);
 
   const isValid = await areReceiversValid(
@@ -134,7 +132,7 @@ async function createDbEntriesForProjectSplits(
   });
 
   const dependencyPromises = dependencies.map(async (dependency) => {
-    if (isRepoDiverId(dependency.accountId)) {
+    if (isRepoDriverId(dependency.accountId)) {
       assertDependencyOfProjectType(dependency);
 
       return createDbEntriesForProjectDependency(
@@ -196,6 +194,12 @@ async function clearCurrentProjectSplits(
     transaction,
   });
   await RepoDriverSplitReceiverModel.destroy({
+    where: {
+      funderProjectId,
+    },
+    transaction,
+  });
+  await DripListSplitReceiverModel.destroy({
     where: {
       funderProjectId,
     },

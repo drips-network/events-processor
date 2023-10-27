@@ -11,6 +11,7 @@ import {
   calculateProjectStatus,
   toForge,
   toReadable,
+  toUrl,
 } from '../utils/gitProjectUtils';
 import LogManager from '../common/LogManager';
 import { toRepoDriverId } from '../utils/accountIdUtils';
@@ -85,6 +86,7 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
           isValid: false, // It will turn true after the metadata is updated.
           name: decodedName,
           forge: forgeAsString,
+          url: toUrl(forgeAsString, decodedName),
           verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
         },
       });
@@ -110,6 +112,7 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
       if (isLatest) {
         project.name = decodedName;
         project.forge = forgeAsString;
+        project.url = toUrl(forgeAsString, decodedName);
         project.verificationStatus = calculateProjectStatus(project);
 
         logManager

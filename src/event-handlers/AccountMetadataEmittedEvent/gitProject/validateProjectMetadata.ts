@@ -16,28 +16,32 @@ export default async function validateProjectMetadata(
   const errors = [];
 
   const { describes, source } = metadata;
-  const { url, repoName, ownerName } = source;
-  const { name: projectName, id: projectId } = project;
+  const {
+    url: metaUrl,
+    repoName: metaRepoName,
+    ownerName: metaOwnerName,
+  } = source;
+  const { id: onChainProjectId, name: onChainProjectName } = project;
 
-  if (`${ownerName}/${repoName}` !== `${projectName}`) {
-    errors.push(`repoName mismatch: got ${repoName}, expected ${projectName}.`);
-  }
-
-  if (!url.includes(repoName)) {
+  if (`${metaOwnerName}/${metaRepoName}` !== `${onChainProjectName}`) {
     errors.push(
-      `URL does not include repoName: ${projectName} not found in ${url}.`,
+      `repoName mismatch: got ${metaOwnerName}/${metaRepoName}, expected ${onChainProjectName}.`,
     );
   }
 
-  if (describes.accountId !== projectId) {
+  if (metaUrl !== project.url) {
+    errors.push(`url mismatch: got ${metaUrl}, expected ${project.url}.`);
+  }
+
+  if (describes.accountId !== onChainProjectId) {
     errors.push(
-      `accountId mismatch with: got ${describes.accountId}, expected ${projectId}.`,
+      `accountId mismatch with: got ${describes.accountId}, expected ${onChainProjectId}.`,
     );
   }
 
   if (errors.length > 0) {
     throw new Error(
-      `Git Project with ID ${projectId} has metadata that does not match the metadata emitted by the contract (${errors.join(
+      `Git Project with ID ${onChainProjectId} has metadata that does not match the metadata emitted by the contract (${errors.join(
         '; ',
       )}).`,
     );

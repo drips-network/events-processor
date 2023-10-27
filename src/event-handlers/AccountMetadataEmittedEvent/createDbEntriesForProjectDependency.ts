@@ -12,7 +12,7 @@ import shouldNeverHappen from '../../utils/shouldNeverHappen';
 import RepoDriverSplitReceiverModel, {
   RepoDriverSplitReceiverType,
 } from '../../models/RepoDriverSplitReceiverModel';
-import { isNftDriverId, isRepoDiverId } from '../../utils/accountIdUtils';
+import { isNftDriverId, isRepoDriverId } from '../../utils/accountIdUtils';
 
 export default async function createDbEntriesForProjectDependency(
   funderAccountId: ProjectId | DripListId,
@@ -34,11 +34,8 @@ export default async function createDbEntriesForProjectDependency(
     defaults: {
       url,
       isValid: true, // There are no receivers yet, so the project is valid.
-      splitsJson: null,
       id: fundeeProjectId,
       name: `${ownerName}/${repoName}`,
-      ownerName,
-      repoName,
       verificationStatus: ProjectVerificationStatus.Unclaimed,
       forge:
         Object.values(FORGES_MAP).find(
@@ -47,7 +44,7 @@ export default async function createDbEntriesForProjectDependency(
     },
   });
 
-  await RepoDriverSplitReceiverModel.create(
+  return RepoDriverSplitReceiverModel.create(
     {
       weight,
       fundeeProjectId,
@@ -55,7 +52,7 @@ export default async function createDbEntriesForProjectDependency(
         ? RepoDriverSplitReceiverType.DripListDependency
         : RepoDriverSplitReceiverType.ProjectDependency,
       funderDripListId: isNftDriverId(funderAccountId) ? funderAccountId : null,
-      funderProjectId: isRepoDiverId(funderAccountId) ? funderAccountId : null,
+      funderProjectId: isRepoDriverId(funderAccountId) ? funderAccountId : null,
     },
     { transaction },
   );
