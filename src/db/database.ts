@@ -1,12 +1,12 @@
 import sequelizeInstance from './getSequelizeInstance';
 import logger from '../common/logger';
-import { SUPPORTED_NETWORKS } from '../common/constants';
 import GitProjectModel from '../models/GitProjectModel';
 import AddressDriverSplitReceiverModel from '../models/AddressDriverSplitReceiverModel';
 import RepoDriverSplitReceiverModel from '../models/RepoDriverSplitReceiverModel';
 import { getRegisteredModels } from '../utils/registerModel';
 import DripListModel from '../models/DripListModel';
 import DripListSplitReceiverModel from '../models/DripListSplitReceiverModel';
+import { getNetwork } from '../utils/getNetworkSettings';
 
 export default async function connectToDb(): Promise<void> {
   logger.info('Initializing database...');
@@ -26,9 +26,10 @@ async function authenticate(): Promise<void> {
 
     logger.info('Connection has been established successfully.');
 
-    for (const network of SUPPORTED_NETWORKS) {
-      await sequelizeInstance.query(`CREATE SCHEMA IF NOT EXISTS ${network};`);
-    }
+    await sequelizeInstance.query(
+      `CREATE SCHEMA IF NOT EXISTS ${getNetwork()};`,
+    );
+
     await sequelizeInstance.authenticate();
   } catch (error: any) {
     logger.error(`Unable to connect to the database: ${error}.`);
