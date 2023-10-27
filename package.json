@@ -14,7 +14,7 @@
     "postbuild": "rm -rf ./dist/src/config && cp -r ./src/config ./dist/src/config",
     "start:dev": "NODE_ENV=development npx nodemon",
     "start:local": "NODE_ENV=local npx nodemon",
-    "start:prod": "npm run build && NODE_ENV=production node dist/src/index.js"
+    "start:prod": "npm run build && NODE_ENV=mainnet node dist/src/index.js"
   },
   "keywords": [],
   "author": "",
