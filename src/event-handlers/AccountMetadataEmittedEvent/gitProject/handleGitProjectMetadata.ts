@@ -24,7 +24,6 @@ import { getProjectMetadata } from '../../../utils/metadataUtils';
 import validateProjectMetadata from './validateProjectMetadata';
 import areReceiversValid from '../splitsValidator';
 import getUserAddress from '../../../utils/get-account-address';
-import logger from '../../../common/logger';
 import DripListSplitReceiverModel from '../../../models/DripListSplitReceiverModel';
 
 export default async function handleGitProjectMetadata(
@@ -156,11 +155,14 @@ async function createDbEntriesForProjectSplits(
     }
 
     if (isNftDriverId(dependency.accountId)) {
-      logger.warn(
-        `Dependency with account ID ${dependency.accountId} is not an Address nor a Git Project.`,
+      return DripListSplitReceiverModel.create(
+        {
+          funderProjectId,
+          fundeeDripListId: dependency.accountId,
+          weight: dependency.weight,
+        },
+        { transaction },
       );
-
-      return Promise.resolve();
     }
 
     return shouldNeverHappen(
