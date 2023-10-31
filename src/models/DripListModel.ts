@@ -13,10 +13,10 @@ export default class DripListModel extends Model<
   InferCreationAttributes<DripListModel>
 > {
   public declare id: DripListId; // The `tokenId` from `TransferEvent` event.
-  public declare isPublic: false;
   public declare isValid: boolean;
   public declare name: string | null;
   public declare ownerAddress: AddressLike;
+  public declare creator: AddressLike;
   public declare description: string | null;
   public declare previousOwnerAddress: AddressLike;
 
@@ -43,12 +43,12 @@ export default class DripListModel extends Model<
           type: DataTypes.TEXT,
           allowNull: true,
         },
-        previousOwnerAddress: {
+        creator: {
           type: DataTypes.STRING,
           allowNull: false,
         },
-        isPublic: {
-          type: DataTypes.BOOLEAN,
+        previousOwnerAddress: {
+          type: DataTypes.STRING,
           allowNull: false,
         },
       },

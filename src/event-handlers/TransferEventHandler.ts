@@ -77,8 +77,8 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         },
         defaults: {
           id,
+          creator: to,
           isValid: false, // It will turn true after the metadata is updated.
-          isPublic: false,
           ownerAddress: to,
           previousOwnerAddress: from,
         },
