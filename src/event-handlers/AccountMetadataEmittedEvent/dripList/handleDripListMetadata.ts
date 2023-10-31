@@ -62,10 +62,11 @@ async function updateDripListMetadata(
   transaction: Transaction,
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
 ): Promise<void> {
-  const { name, projects } = metadata;
+  const { name } = metadata;
 
   dripList.name = name ?? null;
-  dripList.projectsJson = JSON.stringify(projects);
+  dripList.description =
+    'description' in metadata ? metadata.description || null : null;
 
   const isValid = await areReceiversValid(
     dripList.id,

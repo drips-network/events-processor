@@ -79,7 +79,7 @@ export default class GitProjectModel extends Model<
           allowNull: true,
         },
         description: {
-          type: DataTypes.STRING,
+          type: DataTypes.TEXT,
           allowNull: true,
         },
       },

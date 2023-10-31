@@ -17,9 +17,8 @@ export default class DripListModel extends Model<
   public declare isValid: boolean;
   public declare name: string | null;
   public declare ownerAddress: AddressLike;
+  public declare description: string | null;
   public declare previousOwnerAddress: AddressLike;
-  public declare projectsJson: string | null;
-  // TODO: add description after metadata v3 is updated.
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
@@ -28,15 +27,11 @@ export default class DripListModel extends Model<
           type: DataTypes.STRING,
           primaryKey: true,
         },
-        projectsJson: {
-          type: DataTypes.JSON,
-          allowNull: true,
-        },
-        ownerAddress: {
-          type: DataTypes.STRING,
+        isValid: {
+          type: DataTypes.BOOLEAN,
           allowNull: false,
         },
-        previousOwnerAddress: {
+        ownerAddress: {
           type: DataTypes.STRING,
           allowNull: false,
         },
@@ -44,11 +39,15 @@ export default class DripListModel extends Model<
           type: DataTypes.STRING,
           allowNull: true,
         },
-        isPublic: {
-          type: DataTypes.BOOLEAN,
+        description: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+        },
+        previousOwnerAddress: {
+          type: DataTypes.STRING,
           allowNull: false,
         },
-        isValid: {
+        isPublic: {
           type: DataTypes.BOOLEAN,
           allowNull: false,
         },
