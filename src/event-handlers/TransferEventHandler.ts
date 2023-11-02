@@ -8,7 +8,7 @@ import LogManager from '../common/LogManager';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import { saveEventProcessingJob } from '../queue';
 import type { HandleRequest, KnownAny } from '../common/types';
-import { toNftDriverId } from '../utils/accountIdUtils';
+import { getOwnerAccountId, toNftDriverId } from '../utils/accountIdUtils';
 import { isLatestEvent } from '../utils/eventUtils';
 
 export default class TransferEventHandler extends EventHandlerBase<'Transfer(address,address,uint256)'> {
@@ -80,6 +80,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
           creator: to,
           isValid: false, // It will turn true after the metadata is updated.
           ownerAddress: to,
+          ownerAccountId: await getOwnerAccountId(to),
           previousOwnerAddress: from,
         },
       });
@@ -102,6 +103,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         dripList.isValid = false; // It will turn true after the metadata is updated.
         dripList.ownerAddress = to;
         dripList.previousOwnerAddress = from;
+        dripList.ownerAccountId = (await getOwnerAccountId(to)) ?? null;
 
         logManager
           .appendIsLatestEventLog()

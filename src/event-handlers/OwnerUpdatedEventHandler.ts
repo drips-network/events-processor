@@ -2,16 +2,15 @@ import type { OwnerUpdatedEvent } from '../../contracts/RepoDriver';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
 import sequelizeInstance from '../db/getSequelizeInstance';
-import type { KnownAny, HandleRequest, AccountId } from '../common/types';
+import type { KnownAny, HandleRequest } from '../common/types';
 import EventHandlerBase from '../common/EventHandlerBase';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { GitProjectModel } from '../models';
 import LogManager from '../common/LogManager';
 import { ProjectVerificationStatus } from '../models/GitProjectModel';
-import { toRepoDriverId } from '../utils/accountIdUtils';
+import { getOwnerAccountId, toRepoDriverId } from '../utils/accountIdUtils';
 import { calculateProjectStatus } from '../utils/gitProjectUtils';
 import { isLatestEvent } from '../utils/eventUtils';
-import { getAddressDriverClient } from '../utils/contractClientUtils';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
   public readonly eventSignature = 'OwnerUpdated(uint256,address)' as const;
@@ -126,13 +125,4 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       this.eventSignature,
     );
   };
-}
-async function getOwnerAccountId(
-  owner: string,
-): Promise<
-  AccountId | PromiseLike<AccountId | null | undefined> | null | undefined
-> {
-  return (
-    await (await getAddressDriverClient()).calcAccountId(owner as string)
-  ).toString() as AccountId;
 }

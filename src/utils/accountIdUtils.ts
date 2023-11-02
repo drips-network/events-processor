@@ -4,6 +4,7 @@ import type {
   NftDriverId,
   RepoDriverId,
 } from '../common/types';
+import { getAddressDriverClient } from './contractClientUtils';
 import { getOriginContractByAccountId } from './contractUtils';
 
 export function toRepoDriverId(id: bigint): RepoDriverId {
@@ -101,4 +102,14 @@ export function assertRepoDiverAccountId(
   if (!isRepoDriverId(id)) {
     throw new Error(`String ${id} is not a valid 'RepoDriverId'.`);
   }
+}
+
+export async function getOwnerAccountId(
+  owner: string,
+): Promise<
+  AccountId | PromiseLike<AccountId | null | undefined> | null | undefined
+> {
+  return (
+    await (await getAddressDriverClient()).calcAccountId(owner as string)
+  ).toString() as AccountId;
 }
