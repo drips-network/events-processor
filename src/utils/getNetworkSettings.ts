@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-import { WebSocketProvider } from 'ethers';
+import { JsonRpcProvider, WebSocketProvider } from 'ethers';
 import type { ChainConfig, SupportedNetwork } from '../common/types';
 import { SUPPORTED_NETWORKS } from '../common/constants';
 import logger from '../common/logger';
@@ -30,8 +30,14 @@ export function getNetwork(): SupportedNetwork {
   return network;
 }
 
+async function getRPCProvider(): Promise<JsonRpcProvider> {
+  const url = process.env.RPC_URL;
+
+  return new JsonRpcProvider(url);
+}
+
 export async function getNetworkSettings(): Promise<{
-  provider: WebSocketProvider;
+  provider: WebSocketProvider | JsonRpcProvider;
   network: SupportedNetwork;
   chainConfig: ChainConfig;
 }> {
@@ -46,7 +52,10 @@ export async function getNetworkSettings(): Promise<{
 
     const jsonObject: ChainConfig = JSON.parse(fileContent);
 
-    const provider = await getWebSocketProvider(network);
+    const provider =
+      process.env.PROVIDER_TYPE === 'RPC'
+        ? await getRPCProvider()
+        : await getWebSocketProvider(network);
 
     const settings = {
       provider,

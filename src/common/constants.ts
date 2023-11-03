@@ -1,7 +1,12 @@
 import { ethers } from 'ethers';
 import { DataTypes } from 'sequelize';
 
-export const SUPPORTED_NETWORKS = ['mainnet', 'sepolia', 'goerli'] as const;
+export const SUPPORTED_NETWORKS = [
+  'mainnet',
+  'sepolia',
+  'goerli',
+  'localtestnet',
+] as const;
 
 export const DRIPS_CONTRACT_NAMES = [
   'drips',

@@ -27,9 +27,8 @@ export async function getProjectMetadata(
   return metadata;
 }
 
-const IPFS_GATEWAY_DOMAIN = 'drips.mypinata.cloud';
 async function getIpfsFile(hash: IpfsHash): Promise<Response> {
-  return fetch(`https://${IPFS_GATEWAY_DOMAIN}/ipfs/${hash}`);
+  return fetch(`${process.env.IPFS_GATEWAY_URL}/ipfs/${hash}`);
 }
 
 export default async function getNftDriverMetadata(

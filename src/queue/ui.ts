@@ -29,7 +29,9 @@ export default function setupQueueUI() {
 
   app.use('/arena', arenaConfig);
 
-  app.listen(3000, () => {
-    logger.info('Monitor Drips Queues on http://localhost:3000');
+  const port = process.env.QUEUE_UI_PORT ?? 3000;
+
+  app.listen(port, () => {
+    logger.info(`Monitor Drips Queues on http://localhost:${port}`);
   });
 }
