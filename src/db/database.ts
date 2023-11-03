@@ -12,7 +12,7 @@ export default async function connectToDb(): Promise<void> {
   logger.info('Initializing database...');
 
   await authenticate();
-  initializeEntities();
+  await initializeEntities();
   defineAssociations();
 
   await sequelizeInstance.sync();
@@ -37,13 +37,15 @@ async function authenticate(): Promise<void> {
   }
 }
 
-function initializeEntities(): void {
+async function initializeEntities(): Promise<void> {
   try {
     logger.info('Initializing database schema...');
 
-    getRegisteredModels().forEach(async (Model) => {
+    const promises = getRegisteredModels().map(async (Model) => {
       Model.initialize(sequelizeInstance);
     });
+
+    await Promise.all(promises);
 
     logger.info('Database schema initialized.');
   } catch (error: any) {
