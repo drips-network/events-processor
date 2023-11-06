@@ -2,7 +2,9 @@
 
 :warning: **Warning**: This project is currently under active development.
 
-Drips Event Processor is a custom, read-only backend service for [Drips](https://drips.network). It ingests Ethereum events in real-time, stores them in a database, and exposes data in form of a GraphQL API. As a "read-only" service, it merely acts as a query API layer for on-chain activity, meaning that Ethereum and IPFS remain the source of truth for all activity on Drips. In practice, this means that anyone will be able to run an instance of this service and reach the exact same state as Drips' production instance once all past events have been ingested.
+Drips Event Processor is a custom, read-only backend service for [Drips](https://drips.network). It ingests low-level Drips protocol Ethereum events and related IPFS documents in real-time, and produces a database of higher-level entities for the Drips App (such as "Drip Lists" and "Projects"). This database is then read by the [Drips GraphQL API](https://github.com/drips-network/graphql-api) in order to provide a single, convenient and fast endpoint for querying decentralized data within the Drips Network without complicated client-side logic.
+
+As a "read-only" service, Drips Event Processor and Drips GraphQL API together merely act as a query API layer for on-chain activity, meaning that Ethereum and IPFS remain the source of truth for all activity on Drips. In practice, this means that anyone is able to run an instance of this service and reach the exact same state as Drips' production instance once all past events have been ingested.
 
 <br />
 
@@ -10,7 +12,7 @@ Drips Event Processor is a custom, read-only backend service for [Drips](https:/
 
 <br />
 
-Drips Event Processor is comparable in functionality and scope to the [Drips Subgraph](https://github.com/drips-network/subgraph), but adds the flexibility of computing and exposing higher-level abstracted entities (such as `Projects` and `Drip Lists`), the state of which is derived from low-level generics within the [Drips Protocol](https://github.com/drips-network/contracts), in combination with metadata stored on IPFS. Additionally, we'll be able to produce real-time balance estimates for accounts at time-of-query. Combined, these capabilities will allow us to greatly enhance the speed and reliability of the [Drips App](https://github.com/drips-network/app), which currently needs to fetch an excessive amount of low-level information in order to derive the current state and balances of Drips Accounts, Projects and Drip Lists client-side.
+Drips Event Processor & GraphQL API together are comparable in functionality and scope to the [Drips Subgraph](https://github.com/drips-network/subgraph), but add the flexibility of computing and exposing higher-level abstracted entities (such as `Projects` and `Drip Lists`). The canonical state of these entities is derived from low-level generics within the [Drips Protocol](https://github.com/drips-network/contracts), in combination with metadata stored on IPFS.
 
 ## 🏃‍♂️ Running The Development Environment
 
@@ -30,6 +32,8 @@ This will spin up:
 
 _To monitor`BeeQueue` navigate to `http://localhost:3000/arena` after launching the app._
 
+Docker is configured to preserve the state of the database and Redis in-between runs. If you want to start fresh, you'll need to delete the respective volumes with Docker.
+
 ## 🔌 Connecting to pgAdmin
 
 After you have ensured that the Docker containers are up and running, to connect to pgAdmin:
@@ -40,23 +44,28 @@ After you have ensured that the Docker containers are up and running, to connect
 
 ## 🚀 Launching The Application
 
+First, populate `.env` according to `.env.template`.
+
 To launch the application, run:
 
 ```bash
 npm install
 ```
 
-and then:
+Then, ensure you run the development environment, assuming you don't intend to connect to external Postgres and Redis instances.
+
+Lastly, run
 
 ```bash
 npm run start:dev
 ```
 
+to start the server.
+
 This command:
 
-1. Checks for the existence of `dripsdb`; creates it if not present.
-2. Establishes a connection to `dripsdb`.
-3. Synchronizes the state of the database.
-4. Ingests events up to the current block into the database.
-5. Registers event listeners for tracking incoming events.
-6. Continues appending new data to the database.
+1. Establishes a connection to `dripsdb`.
+2. Synchronizes the state of the database.
+3. Ingests events up to the current block into the database.
+4. Registers event listeners for tracking incoming events.
+5. Continues appending new data to the database.
