@@ -33,7 +33,8 @@ export function getNetwork(): SupportedNetwork {
 async function getRPCProvider(): Promise<JsonRpcProvider> {
   const url = process.env.RPC_URL;
 
-  return new JsonRpcProvider(url);
+  // Fast polling interval to speed up E2E tests. In production, we use a websocket provider anyway.
+  return new JsonRpcProvider(url, undefined, { pollingInterval: 1000 });
 }
 
 export async function getNetworkSettings(): Promise<{
