@@ -8,6 +8,8 @@ services:
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: admin
+      POSTGRES_DB: dripsdb
+      POSTGRES_INITDB_ARGS: -E UTF8 --locale=C
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
