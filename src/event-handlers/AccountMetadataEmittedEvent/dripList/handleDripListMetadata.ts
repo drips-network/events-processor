@@ -1,7 +1,11 @@
 /* eslint-disable no-param-reassign */
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
-import type { DripListId, IpfsHash } from '../../../common/types';
+import {
+  DependencyType,
+  type DripListId,
+  type IpfsHash,
+} from '../../../common/types';
 import DripListModel from '../../../models/DripListModel';
 import getNftDriverMetadata from '../../../utils/metadataUtils';
 import validateDripListMetadata from './validateDripListMetadata';
@@ -116,6 +120,7 @@ async function createDbEntriesForDripListSplits(
           funderDripListId,
           fundeeDripListId: split.accountId,
           weight: split.weight,
+          type: DependencyType.DripListDependency,
         },
         { transaction },
       );

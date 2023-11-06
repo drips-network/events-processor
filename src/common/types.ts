@@ -172,3 +172,8 @@ export type DependencyOfProjectType = {
   };
   weight: number;
 };
+
+export enum DependencyType {
+  ProjectDependency = 'ProjectDependency',
+  DripListDependency = 'DripListDependency',
+}

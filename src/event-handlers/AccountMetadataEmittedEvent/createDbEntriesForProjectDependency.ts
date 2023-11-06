@@ -1,17 +1,16 @@
 import type { Transaction } from 'sequelize';
-import type {
-  DependencyOfProjectType,
-  DripListId,
-  ProjectId,
+import {
+  DependencyType,
+  type DependencyOfProjectType,
+  type DripListId,
+  type ProjectId,
 } from '../../common/types';
 import GitProjectModel, {
   ProjectVerificationStatus,
 } from '../../models/GitProjectModel';
 import { FORGES_MAP } from '../../common/constants';
 import shouldNeverHappen from '../../utils/shouldNeverHappen';
-import RepoDriverSplitReceiverModel, {
-  RepoDriverSplitReceiverType,
-} from '../../models/RepoDriverSplitReceiverModel';
+import RepoDriverSplitReceiverModel from '../../models/RepoDriverSplitReceiverModel';
 import { isNftDriverId, isRepoDriverId } from '../../utils/accountIdUtils';
 
 export default async function createDbEntriesForProjectDependency(
@@ -49,8 +48,8 @@ export default async function createDbEntriesForProjectDependency(
       weight,
       fundeeProjectId,
       type: isNftDriverId(funderAccountId)
-        ? RepoDriverSplitReceiverType.DripListDependency
-        : RepoDriverSplitReceiverType.ProjectDependency,
+        ? DependencyType.DripListDependency
+        : DependencyType.ProjectDependency,
       funderDripListId: isNftDriverId(funderAccountId) ? funderAccountId : null,
       funderProjectId: isRepoDriverId(funderAccountId) ? funderAccountId : null,
     },

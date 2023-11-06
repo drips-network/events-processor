@@ -6,6 +6,7 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
+import { DependencyType } from '../common/types';
 import type { DripListId, ProjectId } from '../common/types';
 import DripListModel from './DripListModel';
 import GitProjectModel from './GitProjectModel';
@@ -20,6 +21,7 @@ export default class DripListSplitReceiverModel extends Model<
   public declare funderDripListId: DripListId | null; // Foreign key
 
   public declare weight: number;
+  public declare type: DependencyType;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
@@ -59,6 +61,10 @@ export default class DripListSplitReceiverModel extends Model<
         weight: {
           type: DataTypes.INTEGER,
           allowNull: true,
+        },
+        type: {
+          type: DataTypes.ENUM(...Object.values(DependencyType)),
+          allowNull: false,
         },
       },
       {

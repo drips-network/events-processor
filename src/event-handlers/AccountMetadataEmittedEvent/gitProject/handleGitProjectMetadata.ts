@@ -9,7 +9,11 @@ import {
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
 import LogManager from '../../../common/LogManager';
 import { calculateProjectStatus } from '../../../utils/gitProjectUtils';
-import type { IpfsHash, ProjectId } from '../../../common/types';
+import {
+  DependencyType,
+  type IpfsHash,
+  type ProjectId,
+} from '../../../common/types';
 import {
   assertAddressDiverId,
   isAddressDriverId,
@@ -160,6 +164,7 @@ async function createDbEntriesForProjectSplits(
           funderProjectId,
           fundeeDripListId: dependency.accountId,
           weight: dependency.weight,
+          type: DependencyType.ProjectDependency,
         },
         { transaction },
       );
