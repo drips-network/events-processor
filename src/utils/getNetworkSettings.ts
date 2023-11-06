@@ -6,7 +6,7 @@ import type { ChainConfig, SupportedNetwork } from '../common/types';
 import { SUPPORTED_NETWORKS } from '../common/constants';
 import logger from '../common/logger';
 
-dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
+dotenv.config({ path: `.env.${process.env.ENV}` });
 
 async function getWebSocketProvider(
   network: SupportedNetwork,

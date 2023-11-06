@@ -2,7 +2,7 @@ import winston from 'winston';
 import dotenv from 'dotenv';
 import config from '../db/config';
 
-dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
+dotenv.config({ path: `.env.${process.env.ENV}` });
 
 const format = winston.format.combine(
   winston.format.timestamp(),
@@ -32,11 +32,11 @@ const productionLogger = winston.createLogger({
 });
 
 const logger =
-  process.env.NODE_ENV === 'mainnet' ? productionLogger : developmentLogger;
+  process.env.ENV === 'mainnet' ? productionLogger : developmentLogger;
 
 // TODO: disable Sequelize logging in production.
 // export const shouldEnableSequelizeLogging =
-//   process.env.NODE_ENV === 'development';
+//   process.env.ENV === 'development';
 export const shouldEnableSequelizeLogging = false;
 
 export default logger;

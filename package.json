@@ -12,10 +12,9 @@
     "build": "npm run build:contracts && tsc",
     "build:contracts": "typechain --target=ethers-v6 --out-dir contracts ./src/abi/**.json",
     "postbuild": "rm -rf ./dist/src/config && cp -r ./src/config ./dist/src/config",
-    "start:dev": "NODE_ENV=development npx nodemon",
-    "start:local": "NODE_ENV=local npx nodemon",
-    "start:goerli": "NODE_ENV=goerli npx nodemon",
-    "start:mainnet": "npm run build && NODE_ENV=mainnet node dist/src/index.js",
+    "start:local": "ENV=local npx nodemon",
+    "start:goerli": "ENV=goerli npx nodemon",
+    "start": "npm run build && node dist/src/index.js",
     "check": "tsc --noEmit"
   },
   "keywords": [],
