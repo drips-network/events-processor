@@ -57,7 +57,7 @@ Then, ensure you run the development environment, assuming you don't intend to c
 Lastly, run
 
 ```bash
-npm run start:dev
+npm run start:local
 ```
 
 to start the server.

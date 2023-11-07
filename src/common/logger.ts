@@ -25,9 +25,9 @@ const productionLogger = winston.createLogger({
   format,
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({
-      filename: `logs/${new Date().toISOString().slice(0, 10)}.log`,
-    }),
+    // new winston.transports.File({
+    //   filename: `logs/${new Date().toISOString().slice(0, 10)}.log`,
+    // }),
   ],
 });
 
