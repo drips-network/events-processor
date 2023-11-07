@@ -88,12 +88,6 @@ async function updateGitProjectMetadata(
       })),
   );
 
-  if (project.isValid && !isValid) {
-    shouldNeverHappen(
-      `Attempted to set the Git Project with ID ${project.id} to 'invalid' but it was already 'valid'. This should never happen.`,
-    );
-  }
-
   project.isValid = isValid;
 
   if (!isValid) {

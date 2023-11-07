@@ -83,7 +83,7 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
         },
         defaults: {
           id: repoDriverId,
-          isValid: false, // It will turn true after the metadata is updated.
+          isValid: true, // There are no receivers yet, so the project is valid.
           name: decodedName,
           forge: forgeAsString,
           url: toUrl(forgeAsString, decodedName),

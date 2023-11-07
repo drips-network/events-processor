@@ -72,10 +72,10 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
         },
         defaults: {
           id: repoDriverId,
-          isValid: false, // It will turn true after the metadata is updated.
+          isValid: true, // There are no receivers yet, so the project is valid.
           ownerAddress: owner,
           ownerAccountId: await getOwnerAccountId(owner),
-          verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
+          verificationStatus: ProjectVerificationStatus.OwnerUpdated,
         },
       });
 

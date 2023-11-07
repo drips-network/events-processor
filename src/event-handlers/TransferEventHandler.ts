@@ -78,7 +78,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         defaults: {
           id,
           creator: to,
-          isValid: false, // It will turn true after the metadata is updated.
+          isValid: true, // There are no receivers yet, so the drip list is valid.
           ownerAddress: to,
           ownerAccountId: await getOwnerAccountId(to),
           previousOwnerAddress: from,
@@ -100,7 +100,6 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
           .appendFindOrCreateLog(DripListModel, isDripListCreated, dripList.id)
           .logAllDebug();
       } else if (isLatest) {
-        dripList.isValid = false; // It will turn true after the metadata is updated.
         dripList.ownerAddress = to;
         dripList.previousOwnerAddress = from;
         dripList.ownerAccountId = (await getOwnerAccountId(to)) ?? null;
