@@ -1,8 +1,8 @@
-import { getEventHandler } from '../utils/registerEventHandler';
+import { getEventHandler } from '../eventsConfiguration/eventHandlerUtils';
 import type { KnownAny } from '../common/types';
-import { HandleRequest } from '../common/types';
 import eventProcessingQueue from './queue';
 import { assertRequestId } from '../utils/assert';
+import EventHandlerRequest from '../eventsConfiguration/EventHandlerRequest';
 
 export default async function startQueueProcessing() {
   eventProcessingQueue.process(async (job) => {
@@ -19,7 +19,7 @@ export default async function startQueueProcessing() {
 
     assertRequestId(job.id);
 
-    const handleContext = new HandleRequest(
+    const handleContext = new EventHandlerRequest(
       {
         args: JSON.parse(args, (_, value) => {
           if (typeof value === 'bigint') {

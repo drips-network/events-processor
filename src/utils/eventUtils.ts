@@ -4,20 +4,20 @@ import {
   NftDriver__factory,
   RepoDriver__factory,
 } from '../../contracts';
-import type {
-  DripsEvent,
-  DripsEventSignature,
-  EventSignature,
-  IEventModel,
-  NftDriverEventSignature,
-  RepoDriverEventSignature,
-} from '../common/types';
 import {
   getDripsClient,
   getNftDriverClient,
   getRepoDriverClient,
 } from './contractClientUtils';
 import shouldNeverHappen from './shouldNeverHappen';
+import type {
+  DripsEventSignature,
+  EventSignature,
+  IEventModel,
+  NftDriverEventSignature,
+  RepoDriverEventSignature,
+  SupportedEvent,
+} from '../eventsConfiguration/types';
 
 export function isDripsEvent(
   event: EventSignature,
@@ -39,7 +39,7 @@ export function isRepoDriverEvent(
 
 export async function getTypedEvent(
   eventSignature: EventSignature,
-): Promise<DripsEvent> {
+): Promise<SupportedEvent> {
   if (isDripsEvent(eventSignature)) {
     const drips = await getDripsClient();
     return drips.filters[eventSignature];

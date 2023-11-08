@@ -4,9 +4,10 @@ import type {
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import type { Forge, IEventModel, RepoDriverId } from '../common/types';
+import type { Forge, RepoDriverId } from '../common/types';
 import getSchema from '../utils/getSchema';
 import { COMMON_EVENT_INIT_ATTRIBUTES, FORGES_MAP } from '../common/constants';
+import type { IEventModel } from '../eventsConfiguration/types';
 
 export default class OwnerUpdateRequestedEventModel
   extends Model<

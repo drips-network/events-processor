@@ -1,21 +1,21 @@
 import type { TransferEvent } from '../../contracts/NftDriver';
-import EventHandlerBase from '../common/EventHandlerBase';
+import EventHandlerBase from '../eventsConfiguration/EventHandlerBase';
 import sequelizeInstance from '../db/getSequelizeInstance';
-import TransferEventModel from '../models/TransferEventModel';
 import IsDripList from '../utils/dripListUtils';
-import DripListModel from '../models/DripListModel';
 import LogManager from '../common/LogManager';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
-import { saveEventProcessingJob } from '../queue';
-import type { HandleRequest, KnownAny } from '../common/types';
+import type { KnownAny } from '../common/types';
 import { getOwnerAccountId, toNftDriverId } from '../utils/accountIdUtils';
 import { isLatestEvent } from '../utils/eventUtils';
+import type EventHandlerRequest from '../eventsConfiguration/EventHandlerRequest';
+import { DripListModel, TransferEventModel } from '../models';
+import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 
 export default class TransferEventHandler extends EventHandlerBase<'Transfer(address,address,uint256)'> {
   public eventSignature = 'Transfer(address,address,uint256)' as const;
 
   protected async _handle(
-    request: HandleRequest<'Transfer(address,address,uint256)'>,
+    request: EventHandlerRequest<'Transfer(address,address,uint256)'>,
   ): Promise<void> {
     const {
       id: requestId,

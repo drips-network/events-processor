@@ -1,7 +1,7 @@
 import express from 'express';
 import Arena from 'bull-arena';
 import BeeQueue from 'bee-queue';
-import config from '../db/config';
+import config from '../common/appSettings';
 import logger from '../common/logger';
 
 export default function setupQueueUI() {
@@ -29,7 +29,7 @@ export default function setupQueueUI() {
 
   app.use('/arena', arenaConfig);
 
-  const port = process.env.QUEUE_UI_PORT ?? 3000;
+  const port = config.queueUiPort;
 
   app.listen(port, () => {
     logger.info(`Monitor Drips Queues on http://localhost:${port}`);

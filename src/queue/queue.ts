@@ -1,7 +1,7 @@
 import BeeQueue from 'bee-queue';
-import type { EventSignature } from '../common/types';
-import config from '../db/config';
+import config from '../common/appSettings';
 import logger from '../common/logger';
+import type { EventSignature } from '../eventsConfiguration/types';
 
 const eventProcessingQueue = new BeeQueue<{
   logIndex: number;

@@ -1,12 +1,14 @@
 import sequelizeInstance from './getSequelizeInstance';
 import logger from '../common/logger';
-import GitProjectModel from '../models/GitProjectModel';
-import AddressDriverSplitReceiverModel from '../models/AddressDriverSplitReceiverModel';
-import RepoDriverSplitReceiverModel from '../models/RepoDriverSplitReceiverModel';
-import { getRegisteredModels } from '../utils/registerModel';
-import DripListModel from '../models/DripListModel';
-import DripListSplitReceiverModel from '../models/DripListSplitReceiverModel';
+import { getRegisteredModels } from './registerModel';
 import { getNetwork } from '../utils/getNetworkSettings';
+import {
+  AddressDriverSplitReceiverModel,
+  DripListModel,
+  DripListSplitReceiverModel,
+  GitProjectModel,
+  RepoDriverSplitReceiverModel,
+} from '../models';
 
 export default async function connectToDb(): Promise<void> {
   logger.info('Initializing database...');

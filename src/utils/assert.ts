@@ -1,10 +1,7 @@
 import type { UUID } from 'crypto';
 import type { Transaction } from 'sequelize';
-import type {
-  Dependency,
-  DependencyOfProjectType,
-  EventSignature,
-} from '../common/types';
+import type { Dependency, DependencyOfProjectType } from '../common/types';
+import type { EventSignature } from '../eventsConfiguration/types';
 
 export function assertTransaction(
   transaction: Transaction | null | undefined,

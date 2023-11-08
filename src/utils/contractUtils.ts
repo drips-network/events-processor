@@ -1,5 +1,6 @@
 import type { Drips, NftDriver, RepoDriver } from '../../contracts';
-import type { DripsContract, EventSignature } from '../common/types';
+import type { DripsContract } from '../common/types';
+import type { EventSignature } from '../eventsConfiguration/types';
 import {
   getDripsClient,
   getNftDriverClient,

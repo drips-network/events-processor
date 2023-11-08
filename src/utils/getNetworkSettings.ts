@@ -1,23 +1,21 @@
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
 import { JsonRpcProvider, WebSocketProvider } from 'ethers';
 import type { ChainConfig, SupportedNetwork } from '../common/types';
 import { SUPPORTED_NETWORKS } from '../common/constants';
 import logger from '../common/logger';
-
-dotenv.config({ path: `.env.${process.env.ENV}` });
+import appSettings from '../common/appSettings';
 
 async function getWebSocketProvider(
   network: SupportedNetwork,
 ): Promise<WebSocketProvider> {
-  const url = `wss://${network}.infura.io/ws/v3/${process.env.INFURA_API_KEY}`;
+  const url = `wss://${network}.infura.io/ws/v3/${appSettings.infuraApiKey}`;
 
   return new WebSocketProvider(url);
 }
 
 export function getNetwork(): SupportedNetwork {
-  const network = process.env.NETWORK as SupportedNetwork;
+  const network = appSettings.network as SupportedNetwork;
 
   if (!network) {
     throw new Error(`NETWORK environment variable is not set.`);
@@ -31,7 +29,7 @@ export function getNetwork(): SupportedNetwork {
 }
 
 async function getRPCProvider(): Promise<JsonRpcProvider> {
-  const url = process.env.RPC_URL;
+  const url = appSettings.rpcUrl;
 
   // Fast polling interval to speed up E2E tests. In production, we use a websocket provider anyway.
   return new JsonRpcProvider(url, undefined, { pollingInterval: 1000 });
@@ -54,7 +52,7 @@ export async function getNetworkSettings(): Promise<{
     const jsonObject: ChainConfig = JSON.parse(fileContent);
 
     const provider =
-      process.env.PROVIDER_TYPE === 'RPC'
+      appSettings.providerType === 'RPC'
         ? await getRPCProvider()
         : await getWebSocketProvider(network);
 

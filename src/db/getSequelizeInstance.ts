@@ -1,6 +1,6 @@
 import { Sequelize } from 'sequelize';
 import logger, { shouldEnableSequelizeLogging } from '../common/logger';
-import config from './config';
+import config from '../common/appSettings';
 
 const { postgresConnectionString } = config;
 

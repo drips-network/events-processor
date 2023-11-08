@@ -1,8 +1,5 @@
-import type {
-  EventHandlerConstructor,
-  EventSignature,
-  KnownAny,
-} from '../common/types';
+import type { KnownAny } from '../common/types';
+import type { EventHandlerConstructor, EventSignature } from './types';
 
 const REGISTERED_EVENT_HANDLERS: Partial<{
   [T in EventSignature]: EventHandlerConstructor<T>;

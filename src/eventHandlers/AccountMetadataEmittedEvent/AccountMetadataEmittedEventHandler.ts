@@ -3,11 +3,10 @@ import type {
   TypedListener,
 } from '../../../contracts/common';
 import type { AccountMetadataEmittedEvent } from '../../../contracts/Drips';
-import type { KnownAny, HandleRequest } from '../../common/types';
+import type { KnownAny } from '../../common/types';
 
 import sequelizeInstance from '../../db/getSequelizeInstance';
-import EventHandlerBase from '../../common/EventHandlerBase';
-import AccountMetadataEmittedEventModel from '../../models/AccountMetadataEmittedEventModel';
+import EventHandlerBase from '../../eventsConfiguration/EventHandlerBase';
 import saveEventProcessingJob from '../../queue/saveEventProcessingJob';
 import { DRIPS_APP_USER_METADATA_KEY } from '../../common/constants';
 import handleGitProjectMetadata from './gitProject/handleGitProjectMetadata';
@@ -21,13 +20,15 @@ import {
 import { isLatestEvent } from '../../utils/eventUtils';
 import { toIpfsHash } from '../../utils/metadataUtils';
 import handleDripListMetadata from './dripList/handleDripListMetadata';
+import type EventHandlerRequest from '../../eventsConfiguration/EventHandlerRequest';
+import { AccountMetadataEmittedEventModel } from '../../models';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignature =
     'AccountMetadataEmitted(uint256,bytes32,bytes)' as const;
 
   protected async _handle(
-    request: HandleRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
+    request: EventHandlerRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
   ): Promise<void> {
     const {
       id: requestId,

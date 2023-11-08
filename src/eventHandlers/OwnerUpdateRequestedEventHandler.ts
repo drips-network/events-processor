@@ -1,35 +1,46 @@
-import type { OwnerUpdatedEvent } from '../../contracts/RepoDriver';
+import type { OwnerUpdateRequestedEvent } from '../../contracts/RepoDriver';
+import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
-import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
 import sequelizeInstance from '../db/getSequelizeInstance';
-import type { KnownAny, HandleRequest } from '../common/types';
-import EventHandlerBase from '../common/EventHandlerBase';
+import type { KnownAny } from '../common/types';
+import EventHandlerBase from '../eventsConfiguration/EventHandlerBase';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { GitProjectModel } from '../models';
-import LogManager from '../common/LogManager';
 import { ProjectVerificationStatus } from '../models/GitProjectModel';
-import { getOwnerAccountId, toRepoDriverId } from '../utils/accountIdUtils';
-import { calculateProjectStatus } from '../utils/gitProjectUtils';
+import {
+  calculateProjectStatus,
+  toForge,
+  toReadable,
+  toUrl,
+} from '../utils/gitProjectUtils';
+import LogManager from '../common/LogManager';
+import { toRepoDriverId } from '../utils/accountIdUtils';
 import { isLatestEvent } from '../utils/eventUtils';
+import type EventHandlerRequest from '../eventsConfiguration/EventHandlerRequest';
 
-export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
-  public readonly eventSignature = 'OwnerUpdated(uint256,address)' as const;
+export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'OwnerUpdateRequested(uint256,uint8,bytes)'> {
+  public readonly eventSignature =
+    'OwnerUpdateRequested(uint256,uint8,bytes)' as const;
 
   protected async _handle(
-    request: HandleRequest<'OwnerUpdated(uint256,address)'>,
+    request: EventHandlerRequest<'OwnerUpdateRequested(uint256,uint8,bytes)'>,
   ): Promise<void> {
     const {
       id: requestId,
       event: { args, logIndex, blockNumber, blockTimestamp, transactionHash },
     } = request;
 
-    const [accountId, owner] = args as OwnerUpdatedEvent.OutputTuple;
+    const [accountId, forge, name] =
+      args as OwnerUpdateRequestedEvent.OutputTuple;
 
     const repoDriverId = toRepoDriverId(accountId);
+    const forgeAsString = toForge(forge);
+    const decodedName = toReadable(name);
 
     LogManager.logRequestInfo(
       `📥 ${this.name} is processing the following ${this.eventSignature}:
-      \r\t - owner:       ${owner}
+      \r\t - forge:       ${forgeAsString}
+      \r\t - name:        ${decodedName}
       \r\t - accountId:   ${repoDriverId},
       \r\t - logIndex:    ${logIndex}
       \r\t - blockNumber: ${blockNumber}
@@ -40,8 +51,8 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
     await sequelizeInstance.transaction(async (transaction) => {
       const logManager = new LogManager(requestId);
 
-      const [ownerUpdatedEvent, isEventCreated] =
-        await OwnerUpdatedEventModel.findOrCreate({
+      const [ownerUpdateRequestedEvent, isEventCreated] =
+        await OwnerUpdateRequestedEventModel.findOrCreate({
           lock: true,
           transaction,
           where: {
@@ -49,19 +60,20 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
             transactionHash,
           },
           defaults: {
-            owner,
             logIndex,
             blockNumber,
             blockTimestamp,
             transactionHash,
+            name: decodedName,
+            forge: forgeAsString,
             accountId: repoDriverId,
           },
         });
 
       logManager.appendFindOrCreateLog(
-        OwnerUpdatedEventModel,
+        OwnerUpdateRequestedEventModel,
         isEventCreated,
-        `${ownerUpdatedEvent.transactionHash}-${ownerUpdatedEvent.logIndex}`,
+        `${ownerUpdateRequestedEvent.transactionHash}-${ownerUpdateRequestedEvent.logIndex}`,
       );
 
       const [project, isProjectCreated] = await GitProjectModel.findOrCreate({
@@ -73,9 +85,10 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
         defaults: {
           id: repoDriverId,
           isValid: true, // There are no receivers yet, so the project is valid.
-          ownerAddress: owner,
-          ownerAccountId: await getOwnerAccountId(owner),
-          verificationStatus: ProjectVerificationStatus.OwnerUpdated,
+          name: decodedName,
+          forge: forgeAsString,
+          url: toUrl(forgeAsString, decodedName),
+          verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
         },
       });
 
@@ -88,8 +101,8 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       }
 
       const isLatest = await isLatestEvent(
-        ownerUpdatedEvent,
-        OwnerUpdatedEventModel,
+        ownerUpdateRequestedEvent,
+        OwnerUpdateRequestedEventModel,
         {
           logIndex,
           transactionHash,
@@ -98,8 +111,9 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       );
 
       if (isLatest) {
-        project.ownerAddress = owner;
-        project.ownerAccountId = (await getOwnerAccountId(owner)) ?? null;
+        project.name = decodedName;
+        project.forge = forgeAsString;
+        project.url = toUrl(forgeAsString, decodedName);
         project.verificationStatus = calculateProjectStatus(project);
 
         logManager
@@ -113,13 +127,17 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
     });
   }
 
-  protected readonly onReceive: TypedListener<
+  protected onReceive: TypedListener<
     TypedContractEvent<
-      OwnerUpdatedEvent.InputTuple,
-      OwnerUpdatedEvent.OutputTuple,
-      OwnerUpdatedEvent.OutputObject
+      OwnerUpdateRequestedEvent.InputTuple,
+      OwnerUpdateRequestedEvent.OutputTuple,
+      OwnerUpdateRequestedEvent.OutputObject
     >
-  > = async (_accountId, _owner, eventLog) => {
+    // TODO: change `eventLog` type.
+    // Until ethers/typechain fixes the related bug, the received `eventLog` is typed as 'any' (in ALL listeners).
+    // It should be of `TypedEventLog<TypedContractEvent<...>>`, which TS infers by default.
+    // When fixed, we won't need to pass event.log to `executeHandle`.
+  > = async (_accountId, _forge, _name, eventLog) => {
     await saveEventProcessingJob(
       (eventLog as KnownAny).log,
       this.eventSignature,

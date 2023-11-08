@@ -1,12 +1,12 @@
 import type { TypedListener } from '../../contracts/common';
+import type { Result } from '../common/types';
 import { getOriginContractByEvent } from '../utils/contractUtils';
 import getResult from '../utils/getResult';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
+import type EventHandlerRequest from './EventHandlerRequest';
 import type {
-  Result,
   EventSignature,
   EventSignatureToEventMap,
-  HandleRequest,
   DripsContractEvent,
   RepoDriverContractEvent,
   DripsEventSignature,
@@ -34,12 +34,14 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
    *
    * Usually, you'd call {@link executeHandle} from the {@link onReceive} to process the event.
    */
-  protected abstract _handle(request: HandleRequest<T>): Promise<void>;
+  protected abstract _handle(request: EventHandlerRequest<T>): Promise<void>;
 
   /**
    * Executes the handler.
    */
-  public async executeHandle(request: HandleRequest<T>): Promise<Result<void>> {
+  public async executeHandle(
+    request: EventHandlerRequest<T>,
+  ): Promise<Result<void>> {
     const result = await getResult(this._handle.bind(this))(request);
 
     if (!result.ok) {

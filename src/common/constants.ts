@@ -8,7 +8,12 @@ export const SUPPORTED_NETWORKS = [
   'localtestnet',
 ] as const;
 
-export const DRIPS_CONTRACT_NAMES = [
+export const FORGES_MAP = {
+  0: 'GitHub',
+  1: 'GitLab',
+} as const;
+
+export const DRIPS_CONTRACTS = [
   'drips',
   'nftDriver',
   'repoDriver',
@@ -38,10 +43,4 @@ export const COMMON_EVENT_INIT_ATTRIBUTES = {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
-} as const;
-
-// TODO: add more forges when supported by the contracts.
-export const FORGES_MAP = {
-  0: 'GitHub',
-  1: 'GitLab',
 } as const;

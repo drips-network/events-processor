@@ -1,13 +1,13 @@
 import logger from '../common/logger';
-import { DRIPS_CONTRACT_NAMES, SUPPORTED_NETWORKS } from '../common/constants';
+import { DRIPS_CONTRACTS, SUPPORTED_NETWORKS } from '../common/constants';
 import { getNetworkSettings } from './getNetworkSettings';
-import { getRegisteredEvents } from './registerEventHandler';
-import config from '../db/config';
+import { getRegisteredEvents } from '../eventsConfiguration/eventHandlerUtils';
+import config from '../common/appSettings';
 
 export default async function validateNetworkSettings(): Promise<void> {
   const { chainConfig, network, provider } = await getNetworkSettings();
 
-  DRIPS_CONTRACT_NAMES.forEach((contract) => {
+  DRIPS_CONTRACTS.forEach((contract) => {
     if (!chainConfig[contract]) {
       throw new Error(
         `No ${contract} contract configuration found in network settings.`,

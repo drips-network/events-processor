@@ -1,8 +1,5 @@
 import winston from 'winston';
-import dotenv from 'dotenv';
-import config from '../db/config';
-
-dotenv.config({ path: `.env.${process.env.ENV}` });
+import appSettings from './appSettings';
 
 const format = winston.format.combine(
   winston.format.timestamp(),
@@ -15,13 +12,13 @@ const format = winston.format.combine(
 );
 
 const developmentLogger = winston.createLogger({
-  level: config.logLevel,
+  level: appSettings.logLevel,
   format,
   transports: [new winston.transports.Console()],
 });
 
 const productionLogger = winston.createLogger({
-  level: config.logLevel,
+  level: appSettings.logLevel,
   format,
   transports: [
     new winston.transports.Console(),
@@ -32,11 +29,11 @@ const productionLogger = winston.createLogger({
 });
 
 const logger =
-  process.env.ENV === 'mainnet' ? productionLogger : developmentLogger;
+  appSettings.environment === 'mainnet' ? productionLogger : developmentLogger;
 
 // TODO: disable Sequelize logging in production.
 // export const shouldEnableSequelizeLogging =
-//   process.env.ENV === 'development';
+//   appSettings.environment === 'development';
 export const shouldEnableSequelizeLogging = false;
 
 export default logger;

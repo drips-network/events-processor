@@ -1,4 +1,4 @@
-import { getRegisteredEvents } from './registerEventHandler';
+import { getRegisteredEvents } from '../eventsConfiguration/eventHandlerUtils';
 import { getNetworkSettings } from './getNetworkSettings';
 import logger from '../common/logger';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';

@@ -3,6 +3,7 @@ import type { Transaction } from 'sequelize';
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import {
   AddressDriverSplitReceiverModel,
+  DripListSplitReceiverModel,
   GitProjectModel,
   RepoDriverSplitReceiverModel,
 } from '../../../models';
@@ -27,8 +28,7 @@ import shouldNeverHappen from '../../../utils/shouldNeverHappen';
 import { getProjectMetadata } from '../../../utils/metadataUtils';
 import validateProjectMetadata from './validateProjectMetadata';
 import areReceiversValid from '../splitsValidator';
-import getUserAddress from '../../../utils/get-account-address';
-import DripListSplitReceiverModel from '../../../models/DripListSplitReceiverModel';
+import getUserAddress from '../../../utils/getAccountAddress';
 
 export default async function handleGitProjectMetadata(
   logManager: LogManager,

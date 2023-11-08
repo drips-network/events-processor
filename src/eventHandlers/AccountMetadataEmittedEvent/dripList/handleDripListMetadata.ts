@@ -6,7 +6,6 @@ import {
   type DripListId,
   type IpfsHash,
 } from '../../../common/types';
-import DripListModel from '../../../models/DripListModel';
 import getNftDriverMetadata from '../../../utils/metadataUtils';
 import validateDripListMetadata from './validateDripListMetadata';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
@@ -18,15 +17,16 @@ import {
 } from '../../../utils/accountIdUtils';
 import { assertDependencyOfProjectType } from '../../../utils/assert';
 import createDbEntriesForProjectDependency from '../createDbEntriesForProjectDependency';
-import DripListSplitReceiverModel from '../../../models/DripListSplitReceiverModel';
 import {
   AddressDriverSplitReceiverModel,
+  DripListModel,
   RepoDriverSplitReceiverModel,
+  DripListSplitReceiverModel,
 } from '../../../models';
-import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
 import shouldNeverHappen from '../../../utils/shouldNeverHappen';
 import areReceiversValid from '../splitsValidator';
-import getUserAddress from '../../../utils/get-account-address';
+import getUserAddress from '../../../utils/getAccountAddress';
+import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
 
 export default async function handleDripListMetadata(
   logManager: LogManager,

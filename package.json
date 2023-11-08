@@ -14,7 +14,7 @@
     "postbuild": "rm -rf ./dist/src/config && cp -r ./src/config ./dist/src/config",
     "start:local": "ENV=local npx nodemon",
     "start:goerli": "ENV=goerli npx nodemon",
-    "start": "npm run build && node dist/src/index.js",
+    "start": "export ENV=mainnet && npm run build && node dist/src/index.js",
     "check": "tsc --noEmit"
   },
   "keywords": [],

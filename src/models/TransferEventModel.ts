@@ -5,9 +5,10 @@ import type {
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import type { IEventModel, NftDriverId } from '../common/types';
+import type { NftDriverId } from '../common/types';
 import getSchema from '../utils/getSchema';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
+import type { IEventModel } from '../eventsConfiguration/types';
 
 export default class TransferEventModel
   extends Model<

@@ -2,8 +2,11 @@ import { randomUUID } from 'crypto';
 import type { TypedEventLog } from '../../contracts/common';
 import { assertEventSignature } from '../utils/assert';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
-import type { EventSignature, EventSignatureToEventMap } from '../common/types';
 import eventProcessingQueue from './queue';
+import type {
+  EventSignature,
+  EventSignatureToEventMap,
+} from '../eventsConfiguration/types';
 
 export default async function saveEventProcessingJob<T extends EventSignature>(
   eventLog: TypedEventLog<EventSignatureToEventMap[T]>,

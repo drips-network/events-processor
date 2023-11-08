@@ -5,6 +5,7 @@ import {
   nftDriverAccountMetadataParser,
   repoDriverAccountMetadataParser,
 } from '../metadata/schemas';
+import appSettings from '../common/appSettings';
 
 export function toIpfsHash(str: string): IpfsHash {
   const ipfsHash = ethers.toUtf8String(str);
@@ -28,7 +29,7 @@ export async function getProjectMetadata(
 }
 
 async function getIpfsFile(hash: IpfsHash): Promise<Response> {
-  return fetch(`${process.env.IPFS_GATEWAY_URL}/ipfs/${hash}`);
+  return fetch(`${appSettings.ipfsGatewayUrl}/ipfs/${hash}`);
 }
 
 export default async function getNftDriverMetadata(

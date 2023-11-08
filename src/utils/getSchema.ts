@@ -1,5 +1,5 @@
 import type { DbSchema } from '../common/types';
-import config from '../db/config';
+import config from '../common/appSettings';
 
 export default function getSchema(): DbSchema {
   return config.network as DbSchema;
