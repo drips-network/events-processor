@@ -1,22 +1,26 @@
-import logger from './common/logger';
-import configureEventServices from './eventsConfiguration/configureEventServices';
-import connectToDb from './db/database';
-import processPastEvents from './utils/processPastEvents';
-import validateNetworkSettings from './utils/validateConfig';
-import config from './common/appSettings';
-import startQueueProcessing from './queue/process';
-import setupQueueUI from './queue/ui';
+import logger from './core/logger';
+import processPastEvents from './core/processPastEvents';
+
+import config from './config/appSettings';
+import initJobProcessingQueue from './queue/initJobProcessingQueue';
+import startQueueMonitoringUI from './queue/startQueueMonitoringUI';
+import { connectToDb } from './db/database';
+import {
+  registerEventHandlers,
+  registerEventListeners,
+} from './events/registrations';
 
 (async () => {
   try {
     logger.debug('Starting the application...');
 
-    configureEventServices();
-    await validateNetworkSettings();
-    await startQueueProcessing();
     await connectToDb();
-    setupQueueUI();
-
+    await initJobProcessingQueue();
+    registerEventHandlers();
+    registerEventListeners();
+    if (config.shouldStartMonitoringUI) {
+      startQueueMonitoringUI();
+    }
     if (config.shouldProcessPastEvents) {
       await processPastEvents();
     }

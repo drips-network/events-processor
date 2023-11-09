@@ -1,4 +1,4 @@
-import type { Result } from '../common/types';
+import type { Result } from '../core/types';
 
 export default function getResult<TArgs extends any[], TReturn>(
   func: (...args: TArgs) => TReturn | Promise<TReturn>,

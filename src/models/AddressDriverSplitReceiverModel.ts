@@ -8,7 +8,7 @@ import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
 import GitProjectModel from './GitProjectModel';
-import type { AddressDriverId, DripListId, ProjectId } from '../common/types';
+import type { AddressDriverId, DripListId, ProjectId } from '../core/types';
 import DripListModel from './DripListModel';
 
 export enum AddressDriverSplitReceiverType {

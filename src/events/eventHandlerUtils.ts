@@ -1,4 +1,4 @@
-import type { KnownAny } from '../common/types';
+import type { KnownAny } from '../core/types';
 import type { EventHandlerConstructor, EventSignature } from './types';
 
 const REGISTERED_EVENT_HANDLERS: Partial<{

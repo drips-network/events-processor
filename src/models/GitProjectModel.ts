@@ -6,8 +6,8 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
-import type { AccountId, Forge, ProjectId } from '../common/types';
-import { FORGES_MAP } from '../common/constants';
+import type { AccountId, Forge, ProjectId } from '../core/types';
+import { FORGES_MAP } from '../core/constants';
 
 export enum ProjectVerificationStatus {
   Claimed = 'Claimed',

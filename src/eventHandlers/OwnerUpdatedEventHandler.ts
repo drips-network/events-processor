@@ -1,16 +1,16 @@
 import type { OwnerUpdatedEvent } from '../../contracts/RepoDriver';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
-import sequelizeInstance from '../db/getSequelizeInstance';
-import type { KnownAny } from '../common/types';
-import EventHandlerBase from '../eventsConfiguration/EventHandlerBase';
+import type { KnownAny } from '../core/types';
+import EventHandlerBase from '../events/EventHandlerBase';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { GitProjectModel, OwnerUpdatedEventModel } from '../models';
-import LogManager from '../common/LogManager';
+import LogManager from '../core/LogManager';
 import { getOwnerAccountId, toRepoDriverId } from '../utils/accountIdUtils';
 import { calculateProjectStatus } from '../utils/gitProjectUtils';
 import { isLatestEvent } from '../utils/eventUtils';
-import type EventHandlerRequest from '../eventsConfiguration/EventHandlerRequest';
+import type EventHandlerRequest from '../events/EventHandlerRequest';
 import { ProjectVerificationStatus } from '../models/GitProjectModel';
+import { dbConnection } from '../db/database';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
   public readonly eventSignature = 'OwnerUpdated(uint256,address)' as const;
@@ -37,7 +37,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       requestId,
     );
 
-    await sequelizeInstance.transaction(async (transaction) => {
+    await dbConnection.transaction(async (transaction) => {
       const logManager = new LogManager(requestId);
 
       const [ownerUpdatedEvent, isEventCreated] =

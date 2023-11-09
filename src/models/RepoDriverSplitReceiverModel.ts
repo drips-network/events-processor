@@ -7,8 +7,8 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
 import GitProjectModel from './GitProjectModel';
-import { DependencyType } from '../common/types';
-import type { DripListId, ProjectId } from '../common/types';
+import { DependencyType } from '../core/types';
+import type { DripListId, ProjectId } from '../core/types';
 import DripListModel from './DripListModel';
 
 export default class RepoDriverSplitReceiverModel extends Model<

@@ -1,10 +1,10 @@
-import { getEventHandler } from '../eventsConfiguration/eventHandlerUtils';
-import type { KnownAny } from '../common/types';
+import { getEventHandler } from '../events/eventHandlerUtils';
+import type { KnownAny } from '../core/types';
 import eventProcessingQueue from './queue';
 import { assertRequestId } from '../utils/assert';
-import EventHandlerRequest from '../eventsConfiguration/EventHandlerRequest';
+import EventHandlerRequest from '../events/EventHandlerRequest';
 
-export default async function startQueueProcessing() {
+export default async function initJobProcessingQueue() {
   eventProcessingQueue.process(async (job) => {
     const handler = getEventHandler(job.data.eventSignature);
 

@@ -1,6 +1,6 @@
 import type { TypedListener } from '../../contracts/common';
-import type { Result } from '../common/types';
-import { getOriginContractByEvent } from '../utils/contractUtils';
+import type { Result } from '../core/types';
+import { getContractInfoFromEvent } from '../utils/contractUtils';
 import getResult from '../utils/getResult';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
 import type EventHandlerRequest from './EventHandlerRequest';
@@ -55,7 +55,7 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
    * Registers the {@link onReceive} listener for the event.
    */
   public async registerEventListener(): Promise<void> {
-    const { contract, name: contractName } = await getOriginContractByEvent(
+    const { contract, name: contractName } = await getContractInfoFromEvent(
       this.eventSignature,
     );
 

@@ -1,4 +1,4 @@
-import type { Result } from '../common/types';
+import type { Result } from '../core/types';
 
 async function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds)); // eslint-disable-line no-promise-executor-return

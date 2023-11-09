@@ -3,15 +3,14 @@ import type {
   TypedListener,
 } from '../../../contracts/common';
 import type { AccountMetadataEmittedEvent } from '../../../contracts/Drips';
-import type { KnownAny } from '../../common/types';
+import type { KnownAny } from '../../core/types';
 
-import sequelizeInstance from '../../db/getSequelizeInstance';
-import EventHandlerBase from '../../eventsConfiguration/EventHandlerBase';
+import EventHandlerBase from '../../events/EventHandlerBase';
 import saveEventProcessingJob from '../../queue/saveEventProcessingJob';
-import { DRIPS_APP_USER_METADATA_KEY } from '../../common/constants';
+import { DRIPS_APP_USER_METADATA_KEY } from '../../core/constants';
 import handleGitProjectMetadata from './gitProject/handleGitProjectMetadata';
 import IsDripList from '../../utils/dripListUtils';
-import LogManager from '../../common/LogManager';
+import LogManager from '../../core/LogManager';
 import {
   isNftDriverId,
   isRepoDriverId,
@@ -20,8 +19,9 @@ import {
 import { isLatestEvent } from '../../utils/eventUtils';
 import { toIpfsHash } from '../../utils/metadataUtils';
 import handleDripListMetadata from './dripList/handleDripListMetadata';
-import type EventHandlerRequest from '../../eventsConfiguration/EventHandlerRequest';
+import type EventHandlerRequest from '../../events/EventHandlerRequest';
 import { AccountMetadataEmittedEventModel } from '../../models';
+import { dbConnection } from '../../db/database';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignature =
@@ -60,7 +60,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       requestId,
     );
 
-    await sequelizeInstance.transaction(async (transaction) => {
+    await dbConnection.transaction(async (transaction) => {
       const logManager = new LogManager(requestId);
 
       const [accountMetadataEmittedEventModel, isEventCreated] =

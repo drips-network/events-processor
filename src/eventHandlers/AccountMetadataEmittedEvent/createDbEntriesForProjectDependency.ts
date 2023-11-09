@@ -4,11 +4,11 @@ import {
   type DependencyOfProjectType,
   type DripListId,
   type ProjectId,
-} from '../../common/types';
+} from '../../core/types';
 import GitProjectModel, {
   ProjectVerificationStatus,
 } from '../../models/GitProjectModel';
-import { FORGES_MAP } from '../../common/constants';
+import { FORGES_MAP } from '../../core/constants';
 import shouldNeverHappen from '../../utils/shouldNeverHappen';
 import RepoDriverSplitReceiverModel from '../../models/RepoDriverSplitReceiverModel';
 import { isNftDriverId, isRepoDriverId } from '../../utils/accountIdUtils';

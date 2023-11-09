@@ -1,9 +1,9 @@
 import type { AddressLike } from 'ethers';
 import type { Transaction } from 'sequelize';
 import calcSaltFromAddress from './calcSaltFromAddress';
-import { getNftDriverClient } from './contractClientUtils';
-import type { NftDriverId } from '../common/types';
+import type { NftDriverId } from '../core/types';
 import TransferEventModel from '../models/TransferEventModel';
+import { nftDriverContract } from '../core/contractClients';
 
 // Logic coupled to how the App creates new Drip Lists.
 export default async function IsDripList(
@@ -20,8 +20,6 @@ export default async function IsDripList(
     transaction,
   );
 
-  const nftDriver = await getNftDriverClient();
-
   // We do not expect to have many Drip Lists per owner, so it's ok to iterate.
   for (const index of [
     0,
@@ -31,7 +29,7 @@ export default async function IsDripList(
   ]) {
     const salt = calcSaltFromAddress(ownerAddress.toString(), index);
 
-    const expectedTokenId = await nftDriver.calcTokenIdWithSalt(
+    const expectedTokenId = await nftDriverContract.calcTokenIdWithSalt(
       ownerAddress,
       salt,
     );

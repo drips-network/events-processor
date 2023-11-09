@@ -1,11 +1,11 @@
 import type { Drips, NftDriver, RepoDriver } from '../../contracts';
-import type { DripsContract } from '../common/types';
-import type { EventSignature } from '../eventsConfiguration/types';
+import type { DripsContract } from '../core/types';
+import type { EventSignature } from '../events/types';
 import {
-  getDripsClient,
-  getNftDriverClient,
-  getRepoDriverClient,
-} from './contractClientUtils';
+  dripsContract,
+  nftDriverContract,
+  repoDriverContract,
+} from '../core/contractClients';
 import {
   isDripsEvent,
   isNftDriverEvent,
@@ -13,7 +13,7 @@ import {
 } from './eventUtils';
 import shouldNeverHappen from './shouldNeverHappen';
 
-export function getOriginContractByAccountId(id: string): DripsContract {
+export function getContractNameFromAccountId(id: string): DripsContract {
   if (Number.isNaN(Number(id))) {
     throw new Error(`Could not get bits: ${id} is not a number.`);
   }
@@ -44,7 +44,7 @@ export function getOriginContractByAccountId(id: string): DripsContract {
   }
 }
 
-export async function getOriginContractByEvent(
+export async function getContractInfoFromEvent(
   eventSignature: EventSignature,
 ): Promise<
   | {
@@ -62,21 +62,21 @@ export async function getOriginContractByEvent(
 > {
   if (isDripsEvent(eventSignature)) {
     return {
-      contract: await getDripsClient(),
+      contract: dripsContract,
       name: 'drips',
     };
   }
 
   if (isNftDriverEvent(eventSignature)) {
     return {
-      contract: await getNftDriverClient(),
+      contract: nftDriverContract,
       name: 'nftDriver',
     };
   }
 
   if (isRepoDriverEvent(eventSignature)) {
     return {
-      contract: await getRepoDriverClient(),
+      contract: repoDriverContract,
       name: 'repoDriver',
     };
   }

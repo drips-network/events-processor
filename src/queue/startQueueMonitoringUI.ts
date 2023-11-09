@@ -1,10 +1,10 @@
 import express from 'express';
 import Arena from 'bull-arena';
 import BeeQueue from 'bee-queue';
-import config from '../common/appSettings';
-import logger from '../common/logger';
+import config from '../config/appSettings';
+import logger from '../core/logger';
 
-export default function setupQueueUI() {
+export default function startQueueMonitoringUI() {
   const app = express();
 
   const arenaConfig = Arena(

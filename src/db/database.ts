@@ -1,7 +1,6 @@
-import sequelizeInstance from './getSequelizeInstance';
-import logger from '../common/logger';
-import { getRegisteredModels } from './registerModel';
-import { getNetwork } from '../utils/getNetworkSettings';
+import { Sequelize } from 'sequelize';
+import logger, { shouldEnableSequelizeLogging } from '../core/logger';
+import { getRegisteredModels, registerModels } from './modelRegistration';
 import {
   AddressDriverSplitReceiverModel,
   DripListModel,
@@ -9,30 +8,40 @@ import {
   GitProjectModel,
   RepoDriverSplitReceiverModel,
 } from '../models';
+import appSettings from '../config/appSettings';
 
-export default async function connectToDb(): Promise<void> {
+const { postgresConnectionString } = appSettings;
+
+export const dbConnection = new Sequelize(`${postgresConnectionString}`, {
+  dialect: 'postgres',
+  logging: shouldEnableSequelizeLogging ? (msg) => logger.debug(msg) : false,
+  timezone: 'UTC',
+});
+
+export async function connectToDb(): Promise<void> {
   logger.info('Initializing database...');
 
   await authenticate();
+  registerModels();
   await initializeEntities();
   defineAssociations();
 
-  await sequelizeInstance.sync();
+  await dbConnection.sync();
 
   logger.info('Database initialized.');
 }
 
 async function authenticate(): Promise<void> {
   try {
-    await sequelizeInstance.authenticate();
+    await dbConnection.authenticate();
 
     logger.info('Connection has been established successfully.');
 
-    await sequelizeInstance.query(
-      `CREATE SCHEMA IF NOT EXISTS ${getNetwork()};`,
+    await dbConnection.query(
+      `CREATE SCHEMA IF NOT EXISTS ${appSettings.network};`,
     );
 
-    await sequelizeInstance.authenticate();
+    await dbConnection.authenticate();
   } catch (error: any) {
     logger.error(`Unable to connect to the database: ${error}.`);
     throw error;
@@ -44,7 +53,7 @@ async function initializeEntities(): Promise<void> {
     logger.info('Initializing database schema...');
 
     const promises = getRegisteredModels().map(async (Model) => {
-      Model.initialize(sequelizeInstance);
+      Model.initialize(dbConnection);
     });
 
     await Promise.all(promises);

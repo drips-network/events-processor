@@ -5,11 +5,11 @@ import {
   DependencyType,
   type DripListId,
   type IpfsHash,
-} from '../../../common/types';
+} from '../../../core/types';
 import getNftDriverMetadata from '../../../utils/metadataUtils';
 import validateDripListMetadata from './validateDripListMetadata';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
-import LogManager from '../../../common/LogManager';
+import LogManager from '../../../core/LogManager';
 import {
   isAddressDriverId,
   isNftDriverId,

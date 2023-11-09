@@ -5,24 +5,12 @@ import {
 import AccountMetadataEmittedEventHandler from '../eventHandlers/AccountMetadataEmittedEvent/AccountMetadataEmittedEventHandler';
 import OwnerUpdatedEventHandler from '../eventHandlers/OwnerUpdatedEventHandler';
 import {
-  AccountMetadataEmittedEventModel,
-  AddressDriverSplitReceiverModel,
-  DripListModel,
-  DripListSplitReceiverModel,
-  GitProjectModel,
-  OwnerUpdateRequestedEventModel,
-  OwnerUpdatedEventModel,
-  RepoDriverSplitReceiverModel,
-  TransferEventModel,
-} from '../models';
-import {
   getEventHandler,
   getRegisteredEvents,
   registerEventHandler,
 } from './eventHandlerUtils';
-import { registerModel } from '../db/registerModel';
 
-function registerEventHandlers(): void {
+export function registerEventHandlers(): void {
   registerEventHandler<'OwnerUpdateRequested(uint256,uint8,bytes)'>(
     'OwnerUpdateRequested(uint256,uint8,bytes)',
     OwnerUpdateRequestedEventHandler,
@@ -41,28 +29,10 @@ function registerEventHandlers(): void {
   );
 }
 
-function registerModels(): void {
-  registerModel(DripListModel);
-  registerModel(GitProjectModel);
-  registerModel(TransferEventModel);
-  registerModel(OwnerUpdatedEventModel);
-  registerModel(DripListSplitReceiverModel);
-  registerModel(RepoDriverSplitReceiverModel);
-  registerModel(OwnerUpdateRequestedEventModel);
-  registerModel(AddressDriverSplitReceiverModel);
-  registerModel(AccountMetadataEmittedEventModel);
-}
-
-async function registerEventListeners(): Promise<void> {
+export async function registerEventListeners(): Promise<void> {
   const registeredEvents = getRegisteredEvents();
 
   registeredEvents.forEach(async (eventSignature) =>
     getEventHandler(eventSignature).registerEventListener(),
   );
-}
-
-export default function configureEventServices() {
-  registerEventHandlers();
-  registerModels();
-  registerEventListeners();
 }

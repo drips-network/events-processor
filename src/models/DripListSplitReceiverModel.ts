@@ -6,8 +6,8 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
-import { DependencyType } from '../common/types';
-import type { DripListId, ProjectId } from '../common/types';
+import { DependencyType } from '../core/types';
+import type { DripListId, ProjectId } from '../core/types';
 import DripListModel from './DripListModel';
 import GitProjectModel from './GitProjectModel';
 

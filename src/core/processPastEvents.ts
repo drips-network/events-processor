@@ -1,26 +1,26 @@
-import { getRegisteredEvents } from '../eventsConfiguration/eventHandlerUtils';
-import { getNetworkSettings } from './getNetworkSettings';
-import logger from '../common/logger';
+import { getRegisteredEvents } from '../events/eventHandlerUtils';
+import logger from './logger';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
-import { getOriginContractByEvent } from './contractUtils';
-import { getTypedEvent } from './eventUtils';
+import { getContractInfoFromEvent } from '../utils/contractUtils';
+import { getTypedEvent } from '../utils/eventUtils';
+import loadChainConfig from '../config/loadChainConfig';
+import appProvider from './appProvider';
 
 export default async function processPastEvents(): Promise<void> {
   logger.info('Start processing past events. This might take a while...');
 
-  const { chainConfig, provider } = await getNetworkSettings();
-
-  const endBlock = await provider.getBlockNumber();
+  const endBlock = await appProvider.getBlockNumber();
   logger.info(`End block number: ${endBlock}`);
 
   await Promise.all(
     getRegisteredEvents().map(async (eventSignature) => {
       const { contract, name: contractName } =
-        await getOriginContractByEvent(eventSignature);
+        await getContractInfoFromEvent(eventSignature);
       const event = await getTypedEvent(eventSignature);
 
       let i;
       const batchSize = 5000;
+      const chainConfig = await loadChainConfig();
       const startBlock = chainConfig[contractName].block;
       logger.info(`Start block number for ${contractName}: ${startBlock}`);
 

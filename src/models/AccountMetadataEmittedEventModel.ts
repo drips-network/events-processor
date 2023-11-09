@@ -4,9 +4,9 @@ import type {
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import { COMMON_EVENT_INIT_ATTRIBUTES } from '../common/constants';
+import { COMMON_EVENT_INIT_ATTRIBUTES } from '../core/constants';
 import getSchema from '../utils/getSchema';
-import type { IEventModel } from '../eventsConfiguration/types';
+import type { IEventModel } from '../events/types';
 
 export default class AccountMetadataEmittedEventModel
   extends Model<

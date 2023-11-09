@@ -4,7 +4,7 @@ import type {
   TypedLogDescription,
 } from '../../contracts/common';
 import type EventHandlerBase from './EventHandlerBase';
-import type { ValuesOf } from '../common/types';
+import type { ValuesOf } from '../core/types';
 
 // -------------------------- Filter types inference -----------------------------------------
 // ! DO NOT EXPORT THESE. It will fail in runtime.

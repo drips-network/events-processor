@@ -1,7 +1,7 @@
 import type { AddressLike } from 'ethers';
 import { ethers } from 'ethers';
-import { FORGES_MAP } from '../common/constants';
-import type { Forge } from '../common/types';
+import { FORGES_MAP } from '../core/constants';
+import type { Forge } from '../core/types';
 import type { GitProjectModel } from '../models';
 import { ProjectVerificationStatus } from '../models/GitProjectModel';
 import shouldNeverHappen from './shouldNeverHappen';

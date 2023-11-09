@@ -1,15 +1,15 @@
 import type { TransferEvent } from '../../contracts/NftDriver';
-import EventHandlerBase from '../eventsConfiguration/EventHandlerBase';
-import sequelizeInstance from '../db/getSequelizeInstance';
+import EventHandlerBase from '../events/EventHandlerBase';
 import IsDripList from '../utils/dripListUtils';
-import LogManager from '../common/LogManager';
+import LogManager from '../core/LogManager';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
-import type { KnownAny } from '../common/types';
+import type { KnownAny } from '../core/types';
 import { getOwnerAccountId, toNftDriverId } from '../utils/accountIdUtils';
 import { isLatestEvent } from '../utils/eventUtils';
-import type EventHandlerRequest from '../eventsConfiguration/EventHandlerRequest';
+import type EventHandlerRequest from '../events/EventHandlerRequest';
 import { DripListModel, TransferEventModel } from '../models';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
+import { dbConnection } from '../db/database';
 
 export default class TransferEventHandler extends EventHandlerBase<'Transfer(address,address,uint256)'> {
   public eventSignature = 'Transfer(address,address,uint256)' as const;
@@ -37,7 +37,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
       requestId,
     );
 
-    await sequelizeInstance.transaction(async (transaction) => {
+    await dbConnection.transaction(async (transaction) => {
       const logManager = new LogManager(requestId);
 
       const [transferEvent, isEventCreated] =

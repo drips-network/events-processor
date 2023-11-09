@@ -1,5 +1,5 @@
 import winston from 'winston';
-import appSettings from './appSettings';
+import appSettings from '../config/appSettings';
 
 const format = winston.format.combine(
   winston.format.timestamp(),

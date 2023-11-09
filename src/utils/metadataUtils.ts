@@ -1,11 +1,11 @@
 import { ethers } from 'ethers';
 import type { AnyVersion } from '@efstajas/versioned-parser';
-import type { IpfsHash } from '../common/types';
+import type { IpfsHash } from '../core/types';
 import {
   nftDriverAccountMetadataParser,
   repoDriverAccountMetadataParser,
 } from '../metadata/schemas';
-import appSettings from '../common/appSettings';
+import appSettings from '../config/appSettings';
 
 export function toIpfsHash(str: string): IpfsHash {
   const ipfsHash = ethers.toUtf8String(str);

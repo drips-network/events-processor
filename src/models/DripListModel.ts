@@ -5,7 +5,7 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
-import type { AccountId, DripListId } from '../common/types';
+import type { AccountId, DripListId } from '../core/types';
 import getSchema from '../utils/getSchema';
 
 export default class DripListModel extends Model<

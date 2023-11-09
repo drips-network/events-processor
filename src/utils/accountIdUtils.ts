@@ -3,9 +3,9 @@ import type {
   AddressDriverId,
   NftDriverId,
   RepoDriverId,
-} from '../common/types';
-import { getAddressDriverClient } from './contractClientUtils';
-import { getOriginContractByAccountId } from './contractUtils';
+} from '../core/types';
+import { addressDriverContract } from '../core/contractClients';
+import { getContractNameFromAccountId } from './contractUtils';
 
 export function toRepoDriverId(id: bigint): RepoDriverId {
   const repoDriverId = id.toString();
@@ -47,7 +47,7 @@ export function isAddressDriverId(
   const isNaN = Number.isNaN(Number(idAsString));
 
   const isAccountIdOfAddressDriver =
-    getOriginContractByAccountId(idAsString) === 'addressDriver';
+    getContractNameFromAccountId(idAsString) === 'addressDriver';
 
   if (isNaN || !isAccountIdOfAddressDriver) {
     return false;
@@ -67,7 +67,7 @@ export function assertAddressDiverId(
 export function isNftDriverId(id: string): id is NftDriverId {
   const isNaN = Number.isNaN(Number(id));
   const isAccountIdOfNftDriver =
-    getOriginContractByAccountId(id) === 'nftDriver';
+    getContractNameFromAccountId(id) === 'nftDriver';
 
   if (isNaN || !isAccountIdOfNftDriver) {
     return false;
@@ -87,7 +87,7 @@ export function assertNftDriverAccountId(
 export function isRepoDriverId(id: string): id is RepoDriverId {
   const isNaN = Number.isNaN(Number(id));
   const isAccountIdOfRepoDriver =
-    getOriginContractByAccountId(id) === 'repoDriver';
+    getContractNameFromAccountId(id) === 'repoDriver';
 
   if (isNaN || !isAccountIdOfRepoDriver) {
     return false;
@@ -110,6 +110,6 @@ export async function getOwnerAccountId(
   AccountId | PromiseLike<AccountId | null | undefined> | null | undefined
 > {
   return (
-    await (await getAddressDriverClient()).calcAccountId(owner as string)
+    await addressDriverContract.calcAccountId(owner as string)
   ).toString() as AccountId;
 }

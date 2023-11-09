@@ -3,10 +3,7 @@ import type { TypedEventLog } from '../../contracts/common';
 import { assertEventSignature } from '../utils/assert';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
 import eventProcessingQueue from './queue';
-import type {
-  EventSignature,
-  EventSignatureToEventMap,
-} from '../eventsConfiguration/types';
+import type { EventSignature, EventSignatureToEventMap } from '../events/types';
 
 export default async function saveEventProcessingJob<T extends EventSignature>(
   eventLog: TypedEventLog<EventSignatureToEventMap[T]>,

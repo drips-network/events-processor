@@ -8,13 +8,13 @@ import {
   RepoDriverSplitReceiverModel,
 } from '../../../models';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
-import LogManager from '../../../common/LogManager';
+import LogManager from '../../../core/LogManager';
 import { calculateProjectStatus } from '../../../utils/gitProjectUtils';
 import {
   DependencyType,
   type IpfsHash,
   type ProjectId,
-} from '../../../common/types';
+} from '../../../core/types';
 import {
   assertAddressDiverId,
   isAddressDriverId,
