@@ -3,6 +3,7 @@ import type { SupportedNetwork } from './types';
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
+      RPC_URL: string;
       LOG_LEVEL: 'debug' | 'info' | 'warn' | 'error';
       MONITORING_UI_PORT: number;
       INFURA_API_KEY: string;
