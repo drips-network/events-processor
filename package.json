@@ -11,7 +11,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm run build:contracts && tsc",
     "build:contracts": "typechain --target=ethers-v6 --out-dir contracts ./src/abi/**.json",
-    "postbuild": "rm -rf ./dist/src/config && cp -r ./src/config ./dist/src/config",
+    "postbuild": "rm -rf ./dist/src/config/chainConfigs && cp -r ./src/config/chainConfigs ./dist/src/config/chainConfigs",
     "start:local": "ENV=local npx nodemon",
     "start:goerli": "ENV=goerli npx nodemon",
     "start": "export ENV=mainnet && npm run build && node dist/src/index.js",

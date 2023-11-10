@@ -21,7 +21,6 @@ export const DRIPS_CONTRACTS = [
   'immutableSplitsDriver',
 ] as const;
 
-// TODO: maybe change the key to something more app specific.
 export const DRIPS_APP_USER_METADATA_KEY = ethers.encodeBytes32String('ipfs');
 
 export const COMMON_EVENT_INIT_ATTRIBUTES = {

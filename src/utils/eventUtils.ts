@@ -58,12 +58,12 @@ export async function getTypedEvent(
 }
 
 export async function isLatestEvent<T extends IEventModel & Model<any, any>>(
-  instance: T,
+  incomingEvent: T,
   model: { findOne(options: FindOptions<T>): Promise<T | null> },
   where: WhereOptions<T>,
   transaction: Transaction,
 ): Promise<boolean> {
-  const latestEvent = await model.findOne({
+  const latestEventInDb = await model.findOne({
     lock: true,
     transaction,
     where,
@@ -73,14 +73,14 @@ export async function isLatestEvent<T extends IEventModel & Model<any, any>>(
     ],
   });
 
-  if (!latestEvent) {
+  if (!latestEventInDb) {
     return true;
   }
 
   if (
-    latestEvent.blockNumber > instance.blockNumber ||
-    (latestEvent.blockNumber === instance.blockNumber &&
-      latestEvent.logIndex > instance.logIndex)
+    latestEventInDb.blockNumber > incomingEvent.blockNumber ||
+    (latestEventInDb.blockNumber === incomingEvent.blockNumber &&
+      latestEventInDb.logIndex > incomingEvent.logIndex)
   ) {
     return false;
   }

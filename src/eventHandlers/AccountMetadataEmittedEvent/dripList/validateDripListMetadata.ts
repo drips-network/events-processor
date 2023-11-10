@@ -1,22 +1,16 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import shouldNeverHappen from '../../../utils/shouldNeverHappen';
-import type DripListModel from '../../../models/DripListModel';
+import type { TransferEventModel } from '../../../models';
 
 export default async function validateDripListMetadata(
-  dripList: DripListModel,
+  dripListTransferEvent: TransferEventModel,
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
 ): Promise<void> {
-  if (!metadata) {
-    throw new Error(
-      `Drip List metadata not found for Drip List with (token) ID ${dripList.id} but it was expected to exist.`,
-    );
-  }
-
   const errors = [];
 
   const { describes, isDripList } = metadata;
-  const { id: dripListId } = dripList;
+  const { tokenId: dripListId } = dripListTransferEvent;
 
   if (describes.accountId !== dripListId) {
     errors.push(

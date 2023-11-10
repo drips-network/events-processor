@@ -43,12 +43,12 @@ export default class LogManager {
 
   public appendFindOrCreateLog<T extends Model>(
     type: { new (): T },
-    created: boolean,
+    isCreated: boolean,
     id: string,
   ): this {
     this._logs.push(
       `${
-        created
+        isCreated
           ? `Created a new ${LogManager.nameOfType(type)} with ID ${id}.`
           : `${LogManager.nameOfType(
               type,

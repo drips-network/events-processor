@@ -1,3 +1,4 @@
+import type { AddressLike } from 'ethers';
 import type {
   AccountId,
   AddressDriverId,
@@ -105,7 +106,7 @@ export function assertRepoDiverAccountId(
 }
 
 export async function getOwnerAccountId(
-  owner: string,
+  owner: AddressLike,
 ): Promise<
   AccountId | PromiseLike<AccountId | null | undefined> | null | undefined
 > {

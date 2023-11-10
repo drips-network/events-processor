@@ -4,12 +4,15 @@ import calcSaltFromAddress from './calcSaltFromAddress';
 import type { NftDriverId } from '../core/types';
 import TransferEventModel from '../models/TransferEventModel';
 import { nftDriverContract } from '../core/contractClients';
+import { assertNftDriverAccountId } from './accountIdUtils';
 
-// Logic coupled to how the App creates new Drip Lists.
+// The logic coupled to how the App creates new Drip Lists.
 export default async function IsDripList(
-  possibleDripListId: NftDriverId,
+  possibleDripListId: string,
   transaction: Transaction,
 ): Promise<boolean> {
+  assertNftDriverAccountId(possibleDripListId);
+
   const ownerAddress = await getOwnerAddressByAccountId(
     possibleDripListId,
     transaction,

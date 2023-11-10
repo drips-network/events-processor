@@ -11,6 +11,7 @@ import validateDripListMetadata from './validateDripListMetadata';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import LogManager from '../../../core/LogManager';
 import {
+  getOwnerAccountId,
   isAddressDriverId,
   isNftDriverId,
   isRepoDriverId,
@@ -22,6 +23,7 @@ import {
   DripListModel,
   RepoDriverSplitReceiverModel,
   DripListSplitReceiverModel,
+  TransferEventModel,
 } from '../../../models';
 import shouldNeverHappen from '../../../utils/shouldNeverHappen';
 import areReceiversValid from '../splitsValidator';
@@ -34,23 +36,58 @@ export default async function handleDripListMetadata(
   transaction: Transaction,
   ipfsHash: IpfsHash,
 ) {
-  const dripList = await DripListModel.findByPk(dripListId, {
+  const dripListTransferEvent = await TransferEventModel.findOne({
     transaction,
     lock: true,
+    where: {
+      tokenId: dripListId,
+    },
   });
 
-  if (!dripList) {
+  if (!dripListTransferEvent) {
     throw new Error(
-      `Failed to update the metadata of Drip List with ID ${dripListId}: the list does not exist in the database. 
-      This is normal if the event that should have created the project was not processed yet.`,
+      `Cannot update metadata for Drip List with ID ${dripListId}: the original 'Transfer' event that minted the list on-chain does not exist in the database.`,
     );
   }
 
   const metadata = await getNftDriverMetadata(ipfsHash);
 
-  await validateDripListMetadata(dripList, metadata);
+  await validateDripListMetadata(dripListTransferEvent, metadata);
 
-  await updateDripListMetadata(dripList, logManager, transaction, metadata);
+  const { from, to } = dripListTransferEvent;
+
+  const [dripList, isDripListCreated] = await DripListModel.findOrCreate({
+    transaction,
+    lock: true,
+    where: {
+      id: dripListId,
+    },
+    defaults: {
+      id: dripListId,
+      creator: to,
+      isValid: await areReceiversValid(
+        dripListId,
+        metadata.projects.map((s) => ({
+          weight: s.weight,
+          accountId: s.accountId,
+        })),
+      ),
+      name: metadata.name ?? null,
+      description:
+        'description' in metadata ? metadata.description || null : null,
+      ownerAddress: to,
+      ownerAccountId: await getOwnerAccountId(to),
+      previousOwnerAddress: from,
+    },
+  });
+
+  if (isDripListCreated) {
+    logManager
+      .appendFindOrCreateLog(DripListModel, isDripListCreated, dripList.id)
+      .logAllDebug();
+  } else {
+    await updateDripListMetadata(dripList, logManager, transaction, metadata);
+  }
 
   await createDbEntriesForDripListSplits(
     dripListId,
@@ -66,9 +103,7 @@ async function updateDripListMetadata(
   transaction: Transaction,
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
 ): Promise<void> {
-  const { name } = metadata;
-
-  dripList.name = name ?? null;
+  dripList.name = metadata.name ?? null;
   dripList.description =
     'description' in metadata ? metadata.description || null : null;
 

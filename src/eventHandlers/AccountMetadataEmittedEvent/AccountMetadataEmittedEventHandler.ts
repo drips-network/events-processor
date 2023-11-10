@@ -38,11 +38,12 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
     const [accountId, key, value] =
       args as AccountMetadataEmittedEvent.OutputTuple;
 
-    if (key !== DRIPS_APP_USER_METADATA_KEY) {
+    if (!this._isEmittedByTheDripsApp(key)) {
       LogManager.logRequestInfo(
-        `Skipping ${this.eventSignature} event because the metadata were not emitted by the Drips App.`,
+        `Skipping ${this.eventSignature} event processing because the key '${key}' is not emitted by the Drips App.`,
         requestId,
       );
+
       return;
     }
 
@@ -55,7 +56,6 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       \r\t - value:       ${value} (ipfs hash: ${ipfsHash})
       \r\t - accountId:   ${typedAccountId},
       \r\t - logIndex:    ${logIndex}
-      \r\t - blockNumber: ${blockNumber}
       \r\t - tx hash:     ${transactionHash}`,
       requestId,
     );
@@ -98,23 +98,28 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         transaction,
       );
 
-      // `RepoDriver` account + Drips App metadata key => Git Project
+      // Assumption: `RepoDriverId` + metadata coming from the Drips App => the RepoDriverId represents a Project.
       if (isRepoDriverId(typedAccountId) && isLatest) {
         logManager.appendIsLatestEventLog();
+
         await handleGitProjectMetadata(
           logManager,
           typedAccountId,
           transaction,
           ipfsHash,
         );
-      }
-      // `NftDriver` account + Drips App metadata key => Drip List
-      else if (isNftDriverId(typedAccountId) && isLatest) {
-        logManager.appendIsLatestEventLog();
-
+      } else if (isNftDriverId(typedAccountId) && isLatest) {
         if (!(await IsDripList(typedAccountId, transaction))) {
+          LogManager.logRequestInfo(
+            `Skipping ${this.eventSignature} event processing because the NftDriverId '${typedAccountId}' is not a Drip List ID.`,
+            requestId,
+          );
+
           return;
         }
+
+        logManager.appendIsLatestEventLog();
+
         await handleDripListMetadata(
           logManager,
           typedAccountId,
@@ -139,4 +144,12 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       this.eventSignature,
     );
   };
+
+  private _isEmittedByTheDripsApp(key: string): boolean {
+    if (key === DRIPS_APP_USER_METADATA_KEY) {
+      return true;
+    }
+
+    return false;
+  }
 }

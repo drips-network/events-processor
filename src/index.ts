@@ -1,7 +1,7 @@
 import logger from './core/logger';
 import processPastEvents from './core/processPastEvents';
 
-import config from './config/appSettings';
+import appSettings from './config/appSettings';
 import initJobProcessingQueue from './queue/initJobProcessingQueue';
 import startQueueMonitoringUI from './queue/startQueueMonitoringUI';
 import { connectToDb } from './db/database';
@@ -18,10 +18,10 @@ import {
     await initJobProcessingQueue();
     registerEventHandlers();
     registerEventListeners();
-    if (config.shouldStartMonitoringUI) {
+    if (appSettings.shouldStartMonitoringUI) {
       startQueueMonitoringUI();
     }
-    if (config.shouldProcessPastEvents) {
+    if (appSettings.shouldProcessPastEvents) {
       await processPastEvents();
     }
   } catch (e: any) {

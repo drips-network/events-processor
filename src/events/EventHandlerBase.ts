@@ -29,10 +29,6 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
 
   /**
    * Contains the handler's logic.
-   *
-   * **IMPORTANT: ⚠️ do NOT call this method directly**. Use {@link executeHandle} instead.
-   *
-   * Usually, you'd call {@link executeHandle} from the {@link onReceive} to process the event.
    */
   protected abstract _handle(request: EventHandlerRequest<T>): Promise<void>;
 
