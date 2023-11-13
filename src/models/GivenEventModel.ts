@@ -16,8 +16,8 @@ export default class GivenEventModel
   >
   implements IEventModel
 {
-  public declare accountId: AccountId; // The `tokenId` from `Transfer` event.
-  public declare receiver: AccountId; // The `tokenId` from `Transfer` event.
+  public declare accountId: AccountId; // Sender of the Give
+  public declare receiver: AccountId;
   public declare erc20: Address;
   public declare amt: BigIntString;
 
