@@ -1,4 +1,5 @@
 export { default as DripListModel } from './DripListModel';
+export { default as GivenEventModel } from './GivenEventModel';
 export { default as GitProjectModel } from './GitProjectModel';
 export { default as TransferEventModel } from './TransferEventModel';
 export { default as OwnerUpdatedEventModel } from './OwnerUpdatedEventModel';

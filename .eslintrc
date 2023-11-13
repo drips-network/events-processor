@@ -25,6 +25,7 @@
     "no-shadow": "off",
     "no-useless-constructor": "off",
     "no-use-before-define": "off",
+    "import/prefer-default-export": "off",
     "no-empty-function": [
       "error",
       {
