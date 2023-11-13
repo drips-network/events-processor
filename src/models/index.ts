@@ -1,4 +1,5 @@
 export { default as DripListModel } from './DripListModel';
+export { default as GivenEventModel } from './GivenEventModel';
 export { default as GitProjectModel } from './GitProjectModel';
 export { default as TransferEventModel } from './TransferEventModel';
 export { default as OwnerUpdatedEventModel } from './OwnerUpdatedEventModel';
@@ -7,4 +8,3 @@ export { default as RepoDriverSplitReceiverModel } from './RepoDriverSplitReceiv
 export { default as OwnerUpdateRequestedEventModel } from './OwnerUpdateRequestedEventModel';
 export { default as AddressDriverSplitReceiverModel } from './AddressDriverSplitReceiverModel';
 export { default as AccountMetadataEmittedEventModel } from './AccountMetadataEmittedEventModel';
-export { default as GivenEventModel } from './GivenEventModel';

@@ -24,6 +24,7 @@ export function getRegisteredModels(): ModelStaticMembers[] {
 
 export function registerModels(): void {
   registerModel(DripListModel);
+  registerModel(GivenEventModel);
   registerModel(GitProjectModel);
   registerModel(TransferEventModel);
   registerModel(OwnerUpdatedEventModel);
@@ -32,5 +33,4 @@ export function registerModels(): void {
   registerModel(OwnerUpdateRequestedEventModel);
   registerModel(AddressDriverSplitReceiverModel);
   registerModel(AccountMetadataEmittedEventModel);
-  registerModel(GivenEventModel);
 }
