@@ -22,6 +22,7 @@ const productionLogger = winston.createLogger({
   format,
   transports: [
     new winston.transports.Console(),
+    // Logs are stored on Railways, so we don't need to store them locally.
     // new winston.transports.File({
     //   filename: `logs/${new Date().toISOString().slice(0, 10)}.log`,
     // }),
@@ -31,9 +32,7 @@ const productionLogger = winston.createLogger({
 const logger =
   appSettings.environment === 'mainnet' ? productionLogger : developmentLogger;
 
-// TODO: disable Sequelize logging in production.
-// export const shouldEnableSequelizeLogging =
-//   appSettings.environment === 'development';
-export const shouldEnableSequelizeLogging = false;
+export const shouldEnableSequelizeLogging =
+  appSettings.environment !== 'mainnet';
 
 export default logger;
