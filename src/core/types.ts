@@ -27,6 +27,10 @@ export type ProjectId = RepoDriverId;
 
 export type AccountId = AddressDriverId | NftDriverId | RepoDriverId;
 
+export type Address = string & { __brand: 'Address' };
+
+export type BigIntString = string & { __brand: 'BigIntString' };
+
 export type ValuesOf<T> = T[keyof T];
 
 export type Result<T> =

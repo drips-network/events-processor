@@ -3,6 +3,7 @@ import {
   TransferEventHandler,
 } from '../eventHandlers';
 import AccountMetadataEmittedEventHandler from '../eventHandlers/AccountMetadataEmittedEvent/AccountMetadataEmittedEventHandler';
+import GivenEventHandler from '../eventHandlers/GivenEventHandler';
 import OwnerUpdatedEventHandler from '../eventHandlers/OwnerUpdatedEventHandler';
 import {
   getEventHandler,
@@ -26,6 +27,10 @@ export function registerEventHandlers(): void {
   registerEventHandler<'Transfer(address,address,uint256)'>(
     'Transfer(address,address,uint256)',
     TransferEventHandler,
+  );
+  registerEventHandler<'Given(uint256,uint256,address,uint128)'>(
+    'Given(uint256,uint256,address,uint128)',
+    GivenEventHandler,
   );
 }
 

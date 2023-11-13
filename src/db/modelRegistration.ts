@@ -9,6 +9,7 @@ import {
   OwnerUpdatedEventModel,
   RepoDriverSplitReceiverModel,
   TransferEventModel,
+  GivenEventModel,
 } from '../models';
 
 const REGISTERED_MODELS: ModelStaticMembers[] = [];
@@ -31,4 +32,5 @@ export function registerModels(): void {
   registerModel(OwnerUpdateRequestedEventModel);
   registerModel(AddressDriverSplitReceiverModel);
   registerModel(AccountMetadataEmittedEventModel);
+  registerModel(GivenEventModel);
 }

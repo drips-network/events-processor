@@ -7,3 +7,4 @@ export { default as RepoDriverSplitReceiverModel } from './RepoDriverSplitReceiv
 export { default as OwnerUpdateRequestedEventModel } from './OwnerUpdateRequestedEventModel';
 export { default as AddressDriverSplitReceiverModel } from './AddressDriverSplitReceiverModel';
 export { default as AccountMetadataEmittedEventModel } from './AccountMetadataEmittedEventModel';
+export { default as GivenEventModel } from './GivenEventModel';
