@@ -1,7 +1,7 @@
 import express from 'express';
 import Arena from 'bull-arena';
 import BeeQueue from 'bee-queue';
-import config from '../config/appSettings';
+import appSettings from '../config/appSettings';
 import logger from '../core/logger';
 
 export default function startQueueMonitoringUI() {
@@ -13,9 +13,9 @@ export default function startQueueMonitoringUI() {
       queues: [
         {
           type: 'bee',
-          name: `${config.network}_events`,
+          name: `${appSettings.network}_events`,
           redis: {
-            url: config.redisConnectionString,
+            url: appSettings.redisConnectionString,
           },
           hostId: 'drips_queue',
         },
@@ -29,7 +29,7 @@ export default function startQueueMonitoringUI() {
 
   app.use('/arena', arenaConfig);
 
-  const port = config.queueUiPort;
+  const port = appSettings.queueUiPort;
 
   app.listen(port, () => {
     logger.info(`Monitor Drips Queues on http://localhost:${port}`);

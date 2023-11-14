@@ -1,5 +1,5 @@
 import BeeQueue from 'bee-queue';
-import config from '../config/appSettings';
+import appSettings from '../config/appSettings';
 import logger from '../core/logger';
 import type { EventSignature } from '../events/types';
 
@@ -10,9 +10,9 @@ const eventProcessingQueue = new BeeQueue<{
   blockTimestamp: Date;
   transactionHash: string;
   args: string;
-}>(`${config.network}_events`, {
+}>(`${appSettings.network}_events`, {
   activateDelayedJobs: true,
-  redis: { url: config.redisConnectionString },
+  redis: { url: appSettings.redisConnectionString },
 });
 
 eventProcessingQueue.on('succeeded', (job) => {
