@@ -16,6 +16,7 @@ export default class GivenEventModel
   >
   implements IEventModel
 {
+  public declare id: string; // transactionHash + logIndex
   public declare accountId: AccountId; // Sender of the Give
   public declare receiver: AccountId;
   public declare erc20: Address;
@@ -30,6 +31,10 @@ export default class GivenEventModel
   public static initialize(sequelize: Sequelize): void {
     this.init(
       {
+        id: {
+          type: DataTypes.STRING,
+          primaryKey: true,
+        },
         accountId: {
           type: DataTypes.STRING,
           allowNull: false,
