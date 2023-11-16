@@ -95,7 +95,7 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
       if (isProjectCreated) {
         logManager
           .appendFindOrCreateLog(GitProjectModel, isProjectCreated, project.id)
-          .logAllDebug();
+          .logAllInfo();
 
         return;
       }
@@ -122,7 +122,7 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
 
         await project.save({ transaction });
 
-        logManager.logAllDebug();
+        logManager.logAllInfo();
       }
     });
   }

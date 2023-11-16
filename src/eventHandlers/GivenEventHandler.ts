@@ -69,7 +69,7 @@ export default class GivenEventHandler extends EventHandlerBase<'Given(uint256,u
         `${givenEvent.transactionHash}-${givenEvent.logIndex}`,
       );
 
-      logManager.logAllDebug();
+      logManager.logAllInfo();
     });
   }
 

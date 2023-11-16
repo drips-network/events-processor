@@ -3,11 +3,13 @@ import EventHandlerBase from '../events/EventHandlerBase';
 import LogManager from '../core/LogManager';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import type { KnownAny } from '../core/types';
-import { toNftDriverId } from '../utils/accountIdUtils';
+import { getOwnerAccountId, toNftDriverId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
-import { TransferEventModel } from '../models';
+import { DripListModel, TransferEventModel } from '../models';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { dbConnection } from '../db/database';
+import IsDripList from '../utils/dripListUtils';
+import { isLatestEvent } from '../utils/eventUtils';
 
 export default class TransferEventHandler extends EventHandlerBase<'Transfer(address,address,uint256)'> {
   public eventSignature = 'Transfer(address,address,uint256)' as const;
@@ -62,7 +64,53 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
       );
 
-      logManager.logAllDebug();
+      if (!(await IsDripList(id, transaction))) {
+        return;
+      }
+
+      const [dripList, isDripListCreated] = await DripListModel.findOrCreate({
+        transaction,
+        lock: true,
+        where: {
+          id,
+        },
+        defaults: {
+          id,
+          creator: to,
+          isValid: true, // There are no receivers yet, so the drip list is valid.
+          ownerAddress: to,
+          ownerAccountId: await getOwnerAccountId(to),
+          previousOwnerAddress: from,
+        },
+      });
+
+      const isLatest = await isLatestEvent(
+        transferEvent,
+        TransferEventModel,
+        {
+          transactionHash,
+          logIndex,
+        },
+        transaction,
+      );
+
+      if (isDripListCreated) {
+        logManager
+          .appendFindOrCreateLog(DripListModel, isDripListCreated, dripList.id)
+          .logAllInfo();
+      } else if (isLatest) {
+        dripList.ownerAddress = to;
+        dripList.previousOwnerAddress = from;
+        dripList.ownerAccountId = (await getOwnerAccountId(to)) ?? null;
+
+        logManager
+          .appendIsLatestEventLog()
+          .appendUpdateLog(dripList, DripListModel, dripList.id);
+
+        await dripList.save({ transaction });
+
+        logManager.logAllInfo();
+      }
     });
   }
 

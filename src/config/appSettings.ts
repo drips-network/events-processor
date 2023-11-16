@@ -3,9 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config({ path: `.env.${process.env.ENV}` });
 
 const appSettings = {
-  rpcUrl:
-    process.env.RPC_URL ??
-    `https://${process.env.NETWORK}.infura.io/v3/${process.env.INFURA_API_KEY}`,
+  rpcUrl: process.env.RPC_URL,
   logLevel: process.env.LOG_LEVEL,
   queueUiPort: process.env.MONITORING_UI_PORT ?? 3000,
   pinataSdkKey: process.env.PINATA_SDK_KEY,

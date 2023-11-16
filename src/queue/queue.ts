@@ -15,8 +15,8 @@ const eventProcessingQueue = new BeeQueue<{
   redis: { url: appSettings.redisConnectionString },
 });
 
-eventProcessingQueue.on('succeeded', (job) => {
-  logger.info(`✅ SUCCESS: Job with ID ${job.id} completed successfully.`);
+eventProcessingQueue.on('job succeeded', (job) => {
+  logger.info(`✅ SUCCESS: Job with ID ${job} completed successfully.`);
 });
 
 eventProcessingQueue.on('job failed', (job, err) => {
@@ -26,7 +26,7 @@ eventProcessingQueue.on('job failed', (job, err) => {
 });
 
 eventProcessingQueue.on('job retrying', (job, err) => {
-  logger.debug(
+  logger.info(
     `♻️  Job with ID ${job} failed with error '${err.message}' but is being retried...`,
   );
 });

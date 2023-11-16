@@ -12,7 +12,8 @@ import {
 
 (async () => {
   try {
-    logger.debug('Starting the application...');
+    logger.info('Starting the application...');
+    logger.info(`App Settings: ${JSON.stringify(appSettings, null, 2)}`);
 
     await connectToDb();
     await initJobProcessingQueue();

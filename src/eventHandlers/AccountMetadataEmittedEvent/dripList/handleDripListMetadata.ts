@@ -11,7 +11,6 @@ import validateDripListMetadata from './validateDripListMetadata';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import LogManager from '../../../core/LogManager';
 import {
-  getOwnerAccountId,
   isAddressDriverId,
   isNftDriverId,
   isRepoDriverId,
@@ -23,7 +22,6 @@ import {
   DripListModel,
   RepoDriverSplitReceiverModel,
   DripListSplitReceiverModel,
-  TransferEventModel,
 } from '../../../models';
 import shouldNeverHappen from '../../../utils/shouldNeverHappen';
 import areReceiversValid from '../splitsValidator';
@@ -36,58 +34,23 @@ export default async function handleDripListMetadata(
   transaction: Transaction,
   ipfsHash: IpfsHash,
 ) {
-  const dripListTransferEvent = await TransferEventModel.findOne({
+  const dripList = await DripListModel.findByPk(dripListId, {
     transaction,
     lock: true,
-    where: {
-      tokenId: dripListId,
-    },
   });
 
-  if (!dripListTransferEvent) {
+  if (!dripList) {
     throw new Error(
-      `Cannot update metadata for Drip List with ID ${dripListId}: the original 'Transfer' event that minted the list on-chain does not exist in the database.`,
+      `Failed to update the metadata of Drip List with ID ${dripListId}: the list does not exist in the database. 
+      This is normal if the event that should have created the project was not processed yet.`,
     );
   }
 
   const metadata = await getNftDriverMetadata(ipfsHash);
 
-  await validateDripListMetadata(dripListTransferEvent, metadata);
+  await validateDripListMetadata(dripList, metadata);
 
-  const { from, to } = dripListTransferEvent;
-
-  const [dripList, isDripListCreated] = await DripListModel.findOrCreate({
-    transaction,
-    lock: true,
-    where: {
-      id: dripListId,
-    },
-    defaults: {
-      id: dripListId,
-      creator: to,
-      isValid: await areReceiversValid(
-        dripListId,
-        metadata.projects.map((s) => ({
-          weight: s.weight,
-          accountId: s.accountId,
-        })),
-      ),
-      name: metadata.name ?? null,
-      description:
-        'description' in metadata ? metadata.description || null : null,
-      ownerAddress: to,
-      ownerAccountId: await getOwnerAccountId(to),
-      previousOwnerAddress: from,
-    },
-  });
-
-  if (isDripListCreated) {
-    logManager
-      .appendFindOrCreateLog(DripListModel, isDripListCreated, dripList.id)
-      .logAllDebug();
-  } else {
-    await updateDripListMetadata(dripList, logManager, transaction, metadata);
-  }
+  await updateDripListMetadata(dripList, logManager, transaction, metadata);
 
   await createDbEntriesForDripListSplits(
     dripListId,
@@ -119,7 +82,7 @@ async function updateDripListMetadata(
 
   if (!isValid) {
     logManager.appendLog(
-      `Set the Drip List to 'invalid' because the hash of the metadata receivers did not match the hash of the on-chain receivers for project with ID ${dripList.id}. 
+      `Set the Drip List to 'invalid' because the hash of the metadata receivers did not match the hash of the on-chain receivers for Drip List with ID ${dripList.id}. 
       This means that the processed event was the latest in the database but not the latest on-chain. 
       Check the 'isValid' flag to see if the project is valid after all the events are processed.`,
     );

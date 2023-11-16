@@ -91,8 +91,8 @@ export default class LogManager {
     return this;
   }
 
-  public logAllDebug(): void {
-    LogManager.logRequestDebug(
+  public logAllInfo(): void {
+    LogManager.logRequestInfo(
       `Completed successfully. The following happened:\n\t - ${this._logs.join(
         '\n\t - ',
       )}`,

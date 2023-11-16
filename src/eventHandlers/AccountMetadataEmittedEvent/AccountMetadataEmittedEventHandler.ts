@@ -128,7 +128,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         );
       }
 
-      logManager.logAllDebug();
+      logManager.logAllInfo();
     });
   }
 
