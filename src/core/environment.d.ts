@@ -16,6 +16,7 @@ declare global {
       ENV: 'local' | SupportedNetwork;
       SHOULD_START_MONITORING_UI: boolean;
       SHOULD_PROCESS_PAST_EVENTS: boolean;
+      POLLING_INTERVAL: number;
     }
   }
 }

@@ -1,5 +1,5 @@
 import { Sequelize } from 'sequelize';
-import logger, { shouldEnableSequelizeLogging } from '../core/logger';
+import logger from '../core/logger';
 import { getRegisteredModels, registerModels } from './modelRegistration';
 import {
   AddressDriverSplitReceiverModel,
@@ -14,7 +14,7 @@ const { postgresConnectionString } = appSettings;
 
 export const dbConnection = new Sequelize(`${postgresConnectionString}`, {
   dialect: 'postgres',
-  logging: shouldEnableSequelizeLogging ? (msg) => logger.debug(msg) : false,
+  logging: false,
   timezone: 'UTC',
 });
 

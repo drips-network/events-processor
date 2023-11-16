@@ -17,6 +17,7 @@ const appSettings = {
     (process.env.SHOULD_PROCESS_PAST_EVENTS as unknown as string) === 'true',
   shouldStartMonitoringUI:
     (process.env.SHOULD_START_MONITORING_UI as unknown as string) === 'true',
+  pollingInterval: Number(process.env.POLLING_INTERVAL) ?? 5000,
 } as const;
 
 export default appSettings;

@@ -32,6 +32,4 @@ const productionLogger = winston.createLogger({
 const logger =
   appSettings.network === 'mainnet' ? productionLogger : developmentLogger;
 
-export const shouldEnableSequelizeLogging = appSettings.network !== 'mainnet';
-
 export default logger;
