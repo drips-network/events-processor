@@ -17,10 +17,8 @@ const eventProcessingQueue = new BeeQueue<{
 
 eventProcessingQueue.checkStalledJobs(8000, (err, numStalledJobs) => {
   if (err) {
-    logger.error(`❌ Queue stalled jobs check error: ${err.message}.`);
-  } else {
-    logger.info(
-      `✅ Queue stalled jobs check completed successfully. ${numStalledJobs} jobs were found and re-queued.`,
+    logger.error(
+      `❌ Queue stalled jobs check error (num: ${numStalledJobs}): ${err.message}.`,
     );
   }
 });
