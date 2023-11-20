@@ -15,6 +15,20 @@ const eventProcessingQueue = new BeeQueue<{
   redis: { url: appSettings.redisConnectionString },
 });
 
+eventProcessingQueue.checkStalledJobs(8000, (err, numStalledJobs) => {
+  if (err) {
+    logger.error(`❌ Queue stalled jobs check error: ${err.message}.`);
+  } else {
+    logger.info(
+      `✅ Queue stalled jobs check completed successfully. ${numStalledJobs} jobs were found and re-queued.`,
+    );
+  }
+});
+
+eventProcessingQueue.on('error', (error: Error) => {
+  logger.error(`❌ Queue error: ${error.message}.`);
+});
+
 eventProcessingQueue.on('job succeeded', (job) => {
   logger.info(`✅ SUCCESS: Job with ID ${job} completed successfully.`);
 });

@@ -10,22 +10,29 @@ import {
   registerEventListeners,
 } from './events/registrations';
 
-(async () => {
-  try {
-    logger.info('Starting the application...');
-    logger.info(`App Settings: ${JSON.stringify(appSettings, null, 2)}`);
+process.on('uncaughtException', (error: Error) => {
+  logger.error(`Uncaught Exception: ${error.message}`);
 
-    await connectToDb();
-    await initJobProcessingQueue();
-    registerEventHandlers();
-    registerEventListeners();
-    if (appSettings.shouldStartMonitoringUI) {
-      startQueueMonitoringUI();
-    }
-    if (appSettings.shouldProcessPastEvents) {
-      await processPastEvents();
-    }
-  } catch (e: any) {
-    logger.error(`Unhandled error: ${e.message}`);
-  }
+  // Railways will restart the process if it exits with a non-zero exit code.
+  process.exit(1);
+});
+
+(async () => {
+  await init();
 })();
+
+async function init() {
+  logger.info('Starting the application...');
+  logger.info(`App Settings: ${JSON.stringify(appSettings, null, 2)}`);
+
+  await connectToDb();
+  await initJobProcessingQueue();
+  registerEventHandlers();
+  registerEventListeners();
+  if (appSettings.shouldStartMonitoringUI) {
+    startQueueMonitoringUI();
+  }
+  if (appSettings.shouldProcessPastEvents) {
+    await processPastEvents();
+  }
+}
