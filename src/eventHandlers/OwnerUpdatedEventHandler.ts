@@ -30,7 +30,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
     LogManager.logRequestInfo(
       `📥 ${this.name} is processing the following ${this.eventSignature}:
       \r\t - owner:       ${owner}
-      \r\t - accountId:   ${repoDriverId},
+      \r\t - accountId:   ${repoDriverId}
       \r\t - logIndex:    ${logIndex}
       \r\t - blockNumber: ${blockNumber}
       \r\t - tx hash:     ${transactionHash}`,

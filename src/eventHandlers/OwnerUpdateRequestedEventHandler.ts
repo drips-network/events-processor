@@ -41,7 +41,7 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
       `📥 ${this.name} is processing the following ${this.eventSignature}:
       \r\t - forge:       ${forgeAsString}
       \r\t - name:        ${decodedName}
-      \r\t - accountId:   ${repoDriverId},
+      \r\t - accountId:   ${repoDriverId}
       \r\t - logIndex:    ${logIndex}
       \r\t - blockNumber: ${blockNumber}
       \r\t - tx hash:     ${transactionHash}`,

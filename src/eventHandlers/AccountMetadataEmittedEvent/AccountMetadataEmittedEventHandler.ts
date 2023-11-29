@@ -54,7 +54,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       `📥 ${this.name} is processing the following ${this.eventSignature}:
       \r\t - key:         ${key}
       \r\t - value:       ${value} (ipfs hash: ${ipfsHash})
-      \r\t - accountId:   ${typedAccountId},
+      \r\t - accountId:   ${typedAccountId}
       \r\t - logIndex:    ${logIndex}
       \r\t - tx hash:     ${transactionHash}`,
       requestId,
@@ -107,6 +107,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
           typedAccountId,
           transaction,
           ipfsHash,
+          blockTimestamp,
         );
       } else if (isNftDriverId(typedAccountId) && isLatest) {
         if (!(await IsDripList(typedAccountId, transaction))) {
@@ -125,6 +126,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
           typedAccountId,
           transaction,
           ipfsHash,
+          blockTimestamp,
         );
       }
 

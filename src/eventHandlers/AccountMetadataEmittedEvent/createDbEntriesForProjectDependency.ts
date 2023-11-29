@@ -17,6 +17,7 @@ export default async function createDbEntriesForProjectDependency(
   funderAccountId: ProjectId | DripListId,
   projectDependency: DependencyOfProjectType,
   transaction: Transaction,
+  blockTimestamp: Date,
 ) {
   const {
     weight,
@@ -52,6 +53,7 @@ export default async function createDbEntriesForProjectDependency(
         : DependencyType.ProjectDependency,
       funderDripListId: isNftDriverId(funderAccountId) ? funderAccountId : null,
       funderProjectId: isRepoDriverId(funderAccountId) ? funderAccountId : null,
+      blockTimestamp,
     },
     { transaction },
   );

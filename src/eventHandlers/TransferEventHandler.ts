@@ -30,7 +30,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
       `📥 ${this.name} is processing the following ${this.eventSignature}:
       \r\t - from:        ${from}
       \r\t - to:          ${to}
-      \r\t - tokenId:     ${tokenId},
+      \r\t - tokenId:     ${tokenId}
       \r\t - logIndex:    ${logIndex}
       \r\t - tx hash:     ${transactionHash}`,
       requestId,

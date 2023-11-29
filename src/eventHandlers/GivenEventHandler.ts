@@ -34,8 +34,8 @@ export default class GivenEventHandler extends EventHandlerBase<'Given(uint256,u
       `📥 ${this.name} is processing the following ${this.eventSignature}:
       \r\t - accountId:   ${accountId}
       \r\t - receiver:    ${rawReceiver}
-      \r\t - erc20:       ${rawErc20},
-      \r\t - amt:         ${rawAmt},
+      \r\t - erc20:       ${rawErc20}
+      \r\t - amt:         ${rawAmt}
       \r\t - logIndex:    ${logIndex}
       \r\t - tx hash:     ${transactionHash}`,
       requestId,

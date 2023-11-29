@@ -33,6 +33,7 @@ export default async function handleDripListMetadata(
   dripListId: DripListId,
   transaction: Transaction,
   ipfsHash: IpfsHash,
+  blockTimestamp: Date,
 ) {
   const dripList = await DripListModel.findByPk(dripListId, {
     transaction,
@@ -57,6 +58,7 @@ export default async function handleDripListMetadata(
     metadata.projects,
     logManager,
     transaction,
+    blockTimestamp,
   );
 }
 
@@ -98,6 +100,7 @@ async function createDbEntriesForDripListSplits(
   splits: AnyVersion<typeof nftDriverAccountMetadataParser>['projects'],
   logManager: LogManager,
   transaction: Transaction,
+  blockTimestamp: Date,
 ) {
   await clearCurrentEntries(funderDripListId, transaction);
 
@@ -109,6 +112,7 @@ async function createDbEntriesForDripListSplits(
         funderDripListId,
         split,
         transaction,
+        blockTimestamp,
       );
     }
 
@@ -119,6 +123,7 @@ async function createDbEntriesForDripListSplits(
           fundeeDripListId: split.accountId,
           weight: split.weight,
           type: DependencyType.DripListDependency,
+          blockTimestamp,
         },
         { transaction },
       );

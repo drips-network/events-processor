@@ -35,6 +35,7 @@ export default async function handleGitProjectMetadata(
   projectId: ProjectId,
   transaction: Transaction,
   ipfsHash: IpfsHash,
+  blockTimestamp: Date,
 ) {
   const project = await GitProjectModel.findByPk(projectId, {
     transaction,
@@ -59,6 +60,7 @@ export default async function handleGitProjectMetadata(
     metadata.splits,
     logManager,
     transaction,
+    blockTimestamp,
   );
 }
 
@@ -106,6 +108,7 @@ async function createDbEntriesForProjectSplits(
   splits: AnyVersion<typeof repoDriverAccountMetadataParser>['splits'],
   logManager: LogManager,
   transaction: Transaction,
+  blockTimestamp: Date,
 ) {
   await clearCurrentProjectSplits(funderProjectId, transaction);
 
@@ -134,6 +137,7 @@ async function createDbEntriesForProjectSplits(
         funderProjectId,
         dependency,
         transaction,
+        blockTimestamp,
       );
     }
 
@@ -157,6 +161,7 @@ async function createDbEntriesForProjectSplits(
           fundeeDripListId: dependency.accountId,
           weight: dependency.weight,
           type: DependencyType.ProjectDependency,
+          blockTimestamp,
         },
         { transaction },
       );
