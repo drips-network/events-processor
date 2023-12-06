@@ -85,7 +85,9 @@ export async function getContractInfoFromEvent(
 }
 
 export async function removeAllListeners(): Promise<void> {
-  await dripsContract.removeAllListeners();
-  await nftDriverContract.removeAllListeners();
-  await repoDriverContract.removeAllListeners();
+  await Promise.all([
+    dripsContract.removeAllListeners(),
+    nftDriverContract.removeAllListeners(),
+    repoDriverContract.removeAllListeners(),
+  ]);
 }
