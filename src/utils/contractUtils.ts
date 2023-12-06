@@ -83,3 +83,9 @@ export async function getContractInfoFromEvent(
 
   throw shouldNeverHappen(`No contract found for ${eventSignature} event.`);
 }
+
+export async function removeAllListeners(): Promise<void> {
+  await dripsContract.removeAllListeners();
+  await nftDriverContract.removeAllListeners();
+  await repoDriverContract.removeAllListeners();
+}

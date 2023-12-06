@@ -1,3 +1,4 @@
+import logger from '../core/logger';
 import {
   OwnerUpdateRequestedEventHandler,
   TransferEventHandler,
@@ -5,6 +6,7 @@ import {
 import AccountMetadataEmittedEventHandler from '../eventHandlers/AccountMetadataEmittedEvent/AccountMetadataEmittedEventHandler';
 import GivenEventHandler from '../eventHandlers/GivenEventHandler';
 import OwnerUpdatedEventHandler from '../eventHandlers/OwnerUpdatedEventHandler';
+import { removeAllListeners } from '../utils/contractUtils';
 import {
   getEventHandler,
   getRegisteredEvents,
@@ -34,10 +36,28 @@ export function registerEventHandlers(): void {
   );
 }
 
-export async function registerEventListeners(): Promise<void> {
-  const registeredEvents = getRegisteredEvents();
+let intervalId: NodeJS.Timeout | null = null;
 
-  registeredEvents.forEach(async (eventSignature) =>
-    getEventHandler(eventSignature).registerEventListener(),
-  );
+// We need to re-register event listeners because we were getting `filter not found` errors after a while.
+// See more: https://docs.chainstack.com/docs/understanding-ethereums-filter-not-found-error-and-how-to-fix-it
+export async function registerEventListeners(): Promise<void> {
+  await removeAllListeners();
+
+  const registeredEvents = getRegisteredEvents();
+  for (const eventSignature of registeredEvents) {
+    const handler = getEventHandler(eventSignature);
+    await handler.registerEventListener();
+  }
+
+  if (intervalId) {
+    clearInterval(intervalId);
+  }
+
+  intervalId = setInterval(
+    async () => {
+      await registerEventListeners();
+      logger.info('Re-registered event listeners.');
+    },
+    5 * 60 * 1000,
+  ); // 5 minutes
 }
