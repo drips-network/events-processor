@@ -106,6 +106,7 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
         {
           logIndex,
           transactionHash,
+          accountId,
         },
         transaction,
       );

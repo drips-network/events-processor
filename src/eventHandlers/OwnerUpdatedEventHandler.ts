@@ -93,6 +93,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
         {
           logIndex,
           transactionHash,
+          accountId: repoDriverId,
         },
         transaction,
       );

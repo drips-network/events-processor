@@ -94,6 +94,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         {
           logIndex,
           transactionHash,
+          accountId: typedAccountId,
         },
         transaction,
       );

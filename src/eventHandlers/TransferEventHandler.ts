@@ -90,6 +90,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         {
           transactionHash,
           logIndex,
+          tokenId,
         },
         transaction,
       );
