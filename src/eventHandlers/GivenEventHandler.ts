@@ -52,6 +52,7 @@ export default class GivenEventHandler extends EventHandlerBase<'Given(uint256,u
           transactionHash,
         },
         defaults: {
+          id: `${transactionHash}-${logIndex}`,
           accountId,
           receiver,
           erc20,
