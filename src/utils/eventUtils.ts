@@ -1,4 +1,10 @@
-import type { FindOptions, Model, Transaction, WhereOptions } from 'sequelize';
+import {
+  DataTypes,
+  type FindOptions,
+  type Model,
+  type Transaction,
+  type WhereOptions,
+} from 'sequelize';
 import {
   Drips__factory,
   NftDriver__factory,
@@ -86,4 +92,27 @@ export async function isLatestEvent<T extends IEventModel & Model<any, any>>(
   }
 
   return true;
+}
+
+export function getCommonEventAttributes(setDefaultPk = true) {
+  return {
+    transactionHash: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      primaryKey: setDefaultPk,
+    },
+    logIndex: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      primaryKey: setDefaultPk,
+    },
+    blockTimestamp: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    blockNumber: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+  } as const;
 }

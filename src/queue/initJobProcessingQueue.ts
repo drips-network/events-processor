@@ -5,7 +5,7 @@ import { assertRequestId } from '../utils/assert';
 import EventHandlerRequest from '../events/EventHandlerRequest';
 
 export default async function initJobProcessingQueue() {
-  eventProcessingQueue.process(async (job) => {
+  eventProcessingQueue.process(10, async (job) => {
     const handler = getEventHandler(job.data.eventSignature);
 
     const {

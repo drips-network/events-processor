@@ -6,8 +6,9 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import type { Forge, RepoDriverId } from '../core/types';
 import getSchema from '../utils/getSchema';
-import { COMMON_EVENT_INIT_ATTRIBUTES, FORGES_MAP } from '../core/constants';
+import { FORGES_MAP } from '../core/constants';
 import type { IEventModel } from '../events/types';
+import { getCommonEventAttributes } from '../utils/eventUtils';
 
 export default class OwnerUpdateRequestedEventModel
   extends Model<
@@ -42,7 +43,7 @@ export default class OwnerUpdateRequestedEventModel
           type: DataTypes.ENUM(...Object.values(FORGES_MAP)),
           allowNull: false,
         },
-        ...COMMON_EVENT_INIT_ATTRIBUTES,
+        ...getCommonEventAttributes(),
       },
       {
         sequelize,

@@ -6,8 +6,8 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import type { AccountId, Address, BigIntString } from '../core/types';
 import getSchema from '../utils/getSchema';
-import { COMMON_EVENT_INIT_ATTRIBUTES } from '../core/constants';
 import type { IEventModel } from '../events/types';
+import { getCommonEventAttributes } from '../utils/eventUtils';
 
 export default class GivenEventModel
   extends Model<
@@ -46,7 +46,7 @@ export default class GivenEventModel
           type: DataTypes.STRING,
           allowNull: false,
         },
-        ...COMMON_EVENT_INIT_ATTRIBUTES,
+        ...getCommonEventAttributes(),
       },
       {
         sequelize,

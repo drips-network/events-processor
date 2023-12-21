@@ -5,10 +5,10 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
-import { COMMON_EVENT_INIT_ATTRIBUTES } from '../core/constants';
 import type { RepoDriverId } from '../core/types';
 import getSchema from '../utils/getSchema';
 import type { IEventModel } from '../events/types';
+import { getCommonEventAttributes } from '../utils/eventUtils';
 
 export default class OwnerUpdatedEventModel
   extends Model<
@@ -38,7 +38,7 @@ export default class OwnerUpdatedEventModel
           type: DataTypes.STRING,
           allowNull: false,
         },
-        ...COMMON_EVENT_INIT_ATTRIBUTES,
+        ...getCommonEventAttributes(),
       },
       {
         sequelize,

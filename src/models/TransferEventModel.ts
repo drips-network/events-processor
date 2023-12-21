@@ -7,8 +7,8 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import type { NftDriverId } from '../core/types';
 import getSchema from '../utils/getSchema';
-import { COMMON_EVENT_INIT_ATTRIBUTES } from '../core/constants';
 import type { IEventModel } from '../events/types';
+import { getCommonEventAttributes } from '../utils/eventUtils';
 
 export default class TransferEventModel
   extends Model<
@@ -42,7 +42,7 @@ export default class TransferEventModel
           type: DataTypes.STRING,
           allowNull: false,
         },
-        ...COMMON_EVENT_INIT_ATTRIBUTES,
+        ...getCommonEventAttributes(),
       },
       {
         sequelize,

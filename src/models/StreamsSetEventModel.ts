@@ -4,21 +4,24 @@ import type {
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import getSchema from '../utils/getSchema';
 import type { IEventModel } from '../events/types';
+import type { AccountId, BigIntString } from '../core/types';
+import getSchema from '../utils/getSchema';
 import { getCommonEventAttributes } from '../utils/eventUtils';
 
-export default class AccountMetadataEmittedEventModel
+export default class StreamsSetEventModel
   extends Model<
-    InferAttributes<AccountMetadataEmittedEventModel>,
-    InferCreationAttributes<AccountMetadataEmittedEventModel>
+    InferAttributes<StreamsSetEventModel>,
+    InferCreationAttributes<StreamsSetEventModel>
   >
   implements IEventModel
 {
-  // Properties from event output.
-  public declare key: string;
-  public declare value: string;
-  public declare accountId: string;
+  public declare accountId: AccountId;
+  public declare erc20: string;
+  public declare receiversHash: string;
+  public declare streamsHistoryHash: string;
+  public declare balance: BigIntString;
+  public declare maxEnd: BigIntString;
 
   // Common event log properties.
   public declare logIndex: number;
@@ -29,15 +32,27 @@ export default class AccountMetadataEmittedEventModel
   public static initialize(sequelize: Sequelize): void {
     this.init(
       {
-        key: {
-          type: DataTypes.STRING,
-          allowNull: false,
-        },
-        value: {
-          type: DataTypes.STRING,
-          allowNull: false,
-        },
         accountId: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        erc20: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        receiversHash: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        streamsHistoryHash: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        balance: {
+          type: DataTypes.STRING,
+          allowNull: false,
+        },
+        maxEnd: {
           type: DataTypes.STRING,
           allowNull: false,
         },
@@ -46,7 +61,7 @@ export default class AccountMetadataEmittedEventModel
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'AccountMetadataEmittedEvents',
+        tableName: 'StreamsSetEvents',
       },
     );
   }

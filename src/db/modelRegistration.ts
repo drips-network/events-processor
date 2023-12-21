@@ -10,6 +10,8 @@ import {
   RepoDriverSplitReceiverModel,
   TransferEventModel,
   GivenEventModel,
+  StreamReceiverSeenEventModel,
+  StreamsSetEventModel,
 } from '../models';
 
 const REGISTERED_MODELS: ModelStaticMembers[] = [];
@@ -27,8 +29,10 @@ export function registerModels(): void {
   registerModel(GivenEventModel);
   registerModel(GitProjectModel);
   registerModel(TransferEventModel);
+  registerModel(StreamsSetEventModel);
   registerModel(OwnerUpdatedEventModel);
   registerModel(DripListSplitReceiverModel);
+  registerModel(StreamReceiverSeenEventModel);
   registerModel(RepoDriverSplitReceiverModel);
   registerModel(OwnerUpdateRequestedEventModel);
   registerModel(AddressDriverSplitReceiverModel);
