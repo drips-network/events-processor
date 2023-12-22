@@ -5,7 +5,7 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type { IEventModel } from '../events/types';
-import type { AccountId } from '../core/types';
+import type { AccountId, BigIntString } from '../core/types';
 import getSchema from '../utils/getSchema';
 import { getCommonEventAttributes } from '../utils/eventUtils';
 
@@ -18,7 +18,7 @@ export default class StreamReceiverSeenEventModel
 {
   public declare receiversHash: string;
   public declare accountId: AccountId;
-  public declare config: string;
+  public declare config: BigIntString;
 
   // Common event log properties.
   public declare logIndex: number;

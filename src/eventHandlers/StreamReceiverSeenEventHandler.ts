@@ -41,37 +41,30 @@ export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'St
     await dbConnection.transaction(async (transaction) => {
       const logManager = new LogManager(requestId);
 
-      try {
-        const [streamReceiverSeenEvent, isEventCreated] =
-          await StreamReceiverSeenEventModel.findOrCreate({
-            lock: true,
-            transaction,
-            where: {
-              logIndex,
-              transactionHash,
-            },
-            defaults: {
-              receiversHash: rawReceiversHash,
-              accountId,
-              config,
-              logIndex,
-              blockNumber,
-              blockTimestamp,
-              transactionHash,
-            },
-          });
+      const [streamReceiverSeenEvent, isEventCreated] =
+        await StreamReceiverSeenEventModel.findOrCreate({
+          lock: true,
+          transaction,
+          where: {
+            logIndex,
+            transactionHash,
+          },
+          defaults: {
+            receiversHash: rawReceiversHash,
+            accountId,
+            config,
+            logIndex,
+            blockNumber,
+            blockTimestamp,
+            transactionHash,
+          },
+        });
 
-        logManager.appendFindOrCreateLog(
-          StreamReceiverSeenEventModel,
-          isEventCreated,
-          `${streamReceiverSeenEvent.transactionHash}-${streamReceiverSeenEvent.logIndex}`,
-        );
-      } catch (error) {
-        console.log(
-          '💧💧💧💧💧💧 ~ file: StreamReceiverSeenEventHandler.ts:70 ~ StreamReceiverSeenEventHandler ~ awaitdbConnection.transaction ~ error:',
-          error,
-        );
-      }
+      logManager.appendFindOrCreateLog(
+        StreamReceiverSeenEventModel,
+        isEventCreated,
+        `${streamReceiverSeenEvent.transactionHash}-${streamReceiverSeenEvent.logIndex}`,
+      );
     });
   }
 
