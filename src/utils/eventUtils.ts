@@ -74,8 +74,8 @@ export async function isLatestEvent<T extends IEventModel & Model<any, any>>(
     transaction,
     where,
     order: [
-      ['logIndex', 'DESC'],
       ['blockNumber', 'DESC'],
+      ['logIndex', 'DESC'],
     ],
   });
 
