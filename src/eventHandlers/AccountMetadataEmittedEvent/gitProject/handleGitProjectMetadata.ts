@@ -70,13 +70,28 @@ async function updateGitProjectMetadata(
   transaction: Transaction,
   metadata: AnyVersion<typeof repoDriverAccountMetadataParser>,
 ): Promise<void> {
-  const { color, emoji, source, description } = metadata;
+  const { color, source, description } = metadata;
 
   project.color = color;
-  project.emoji = emoji;
   project.url = source.url;
   project.description = description ?? null;
   project.verificationStatus = calculateProjectStatus(project);
+
+  if ('avatar' in metadata) {
+    // Metadata V4
+
+    if (metadata.avatar.type === 'emoji') {
+      project.emoji = metadata.avatar.emoji;
+      project.avatarCid = null;
+    } else if (metadata.avatar.type === 'image') {
+      project.avatarCid = metadata.avatar.cid;
+      project.emoji = null;
+    }
+  } else {
+    // Metadata V3
+
+    project.emoji = metadata.emoji;
+  }
 
   const isValid = await areReceiversValid(
     project.id,
