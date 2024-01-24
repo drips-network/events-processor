@@ -20,7 +20,7 @@ export default async function processPastEvents(): Promise<void> {
 
       let i;
       const batchSize = 5000;
-      const chainConfig = await loadChainConfig();
+      const chainConfig = loadChainConfig();
       const startBlock = chainConfig[contractName].block;
       logger.info(`Start block number for ${contractName}: ${startBlock}`);
 
