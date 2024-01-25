@@ -14,6 +14,20 @@
       "skipFiles": ["<node_internals>/**"],
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Mocha Tests",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run-script", "test"],
+      "env": {
+        "TS_NODE_COMPILER_OPTIONS": "{\"module\": \"commonjs\" }"
+      },
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "smartStep": true,
+      "skipFiles": ["<node_internals>/**"]
     }
   ]
 }

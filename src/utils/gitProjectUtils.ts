@@ -40,19 +40,19 @@ export function toReadable(bytes: string): string {
 export function calculateProjectStatus(
   project: GitProjectModel,
 ): ProjectVerificationStatus {
-  if (!project.ownerAddress && !project.emoji) {
+  if (!project.ownerAddress && !project.color) {
     return ProjectVerificationStatus.Unclaimed;
   }
 
-  if (project.ownerAddress && project.emoji) {
+  if (project.ownerAddress && project.color) {
     return ProjectVerificationStatus.Claimed;
   }
 
-  if (project.ownerAddress && !project.emoji) {
+  if (project.ownerAddress && !project.color) {
     return ProjectVerificationStatus.PendingMetadata;
   }
 
-  if (!project.ownerAddress && project.emoji) {
+  if (!project.ownerAddress && project.color) {
     return ProjectVerificationStatus.PendingOwner;
   }
 

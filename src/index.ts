@@ -28,7 +28,7 @@ async function init() {
   await connectToDb();
   await initJobProcessingQueue();
   registerEventHandlers();
-  registerEventListeners();
+  await registerEventListeners();
   if (appSettings.shouldStartMonitoringUI) {
     startQueueMonitoringUI();
   }
