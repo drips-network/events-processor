@@ -87,3 +87,7 @@ export enum DependencyType {
   ProjectDependency = 'ProjectDependency',
   DripListDependency = 'DripListDependency',
 }
+
+export type StreamHistoryHashes = string & {
+  __type: 'StreamHistoryHashes';
+};

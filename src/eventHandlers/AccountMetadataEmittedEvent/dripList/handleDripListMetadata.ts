@@ -43,7 +43,7 @@ export default async function handleDripListMetadata(
   if (!dripList) {
     throw new Error(
       `Failed to update the metadata of Drip List with ID ${dripListId}: the list does not exist in the database. 
-      This is normal if the event that should have created the project was not processed yet.`,
+      This is normal if the event that should have created the list was not processed yet.`,
     );
   }
 

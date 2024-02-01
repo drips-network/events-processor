@@ -12,6 +12,7 @@ import {
   GivenEventModel,
   StreamReceiverSeenEventModel,
   StreamsSetEventModel,
+  SqueezedStreamsEventModel,
 } from '../models';
 
 const REGISTERED_MODELS: ModelStaticMembers[] = [];
@@ -31,6 +32,7 @@ export function registerModels(): void {
   registerModel(TransferEventModel);
   registerModel(StreamsSetEventModel);
   registerModel(OwnerUpdatedEventModel);
+  registerModel(SqueezedStreamsEventModel);
   registerModel(DripListSplitReceiverModel);
   registerModel(StreamReceiverSeenEventModel);
   registerModel(RepoDriverSplitReceiverModel);

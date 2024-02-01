@@ -8,6 +8,7 @@ import {
   StreamsSetEventHandler,
   TransferEventHandler,
 } from '../eventHandlers';
+import SqueezedStreamsEventHandler from '../eventHandlers/SqueezedStreamsEventHandler';
 import { removeAllListeners } from '../utils/contractUtils';
 import {
   getEventHandler,
@@ -43,6 +44,10 @@ export function registerEventHandlers(): void {
   registerEventHandler<'StreamReceiverSeen(bytes32,uint256,uint256)'>(
     'StreamReceiverSeen(bytes32,uint256,uint256)',
     StreamReceiverSeenEventHandler,
+  );
+  registerEventHandler<'SqueezedStreams(uint256,address,uint256,uint128,bytes32[])'>(
+    'SqueezedStreams(uint256,address,uint256,uint128,bytes32[])',
+    SqueezedStreamsEventHandler,
   );
 }
 

@@ -4,6 +4,7 @@ export { default as GitProjectModel } from './GitProjectModel';
 export { default as TransferEventModel } from './TransferEventModel';
 export { default as StreamsSetEventModel } from './StreamsSetEventModel';
 export { default as OwnerUpdatedEventModel } from './OwnerUpdatedEventModel';
+export { default as SqueezedStreamsEventModel } from './SqueezedStreamsEventModel';
 export { default as DripListSplitReceiverModel } from './DripListSplitReceiverModel';
 export { default as RepoDriverSplitReceiverModel } from './RepoDriverSplitReceiverModel';
 export { default as StreamReceiverSeenEventModel } from './StreamReceiverSeenEventModel';
