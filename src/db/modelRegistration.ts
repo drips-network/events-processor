@@ -11,6 +11,7 @@ import {
   TransferEventModel,
   GivenEventModel,
 } from '../models';
+import SplitEventModel from '../models/SplitEventModel';
 
 const REGISTERED_MODELS: ModelStaticMembers[] = [];
 
@@ -25,6 +26,7 @@ export function getRegisteredModels(): ModelStaticMembers[] {
 export function registerModels(): void {
   registerModel(DripListModel);
   registerModel(GivenEventModel);
+  registerModel(SplitEventModel);
   registerModel(GitProjectModel);
   registerModel(TransferEventModel);
   registerModel(OwnerUpdatedEventModel);

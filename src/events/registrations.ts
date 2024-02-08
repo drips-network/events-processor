@@ -1,11 +1,12 @@
 import logger from '../core/logger';
 import {
+  AccountMetadataEmittedEventHandler,
+  GivenEventHandler,
   OwnerUpdateRequestedEventHandler,
+  OwnerUpdatedEventHandler,
+  SplitEventHandler,
   TransferEventHandler,
 } from '../eventHandlers';
-import AccountMetadataEmittedEventHandler from '../eventHandlers/AccountMetadataEmittedEvent/AccountMetadataEmittedEventHandler';
-import GivenEventHandler from '../eventHandlers/GivenEventHandler';
-import OwnerUpdatedEventHandler from '../eventHandlers/OwnerUpdatedEventHandler';
 import { removeAllListeners } from '../utils/contractUtils';
 import {
   getEventHandler,
@@ -33,6 +34,10 @@ export function registerEventHandlers(): void {
   registerEventHandler<'Given(uint256,uint256,address,uint128)'>(
     'Given(uint256,uint256,address,uint128)',
     GivenEventHandler,
+  );
+  registerEventHandler<'Split(uint256,uint256,address,uint128)'>(
+    'Split(uint256,uint256,address,uint128)',
+    SplitEventHandler,
   );
 }
 

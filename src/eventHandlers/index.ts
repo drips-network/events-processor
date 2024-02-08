@@ -1,3 +1,5 @@
+export { default as GivenEventHandler } from './GivenEventHandler';
+export { default as SplitEventHandler } from './SplitEventHandler';
 export { default as TransferEventHandler } from './TransferEventHandler';
 export { default as OwnerUpdatedEventHandler } from './OwnerUpdatedEventHandler';
 export { default as OwnerUpdateRequestedEventHandler } from './OwnerUpdateRequestedEventHandler';
