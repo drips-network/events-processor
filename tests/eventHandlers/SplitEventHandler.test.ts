@@ -3,27 +3,27 @@ import { randomUUID } from 'crypto';
 import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
-import GivenEventModel from '../../src/models/GivenEventModel';
+import SplitEventModel from '../../src/models/SplitEventModel';
 import LogManager from '../../src/core/LogManager';
-import GivenEventHandler from '../../src/eventHandlers/GivenEventHandler';
+import SplitEventHandler from '../../src/eventHandlers/SplitEventHandler';
 import { toAccountId } from '../../src/utils/accountIdUtils';
 import { toAddress } from '../../src/utils/ethereumAddressUtils';
 import { toBigIntString } from '../../src/utils/bigintUtils';
 
-jest.mock('../../src/models/GivenEventModel');
+jest.mock('../../src/models/SplitEventModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
 jest.mock('../../src/core/LogManager');
 
-describe('GivenEventHandler', () => {
+describe('SplitEventHandler', () => {
   let mockDbTransaction: {};
-  let handler: GivenEventHandler;
-  let mockRequest: EventHandlerRequest<'Given(uint256,uint256,address,uint128)'>;
+  let handler: SplitEventHandler;
+  let mockRequest: EventHandlerRequest<'Split(uint256,uint256,address,uint128)'>;
 
   beforeAll(() => {
     jest.clearAllMocks();
 
-    handler = new GivenEventHandler();
+    handler = new SplitEventHandler();
 
     mockRequest = {
       id: randomUUID(),
@@ -38,7 +38,7 @@ describe('GivenEventHandler', () => {
         blockNumber: 1,
         blockTimestamp: new Date(),
         transactionHash: 'requestTransactionHash',
-      } as EventData<'Given(uint256,uint256,address,uint128)'>,
+      } as EventData<'Split(uint256,uint256,address,uint128)'>,
     };
 
     mockDbTransaction = {};
@@ -49,11 +49,11 @@ describe('GivenEventHandler', () => {
   });
 
   describe('_handle', () => {
-    test('should create a new GivenEventModel', async () => {
+    test('should create a new SplitEventModel', async () => {
       // Arrange
-      GivenEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      SplitEventModel.findOrCreate = jest.fn().mockResolvedValue([
         {
-          transactionHash: 'GivenEventTransactionHash',
+          transactionHash: 'SplitEventTransactionHash',
           logIndex: 1,
         },
         true,
@@ -75,7 +75,7 @@ describe('GivenEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(GivenEventModel.findOrCreate).toHaveBeenCalledWith({
+      expect(SplitEventModel.findOrCreate).toHaveBeenCalledWith({
         lock: true,
         transaction: mockDbTransaction,
         where: {
