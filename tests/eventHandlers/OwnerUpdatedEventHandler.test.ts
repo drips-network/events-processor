@@ -121,6 +121,7 @@ describe('OwnerUpdatedEventHandler', () => {
           id: toRepoDriverId(accountId),
           isValid: true,
           ownerAddress: owner,
+          claimedAt: blockTimestamp,
           ownerAccountId: await getOwnerAccountId(owner),
           verificationStatus: ProjectVerificationStatus.OwnerUpdated,
         },

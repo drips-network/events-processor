@@ -74,6 +74,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           id: repoDriverId,
           isValid: true, // There are no receivers yet, so the project is valid.
           ownerAddress: owner,
+          claimedAt: blockTimestamp,
           ownerAccountId: await getOwnerAccountId(owner),
           verificationStatus: ProjectVerificationStatus.OwnerUpdated,
         },
@@ -100,6 +101,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
 
       if (isLatest) {
         project.ownerAddress = owner;
+        project.claimedAt = blockTimestamp;
         project.ownerAccountId = (await getOwnerAccountId(owner)) ?? null;
         project.verificationStatus = calculateProjectStatus(project);
 
