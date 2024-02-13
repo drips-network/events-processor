@@ -3,6 +3,7 @@ export { default as GivenEventModel } from './GivenEventModel';
 export { default as SplitEventModel } from './SplitEventModel';
 export { default as GitProjectModel } from './GitProjectModel';
 export { default as TransferEventModel } from './TransferEventModel';
+export { default as SplitsSetEventModel } from './SplitsSetEventModel';
 export { default as OwnerUpdatedEventModel } from './OwnerUpdatedEventModel';
 export { default as DripListSplitReceiverModel } from './DripListSplitReceiverModel';
 export { default as RepoDriverSplitReceiverModel } from './RepoDriverSplitReceiverModel';

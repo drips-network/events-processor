@@ -10,6 +10,7 @@ import {
   RepoDriverSplitReceiverModel,
   TransferEventModel,
   GivenEventModel,
+  SplitsSetEventModel,
 } from '../models';
 import SplitEventModel from '../models/SplitEventModel';
 
@@ -29,6 +30,7 @@ export function registerModels(): void {
   registerModel(SplitEventModel);
   registerModel(GitProjectModel);
   registerModel(TransferEventModel);
+  registerModel(SplitsSetEventModel);
   registerModel(OwnerUpdatedEventModel);
   registerModel(DripListSplitReceiverModel);
   registerModel(RepoDriverSplitReceiverModel);

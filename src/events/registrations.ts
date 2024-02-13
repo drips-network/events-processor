@@ -5,6 +5,7 @@ import {
   OwnerUpdateRequestedEventHandler,
   OwnerUpdatedEventHandler,
   SplitEventHandler,
+  SplitsSetEventHandler,
   TransferEventHandler,
 } from '../eventHandlers';
 import { removeAllListeners } from '../utils/contractUtils';
@@ -38,6 +39,10 @@ export function registerEventHandlers(): void {
   registerEventHandler<'Split(uint256,uint256,address,uint128)'>(
     'Split(uint256,uint256,address,uint128)',
     SplitEventHandler,
+  );
+  registerEventHandler<'SplitsSet(uint256,bytes32)'>(
+    'SplitsSet(uint256,bytes32)',
+    SplitsSetEventHandler,
   );
 }
 
