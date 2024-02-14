@@ -44,8 +44,10 @@ export default async function handleGitProjectMetadata(
 
   if (!project) {
     throw new Error(
-      `Cannot update metadata for Project with ID ${projectId}: the project does not exist in the database. 
-      Ensure the account metadata were not manually emitted. Check the logs for more information on the result of the operation.`,
+      `Failed to update metadata for Project with ID ${projectId}: Project not found.
+      \r Possible reasons:
+      \r\t - The event that should have created the Project was not processed yet.
+      \r\t - The metadata were manually emitted.`,
     );
   }
 

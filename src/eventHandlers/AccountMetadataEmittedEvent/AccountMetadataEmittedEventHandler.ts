@@ -9,7 +9,6 @@ import EventHandlerBase from '../../events/EventHandlerBase';
 import saveEventProcessingJob from '../../queue/saveEventProcessingJob';
 import { DRIPS_APP_USER_METADATA_KEY } from '../../core/constants';
 import handleGitProjectMetadata from './gitProject/handleGitProjectMetadata';
-import IsDripList from '../../utils/dripListUtils';
 import LogManager from '../../core/LogManager';
 import {
   isNftDriverId,
@@ -111,15 +110,6 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
           blockTimestamp,
         );
       } else if (isNftDriverId(typedAccountId) && isLatest) {
-        if (!(await IsDripList(typedAccountId, transaction))) {
-          LogManager.logRequestInfo(
-            `Skipping ${this.eventSignature} event processing because the NftDriverId '${typedAccountId}' is not a Drip List ID.`,
-            requestId,
-          );
-
-          return;
-        }
-
         logManager.appendIsLatestEventLog();
 
         await handleDripListMetadata(

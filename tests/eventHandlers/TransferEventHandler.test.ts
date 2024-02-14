@@ -2,7 +2,6 @@
 import { randomUUID } from 'crypto';
 import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { TransferEventHandler } from '../../src/eventHandlers';
-import IsDripList from '../../src/utils/dripListUtils';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import {
@@ -16,7 +15,6 @@ import DripListModel from '../../src/models/DripListModel';
 
 jest.mock('../../src/models/TransferEventModel');
 jest.mock('../../src/models/DripListModel');
-jest.mock('../../src/utils/dripListUtils');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
 jest.mock('../../src/utils/eventUtils');
@@ -66,7 +64,11 @@ describe('TransferEventHandler', () => {
         true,
       ]);
 
-      (IsDripList as jest.Mock).mockResolvedValue(false);
+      DripListModel.findOrCreate = jest
+        .fn()
+        .mockResolvedValue([{ save: jest.fn() }, true]);
+
+      LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
 
       // Act
       await handler['_handle'](mockRequest);
@@ -110,8 +112,6 @@ describe('TransferEventHandler', () => {
         },
         true,
       ]);
-
-      (IsDripList as jest.Mock).mockResolvedValue(true);
 
       (getOwnerAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
 
@@ -157,8 +157,6 @@ describe('TransferEventHandler', () => {
         },
         true,
       ]);
-
-      (IsDripList as jest.Mock).mockResolvedValue(true);
 
       (getOwnerAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
 

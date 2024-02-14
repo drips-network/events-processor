@@ -8,7 +8,6 @@ import type EventHandlerRequest from '../events/EventHandlerRequest';
 import { DripListModel, TransferEventModel } from '../models';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { dbConnection } from '../db/database';
-import IsDripList from '../utils/dripListUtils';
 import { isLatestEvent } from '../utils/eventUtils';
 
 export default class TransferEventHandler extends EventHandlerBase<'Transfer(address,address,uint256)'> {
@@ -63,10 +62,6 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         isEventCreated,
         `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
       );
-
-      if (!(await IsDripList(id, transaction))) {
-        return;
-      }
 
       const [dripList, isDripListCreated] = await DripListModel.findOrCreate({
         transaction,

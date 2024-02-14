@@ -18,7 +18,6 @@ import { isLatestEvent } from '../../src/utils/eventUtils';
 
 jest.mock('../../src/models/OwnerUpdatedEventModel');
 jest.mock('../../src/models/GitProjectModel');
-jest.mock('../../src/utils/dripListUtils');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
 jest.mock('../../src/utils/eventUtils');
