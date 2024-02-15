@@ -1,5 +1,6 @@
 #dev scripts
 scripts
+SQLQueries.sql
 
 # vscode
 .vscode/settings.json
