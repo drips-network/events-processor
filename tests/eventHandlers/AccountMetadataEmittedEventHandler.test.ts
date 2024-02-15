@@ -11,9 +11,7 @@ import { DRIPS_APP_USER_METADATA_KEY } from '../../src/core/constants';
 import * as handleGitProjectMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/gitProject/handleGitProjectMetadata';
 import { toIpfsHash } from '../../src/utils/metadataUtils';
 import * as handleDripListMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/dripList/handleDripListMetadata';
-import IsDripList from '../../src/utils/dripListUtils';
 
-jest.mock('../../src/utils/dripListUtils');
 jest.mock('../../src/models/AccountMetadataEmittedEventModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
@@ -173,8 +171,6 @@ describe('GivenEventHandler', () => {
       (isLatestEvent as jest.Mock).mockResolvedValue(true);
 
       (handleDripListMetadata.default as jest.Mock) = jest.fn();
-
-      (IsDripList as jest.Mock).mockResolvedValue(true);
 
       const request = {
         id: randomUUID(),
