@@ -27,7 +27,7 @@ import createDbEntriesForProjectDependency from '../createDbEntriesForProjectDep
 import shouldNeverHappen from '../../../utils/shouldNeverHappen';
 import { getProjectMetadata } from '../../../utils/metadataUtils';
 import validateProjectMetadata from './validateProjectMetadata';
-import areReceiversValid from '../splitsValidator';
+import validateSplitsReceivers from '../splitsValidator';
 import getUserAddress from '../../../utils/getAccountAddress';
 
 export default async function handleGitProjectMetadata(
@@ -47,11 +47,39 @@ export default async function handleGitProjectMetadata(
       `Failed to update metadata for Project with ID ${projectId}: Project not found.
       \r Possible reasons:
       \r\t - The event that should have created the Project was not processed yet.
-      \r\t - The metadata were manually emitted.`,
+      \r\t - The metadata were manually emitted for a Project that does not exist in the app.`,
     );
   }
 
   const metadata = await getProjectMetadata(ipfsHash);
+
+  const [areSplitsValid, onChainSplitsHash, calculatedSplitsHash] =
+    await validateSplitsReceivers(
+      project.id,
+      metadata.splits.dependencies
+        .concat(metadata.splits.maintainers as any)
+        .map((s) => ({
+          weight: s.weight,
+          accountId: s.accountId,
+        })),
+    );
+
+  // If we reach this point, it means that the processed `AccountMetadataEmitted` event is the latest in the DB.
+  // But we still need to check if the splits are the latest on-chain.
+  // There is no need to process the metadata if the splits are not the latest on-chain.
+
+  if (!areSplitsValid) {
+    logManager.appendLog(
+      `Skipping metadata update for Project with ID ${projectId} because the splits receivers hashes from the contract and the metadata do not match:
+      \r\t - On-chain splits receivers hash: ${onChainSplitsHash}
+      \r\t - Metadata splits receivers hash: ${calculatedSplitsHash}
+      \r Possible reasons:
+      \r\t - The metadata were the latest in the DB but not on-chain.
+      \r\t - The metadata were manually emitted with different splits than the latest on-chain.`,
+    );
+
+    return;
+  }
 
   await validateProjectMetadata(project, metadata);
 
@@ -93,26 +121,6 @@ async function updateGitProjectMetadata(
     // Metadata V3
 
     project.emoji = metadata.emoji;
-  }
-
-  const isValid = await areReceiversValid(
-    project.id,
-    metadata.splits.dependencies
-      .concat(metadata.splits.maintainers as any)
-      .map((s) => ({
-        weight: s.weight,
-        accountId: s.accountId,
-      })),
-  );
-
-  project.isValid = isValid;
-
-  if (!isValid) {
-    logManager.appendLog(
-      `Set the Git Project to 'invalid' because the hash of the metadata receivers did not match the hash of the on-chain receivers for project with ID ${project.id}. 
-      This means that the processed event was the latest in the database but not the latest on-chain. 
-      Check the 'isValid' flag to see if the project is valid after all the events are processed.`,
-    );
   }
 
   logManager.appendUpdateLog(project, GitProjectModel, project.id);

@@ -3,7 +3,7 @@ import EventHandlerBase from '../events/EventHandlerBase';
 import LogManager from '../core/LogManager';
 import type { TypedContractEvent, TypedListener } from '../../contracts/common';
 import type { KnownAny } from '../core/types';
-import { getOwnerAccountId, toNftDriverId } from '../utils/accountIdUtils';
+import { calcAccountId, toNftDriverId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import { DripListModel, TransferEventModel } from '../models';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
@@ -63,6 +63,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
       );
 
+      // This must be the only place a Drip List is created.
       const [dripList, isDripListCreated] = await DripListModel.findOrCreate({
         transaction,
         lock: true,
@@ -71,42 +72,53 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         },
         defaults: {
           id,
-          creator: to,
+          creator: to, // TODO: https://github.com/drips-network/events-processor/issues/14
           isValid: true, // There are no receivers yet, so the drip list is valid.
           ownerAddress: to,
-          ownerAccountId: await getOwnerAccountId(to),
+          ownerAccountId: await calcAccountId(to),
           previousOwnerAddress: from,
         },
       });
-
-      const isLatest = await isLatestEvent(
-        transferEvent,
-        TransferEventModel,
-        {
-          transactionHash,
-          logIndex,
-          tokenId,
-        },
-        transaction,
-      );
 
       if (isDripListCreated) {
         logManager
           .appendFindOrCreateLog(DripListModel, isDripListCreated, dripList.id)
           .logAllInfo();
-      } else if (isLatest) {
-        dripList.ownerAddress = to;
-        dripList.previousOwnerAddress = from;
-        dripList.ownerAccountId = (await getOwnerAccountId(to)) ?? null;
 
-        logManager
-          .appendIsLatestEventLog()
-          .appendUpdateLog(dripList, DripListModel, dripList.id);
-
-        await dripList.save({ transaction });
-
-        logManager.logAllInfo();
+        return;
       }
+
+      // Here, the Drip List already exists.
+      // Only if the event is the latest (in the DB), we process the metadata.
+      // After all events are processed, the Drip List will be updated with the latest values.
+      if (
+        !(await isLatestEvent(
+          transferEvent,
+          TransferEventModel,
+          {
+            transactionHash,
+            logIndex,
+            tokenId,
+          },
+          transaction,
+        ))
+      ) {
+        logManager.logAllInfo();
+
+        return;
+      }
+
+      dripList.ownerAddress = to;
+      dripList.previousOwnerAddress = from;
+      dripList.ownerAccountId = await calcAccountId(to);
+
+      logManager
+        .appendIsLatestEventLog()
+        .appendUpdateLog(dripList, DripListModel, dripList.id);
+
+      await dripList.save({ transaction });
+
+      logManager.logAllInfo();
     });
   }
 

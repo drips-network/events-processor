@@ -76,6 +76,10 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
         `${ownerUpdateRequestedEvent.transactionHash}-${ownerUpdateRequestedEvent.logIndex}`,
       );
 
+      // Depending on the order of processing, a project can be created:
+      // - By a `OwnerUpdateRequested` event.
+      // - By a `OwnerUpdated` event.
+      // - By an `AccountMetadataEmitted` event, as a (non existing in the DB) Project dependency of the account that emitted the metadata.
       const [project, isProjectCreated] = await GitProjectModel.findOrCreate({
         transaction,
         lock: true,
@@ -100,31 +104,38 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
         return;
       }
 
-      const isLatest = await isLatestEvent(
-        ownerUpdateRequestedEvent,
-        OwnerUpdateRequestedEventModel,
-        {
-          logIndex,
-          transactionHash,
-          accountId,
-        },
-        transaction,
-      );
-
-      if (isLatest) {
-        project.name = decodedName;
-        project.forge = forgeAsString;
-        project.url = toUrl(forgeAsString, decodedName);
-        project.verificationStatus = calculateProjectStatus(project);
-
-        logManager
-          .appendIsLatestEventLog()
-          .appendUpdateLog(project, GitProjectModel, project.id);
-
-        await project.save({ transaction });
-
+      // Here, the Project already exists.
+      // Only if the event is the latest (in the DB), we process the metadata.
+      // After all events are processed, the Project will be updated with the latest values.
+      if (
+        !(await isLatestEvent(
+          ownerUpdateRequestedEvent,
+          OwnerUpdateRequestedEventModel,
+          {
+            logIndex,
+            transactionHash,
+            accountId,
+          },
+          transaction,
+        ))
+      ) {
         logManager.logAllInfo();
+
+        return;
       }
+
+      project.name = decodedName;
+      project.forge = forgeAsString;
+      project.url = toUrl(forgeAsString, decodedName);
+      project.verificationStatus = calculateProjectStatus(project);
+
+      logManager
+        .appendIsLatestEventLog()
+        .appendUpdateLog(project, GitProjectModel, project.id);
+
+      await project.save({ transaction });
+
+      logManager.logAllInfo();
     });
   }
 

@@ -24,7 +24,7 @@ import {
   DripListSplitReceiverModel,
 } from '../../../models';
 import shouldNeverHappen from '../../../utils/shouldNeverHappen';
-import areReceiversValid from '../splitsValidator';
+import validateSplitsReceivers from '../splitsValidator';
 import getUserAddress from '../../../utils/getAccountAddress';
 import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
 
@@ -45,11 +45,37 @@ export default async function handleDripListMetadata(
       `Failed to update metadata for Drip List with ID ${dripListId}: Drip List not found.
       \r Possible reasons:
       \r\t - The event that should have created the Drip List was not processed yet.
-      \r\t - The metadata were manually emitted.`,
+      \r\t - The metadata were manually emitted for a Drip List that does not exist in the app.`,
     );
   }
 
   const metadata = await getNftDriverMetadata(ipfsHash);
+
+  const [areSplitsValid, onChainSplitsHash, calculatedSplitsHash] =
+    await validateSplitsReceivers(
+      dripList.id,
+      metadata.projects.map((s) => ({
+        weight: s.weight,
+        accountId: s.accountId,
+      })),
+    );
+
+  // If we reach this point, it means that the processed `AccountMetadataEmitted` event is the latest in the DB.
+  // But we still need to check if the splits are the latest on-chain.
+  // There is no need to process the metadata if the splits are not the latest on-chain.
+
+  if (!areSplitsValid) {
+    logManager.appendLog(
+      `Skipping metadata update for Drip List with ID ${dripListId} because the splits receivers hashes from the contract and the metadata do not match:
+      \r\t - On-chain splits receivers hash: ${onChainSplitsHash}
+      \r\t - Metadata splits receivers hash: ${calculatedSplitsHash}
+      \r Possible reasons:
+      \r\t - The metadata were the latest in the DB but not on-chain.
+      \r\t - The metadata were manually emitted with different splits than the latest on-chain.`,
+    );
+
+    return;
+  }
 
   await validateDripListMetadata(dripList, metadata);
 
@@ -70,27 +96,10 @@ async function updateDripListMetadata(
   transaction: Transaction,
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
 ): Promise<void> {
+  dripList.isValid = true;
   dripList.name = metadata.name ?? null;
   dripList.description =
     'description' in metadata ? metadata.description || null : null;
-
-  const isValid = await areReceiversValid(
-    dripList.id,
-    metadata.projects.map((s) => ({
-      weight: s.weight,
-      accountId: s.accountId,
-    })),
-  );
-
-  dripList.isValid = isValid;
-
-  if (!isValid) {
-    logManager.appendLog(
-      `Set the Drip List to 'invalid' because the hash of the metadata receivers did not match the hash of the on-chain receivers for Drip List with ID ${dripList.id}. 
-      This means that the processed event was the latest in the database but not the latest on-chain. 
-      Check the 'isValid' flag to see if the project is valid after all the events are processed.`,
-    );
-  }
 
   logManager.appendUpdateLog(dripList, DripListModel, dripList.id);
 
@@ -104,7 +113,7 @@ async function createDbEntriesForDripListSplits(
   transaction: Transaction,
   blockTimestamp: Date,
 ) {
-  await clearCurrentEntries(funderDripListId, transaction);
+  await clearCurrentProjectSplits(funderDripListId, transaction);
 
   const splitsPromises = splits.map((split) => {
     if (isRepoDriverId(split.accountId)) {
@@ -161,7 +170,7 @@ async function createDbEntriesForDripListSplits(
   );
 }
 
-async function clearCurrentEntries(
+async function clearCurrentProjectSplits(
   funderDripListId: string,
   transaction: Transaction,
 ) {

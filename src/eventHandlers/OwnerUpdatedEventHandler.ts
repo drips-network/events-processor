@@ -5,7 +5,7 @@ import EventHandlerBase from '../events/EventHandlerBase';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { GitProjectModel, OwnerUpdatedEventModel } from '../models';
 import LogManager from '../core/LogManager';
-import { getOwnerAccountId, toRepoDriverId } from '../utils/accountIdUtils';
+import { calcAccountId, toRepoDriverId } from '../utils/accountIdUtils';
 import { calculateProjectStatus } from '../utils/gitProjectUtils';
 import { isLatestEvent } from '../utils/eventUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
@@ -64,6 +64,10 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
         `${ownerUpdatedEvent.transactionHash}-${ownerUpdatedEvent.logIndex}`,
       );
 
+      // Depending on the order of processing, a project can be created:
+      // - By a `OwnerUpdateRequested` event.
+      // - By a `OwnerUpdated` event.
+      // - By an `AccountMetadataEmitted` event, as a (non existing in the DB) Project dependency of the account that emitted the metadata.
       const [project, isProjectCreated] = await GitProjectModel.findOrCreate({
         transaction,
         lock: true,
@@ -75,7 +79,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           isValid: true, // There are no receivers yet, so the project is valid.
           ownerAddress: owner,
           claimedAt: blockTimestamp,
-          ownerAccountId: await getOwnerAccountId(owner),
+          ownerAccountId: await calcAccountId(owner),
           verificationStatus: ProjectVerificationStatus.OwnerUpdated,
         },
       });
@@ -88,31 +92,38 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
         return;
       }
 
-      const isLatest = await isLatestEvent(
-        ownerUpdatedEvent,
-        OwnerUpdatedEventModel,
-        {
-          logIndex,
-          transactionHash,
-          accountId: repoDriverId,
-        },
-        transaction,
-      );
-
-      if (isLatest) {
-        project.ownerAddress = owner;
-        project.claimedAt = blockTimestamp;
-        project.ownerAccountId = (await getOwnerAccountId(owner)) ?? null;
-        project.verificationStatus = calculateProjectStatus(project);
-
-        logManager
-          .appendIsLatestEventLog()
-          .appendUpdateLog(project, GitProjectModel, project.id);
-
-        await project.save({ transaction });
-
+      // Here, the Project already exists.
+      // Only if the event is the latest (in the DB), we process the metadata.
+      // After all events are processed, the Project will be updated with the latest values.
+      if (
+        !isLatestEvent(
+          ownerUpdatedEvent,
+          OwnerUpdatedEventModel,
+          {
+            logIndex,
+            transactionHash,
+            accountId: repoDriverId,
+          },
+          transaction,
+        )
+      ) {
         logManager.logAllInfo();
+
+        return;
       }
+
+      project.ownerAddress = owner;
+      project.claimedAt = blockTimestamp;
+      project.ownerAccountId = (await calcAccountId(owner)) ?? null;
+      project.verificationStatus = calculateProjectStatus(project);
+
+      logManager
+        .appendIsLatestEventLog()
+        .appendUpdateLog(project, GitProjectModel, project.id);
+
+      await project.save({ transaction });
+
+      logManager.logAllInfo();
     });
   }
 

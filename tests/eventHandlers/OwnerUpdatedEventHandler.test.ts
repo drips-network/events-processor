@@ -4,10 +4,7 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { OwnerUpdatedEventHandler } from '../../src/eventHandlers';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
-import {
-  getOwnerAccountId,
-  toRepoDriverId,
-} from '../../src/utils/accountIdUtils';
+import { calcAccountId, toRepoDriverId } from '../../src/utils/accountIdUtils';
 import { calculateProjectStatus } from '../../src/utils/gitProjectUtils';
 import OwnerUpdatedEventModel from '../../src/models/OwnerUpdatedEventModel';
 import GitProjectModel, {
@@ -77,7 +74,7 @@ describe('OwnerUpdatedEventHandler', () => {
 
       LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
 
-      (getOwnerAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
+      (calcAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
 
       // Act
       await handler['_handle'](mockRequest);
@@ -121,7 +118,7 @@ describe('OwnerUpdatedEventHandler', () => {
           isValid: true,
           ownerAddress: owner,
           claimedAt: blockTimestamp,
-          ownerAccountId: await getOwnerAccountId(owner),
+          ownerAccountId: await calcAccountId(owner),
           verificationStatus: ProjectVerificationStatus.OwnerUpdated,
         },
       });
@@ -151,7 +148,7 @@ describe('OwnerUpdatedEventHandler', () => {
 
       LogManager.prototype.appendIsLatestEventLog = jest.fn().mockReturnThis();
 
-      (getOwnerAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
+      (calcAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
 
       // Act
       await handler['_handle'](mockRequest);
@@ -165,9 +162,7 @@ describe('OwnerUpdatedEventHandler', () => {
       } = mockRequest;
 
       expect(mockGitProject.ownerAddress).toBe(owner);
-      expect(mockGitProject.ownerAccountId).toBe(
-        await getOwnerAccountId(owner),
-      );
+      expect(mockGitProject.ownerAccountId).toBe(await calcAccountId(owner));
       expect(mockGitProject.verificationStatus).toBe(
         calculateProjectStatus(mockGitProject as any),
       );

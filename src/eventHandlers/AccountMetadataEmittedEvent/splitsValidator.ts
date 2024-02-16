@@ -2,22 +2,28 @@ import type { SplitsReceiverStruct } from '../../../contracts/Drips';
 import type { DripListId, ProjectId } from '../../core/types';
 import { dripsContract } from '../../core/contractClients';
 
-export default async function areReceiversValid(
+export default async function validateSplitsReceivers(
   accountId: ProjectId | DripListId,
   splits: SplitsReceiverStruct[],
-): Promise<boolean> {
+): Promise<
+  [
+    areSplitsValid: boolean,
+    onChainSplitsHash: string,
+    calculatedSplitsHash: string,
+  ]
+> {
   const formattedSplits = formatSplitReceivers(splits);
-  const metadataReceiversHash = await dripsContract.hashSplits(formattedSplits);
-  const onChainReceiversHash = await dripsContract.splitsHash(accountId);
+  const calculatedSplitsHash = await dripsContract.hashSplits(formattedSplits);
+  const onChainSplitsHash = await dripsContract.splitsHash(accountId);
 
-  if (metadataReceiversHash !== onChainReceiversHash) {
-    return false;
+  if (calculatedSplitsHash !== onChainSplitsHash) {
+    return [false, onChainSplitsHash, calculatedSplitsHash];
   }
 
-  return true;
+  return [true, onChainSplitsHash, calculatedSplitsHash];
 }
 
-function formatSplitReceivers(
+export function formatSplitReceivers(
   receivers: SplitsReceiverStruct[],
 ): SplitsReceiverStruct[] {
   // Splits receivers must be sorted by user ID, deduplicated, and without weights <= 0.

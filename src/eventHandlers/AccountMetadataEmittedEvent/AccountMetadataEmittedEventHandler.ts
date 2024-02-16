@@ -87,21 +87,29 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         `${accountMetadataEmittedEventModel.transactionHash}-${accountMetadataEmittedEventModel.logIndex}`,
       );
 
-      const isLatest = await isLatestEvent(
-        accountMetadataEmittedEventModel,
-        AccountMetadataEmittedEventModel,
-        {
-          logIndex,
-          transactionHash,
-          accountId: typedAccountId,
-        },
-        transaction,
-      );
+      // Only if the event is the latest (in the DB), we process the metadata.
 
-      // Assumption: `RepoDriverId` + metadata coming from the Drips App => the RepoDriverId represents a Project.
-      if (isRepoDriverId(typedAccountId) && isLatest) {
-        logManager.appendIsLatestEventLog();
+      if (
+        !(await isLatestEvent(
+          accountMetadataEmittedEventModel,
+          AccountMetadataEmittedEventModel,
+          {
+            logIndex,
+            transactionHash,
+            accountId: typedAccountId,
+          },
+          transaction,
+        ))
+      ) {
+        logManager.logAllInfo();
 
+        return;
+      }
+
+      logManager.appendIsLatestEventLog();
+
+      // The metadata are related to a Project.
+      if (isRepoDriverId(typedAccountId)) {
         await handleGitProjectMetadata(
           logManager,
           typedAccountId,
@@ -109,15 +117,19 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
           ipfsHash,
           blockTimestamp,
         );
-      } else if (isNftDriverId(typedAccountId) && isLatest) {
-        logManager.appendIsLatestEventLog();
-
+      }
+      // The metadata are related to a Drip List.
+      else if (isNftDriverId(typedAccountId)) {
         await handleDripListMetadata(
           logManager,
           typedAccountId,
           transaction,
           ipfsHash,
           blockTimestamp,
+        );
+      } else {
+        logManager.appendLog(
+          `Skipping metadata processing because the account with ID ${typedAccountId} is not a Project or a Drip List.`,
         );
       }
 

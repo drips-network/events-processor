@@ -4,10 +4,7 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { TransferEventHandler } from '../../src/eventHandlers';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
-import {
-  getOwnerAccountId,
-  toNftDriverId,
-} from '../../src/utils/accountIdUtils';
+import { calcAccountId, toNftDriverId } from '../../src/utils/accountIdUtils';
 import { isLatestEvent } from '../../src/utils/eventUtils';
 import LogManager from '../../src/core/LogManager';
 import TransferEventModel from '../../src/models/TransferEventModel';
@@ -113,7 +110,7 @@ describe('TransferEventHandler', () => {
         true,
       ]);
 
-      (getOwnerAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
+      (calcAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
 
       DripListModel.findOrCreate = jest
         .fn()
@@ -158,7 +155,7 @@ describe('TransferEventHandler', () => {
         true,
       ]);
 
-      (getOwnerAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
+      (calcAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
 
       const mockDripList = {
         ownerAddress: '',

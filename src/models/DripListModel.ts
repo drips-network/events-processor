@@ -18,7 +18,7 @@ export default class DripListModel extends Model<
   public declare creator: AddressLike;
   public declare description: string | null;
   public declare ownerAddress: AddressLike;
-  public declare ownerAccountId: AccountId | null;
+  public declare ownerAccountId: AccountId;
   public declare previousOwnerAddress: AddressLike;
 
   public static initialize(sequelize: Sequelize): void {
@@ -38,7 +38,7 @@ export default class DripListModel extends Model<
         },
         ownerAccountId: {
           type: DataTypes.STRING,
-          allowNull: true,
+          allowNull: false,
         },
         name: {
           type: DataTypes.STRING,

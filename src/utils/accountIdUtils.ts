@@ -105,11 +105,7 @@ export function assertRepoDiverAccountId(
   }
 }
 
-export async function getOwnerAccountId(
-  owner: AddressLike,
-): Promise<
-  AccountId | PromiseLike<AccountId | null | undefined> | null | undefined
-> {
+export async function calcAccountId(owner: AddressLike): Promise<AccountId> {
   return (
     await addressDriverContract.calcAccountId(owner as string)
   ).toString() as AccountId;
