@@ -87,7 +87,7 @@ export default class SplitsSetEventHandler extends EventHandlerBase<'SplitsSet(u
       SplitsSetEvent.OutputTuple,
       SplitsSetEvent.OutputObject
     >
-  > = async (_accId, _receiver, _erc20, _amt, eventLog) => {
+  > = async (_accId, _receiversHash, eventLog) => {
     await saveEventProcessingJob(
       (eventLog as KnownAny).log,
       this.eventSignature,
