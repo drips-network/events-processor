@@ -1,6 +1,7 @@
 /* eslint-disable no-param-reassign */
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
+import type { UUID } from 'crypto';
 import {
   DependencyType,
   type DripListId,
@@ -100,6 +101,10 @@ async function updateDripListMetadata(
   dripList.name = metadata.name ?? null;
   dripList.description =
     'description' in metadata ? metadata.description || null : null;
+  dripList.latestVotingRoundId =
+    'latestVotingRoundId' in metadata
+      ? (metadata.latestVotingRoundId as UUID) || null
+      : null;
 
   logManager.appendUpdateLog(dripList, DripListModel, dripList.id);
 

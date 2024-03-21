@@ -5,6 +5,7 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
+import type { UUID } from 'crypto';
 import type { AccountId, DripListId } from '../core/types';
 import getSchema from '../utils/getSchema';
 
@@ -20,6 +21,7 @@ export default class DripListModel extends Model<
   public declare ownerAddress: AddressLike;
   public declare ownerAccountId: AccountId;
   public declare previousOwnerAddress: AddressLike;
+  public declare latestVotingRoundId: UUID | null;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
@@ -42,6 +44,10 @@ export default class DripListModel extends Model<
         },
         name: {
           type: DataTypes.STRING,
+          allowNull: true,
+        },
+        latestVotingRoundId: {
+          type: DataTypes.UUID,
           allowNull: true,
         },
         description: {

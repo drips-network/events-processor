@@ -32,6 +32,6 @@ export default function startQueueMonitoringUI() {
   const port = appSettings.queueUiPort;
 
   app.listen(port, () => {
-    logger.info(`Monitor Drips Queues on http://localhost:${port}`);
+    logger.info(`Monitor Drips Queues on http://localhost:${port}/arena`);
   });
 }
