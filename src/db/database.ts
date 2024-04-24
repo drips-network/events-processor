@@ -9,6 +9,7 @@ import {
   RepoDriverSplitReceiverModel,
 } from '../models';
 import appSettings from '../config/appSettings';
+import shouldNeverHappen from '../utils/shouldNeverHappen';
 
 const { postgresConnectionString } = appSettings;
 
@@ -37,13 +38,18 @@ async function authenticate(): Promise<void> {
 
     logger.info('Connection has been established successfully.');
 
-    await dbConnection.query(
-      `CREATE SCHEMA IF NOT EXISTS ${appSettings.network};`,
-    );
+    const schema = `"${(
+      appSettings.network ||
+      shouldNeverHappen('Missing network in app settings.')
+    ).replace(/"/g, '""')}"`;
+
+    await dbConnection.query(`CREATE SCHEMA IF NOT EXISTS ${schema};`);
 
     await dbConnection.authenticate();
   } catch (error: any) {
-    logger.error(`Unable to connect to the database: ${error}.`);
+    logger.error(
+      `Unable to connect to the database: ${error} in ${error.stack}`,
+    );
     throw error;
   }
 }

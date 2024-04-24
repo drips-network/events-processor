@@ -1,9 +1,10 @@
 import dotenv from 'dotenv';
+import shouldNeverHappen from '../utils/shouldNeverHappen';
 
 dotenv.config({ path: `.env.${process.env.ENV}` });
 
 const appSettings = {
-  rpcUrl: process.env.RPC_URL,
+  rpcUrl: process.env.RPC_URL || shouldNeverHappen('RPC_URL is not set.'),
   logLevel: process.env.LOG_LEVEL,
   queueUiPort: process.env.MONITORING_UI_PORT ?? 3000,
   pinataSdkKey: process.env.PINATA_SDK_KEY,

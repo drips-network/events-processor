@@ -6,6 +6,8 @@ export const SUPPORTED_NETWORKS = [
   'sepolia',
   'goerli',
   'localtestnet',
+  'optimism-sepolia',
+  'polygon-amoy',
 ] as const;
 
 export const FORGES_MAP = {
