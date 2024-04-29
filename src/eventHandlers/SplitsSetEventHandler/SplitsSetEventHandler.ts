@@ -25,7 +25,6 @@ export default class SplitsSetEventHandler extends EventHandlerBase<'SplitsSet(u
     } = request;
 
     const [rawAccountId, rawReceiversHash] = args as SplitsSetEvent.OutputTuple;
-
     const accountId = toAccountId(rawAccountId);
 
     LogManager.logRequestInfo(

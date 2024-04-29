@@ -24,7 +24,7 @@ jest.mock(
   '../../src/eventHandlers/AccountMetadataEmittedEvent/dripList/handleDripListMetadata',
 );
 
-describe('GivenEventHandler', () => {
+describe('AccountMetadataEmittedHandler', () => {
   let mockDbTransaction: {};
   let handler: AccountMetadataEmittedEventHandler;
   let mockRequest: EventHandlerRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>;

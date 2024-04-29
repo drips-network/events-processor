@@ -7,6 +7,9 @@ import {
   SplitEventHandler,
   SplitsSetEventHandler,
   TransferEventHandler,
+  StreamReceiverSeenEventHandler,
+  StreamsSetEventHandler,
+  SqueezedStreamsEventHandler,
 } from '../eventHandlers';
 import { removeAllListeners } from '../utils/contractUtils';
 import {
@@ -43,6 +46,18 @@ export function registerEventHandlers(): void {
   registerEventHandler<'SplitsSet(uint256,bytes32)'>(
     'SplitsSet(uint256,bytes32)',
     SplitsSetEventHandler,
+  );
+  registerEventHandler<'StreamsSet(uint256,address,bytes32,bytes32,uint128,uint32)'>(
+    'StreamsSet(uint256,address,bytes32,bytes32,uint128,uint32)',
+    StreamsSetEventHandler,
+  );
+  registerEventHandler<'StreamReceiverSeen(bytes32,uint256,uint256)'>(
+    'StreamReceiverSeen(bytes32,uint256,uint256)',
+    StreamReceiverSeenEventHandler,
+  );
+  registerEventHandler<'SqueezedStreams(uint256,address,uint256,uint128,bytes32[])'>(
+    'SqueezedStreams(uint256,address,uint256,uint128,bytes32[])',
+    SqueezedStreamsEventHandler,
   );
 }
 
