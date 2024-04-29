@@ -5,18 +5,7 @@ dotenv.config({ path: `.env.${process.env.ENV}` });
 
 const appSettings = {
   network: process.env.NETWORK || shouldNeverHappen('NETWORK is not set.'),
-  rpcUrl: (() => {
-    const rpcUrl =
-      process.env.RPC_URL || shouldNeverHappen('RPC_URL is not set.');
-
-    if (!rpcUrl.includes(process.env.NETWORK!)) {
-      throw new Error(
-        `RPC_URL '${rpcUrl}' does not match NETWORK '${process.env.NETWORK}'.`,
-      );
-    }
-
-    return rpcUrl;
-  })(),
+  rpcUrl: process.env.RPC_URL || shouldNeverHappen('RPC_URL is not set.'),
   logLevel: process.env.LOG_LEVEL || 'debug',
   pollingInterval: Number(process.env.POLLING_INTERVAL) ?? 5000,
   ipfsGatewayUrl:
