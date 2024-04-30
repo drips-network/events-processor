@@ -3,7 +3,7 @@ import appSettings from '../config/appSettings';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
 
 // eslint-disable-next-line no-nested-ternary
-const appProvider = appSettings.rpcUrl.startsWith('https')
+const appProvider = appSettings.rpcUrl.startsWith('http')
   ? new JsonRpcProvider(appSettings.rpcUrl, undefined, {
       pollingInterval: appSettings.pollingInterval,
     })
