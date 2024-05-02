@@ -90,7 +90,14 @@ export default class SqueezedStreamsEventHandler extends EventHandlerBase<'Squee
       SqueezedStreamsEvent.OutputTuple,
       SqueezedStreamsEvent.OutputObject
     >
-  > = async (_from, _to, _tokenId, eventLog) => {
+  > = async (
+    _accountId,
+    _erc20,
+    _senderId,
+    _amt,
+    _streamsHistoryHashes,
+    eventLog,
+  ) => {
     await saveEventProcessingJob(
       (eventLog as KnownAny).log,
       this.eventSignature,
