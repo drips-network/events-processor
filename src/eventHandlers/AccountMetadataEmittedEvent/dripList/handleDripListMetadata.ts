@@ -153,6 +153,7 @@ async function createDbEntriesForDripListSplits(
           fundeeAccountId: split.accountId,
           fundeeAccountAddress: getUserAddress(split.accountId),
           type: AddressDriverSplitReceiverType.DripListDependency,
+          blockTimestamp,
         },
         { transaction },
       );

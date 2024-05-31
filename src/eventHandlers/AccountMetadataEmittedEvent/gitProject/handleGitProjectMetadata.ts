@@ -149,6 +149,7 @@ async function createDbEntriesForProjectSplits(
         fundeeAccountId: maintainer.accountId,
         fundeeAccountAddress: getUserAddress(maintainer.accountId),
         type: AddressDriverSplitReceiverType.ProjectMaintainer,
+        blockTimestamp,
       },
       { transaction },
     );
@@ -174,6 +175,7 @@ async function createDbEntriesForProjectSplits(
           fundeeAccountId: dependency.accountId,
           fundeeAccountAddress: getUserAddress(dependency.accountId),
           type: AddressDriverSplitReceiverType.ProjectDependency,
+          blockTimestamp,
         },
         { transaction },
       );
