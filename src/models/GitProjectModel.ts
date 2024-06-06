@@ -52,6 +52,27 @@ export default class GitProjectModel extends Model<
         name: {
           type: DataTypes.STRING,
           allowNull: true,
+          validate: {
+            isValidName(value: string) {
+              const components = value.split('/');
+
+              if (components.length !== 2) {
+                throw new Error(`Invalid project name: '${value}'.`);
+              }
+
+              const ownerName = components[0];
+              const repoName = components[1];
+
+              const validProjectNameRegex: RegExp = /^[\w.-]+$/;
+
+              if (
+                !validProjectNameRegex.test(ownerName) ||
+                !validProjectNameRegex.test(repoName)
+              ) {
+                throw new Error(`Invalid project name: '${value}'.`);
+              }
+            },
+          },
         },
         verificationStatus: {
           type: DataTypes.ENUM(...Object.values(ProjectVerificationStatus)),
