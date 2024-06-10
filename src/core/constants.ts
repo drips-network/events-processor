@@ -6,7 +6,7 @@ export const SUPPORTED_NETWORKS = [
   'sepolia',
   'goerli',
   'localtestnet',
-  'optimism-sepolia',
+  'optimism_sepolia',
   'polygon-amoy',
 ] as const;
 

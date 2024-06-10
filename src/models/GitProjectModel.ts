@@ -54,7 +54,11 @@ export default class GitProjectModel extends Model<
           allowNull: true,
           validate: {
             isValidName(value: string) {
-              const components = value.split('/');
+              if (!value) {
+                throw new Error('Project name is required.');
+              }
+
+              const components = value?.split('/');
 
               if (components.length !== 2) {
                 throw new Error(`Invalid project name: '${value}'.`);

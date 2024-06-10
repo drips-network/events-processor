@@ -1,5 +1,5 @@
 {
-  "network": "optimism-sepolia",
+  "network": "optimism_sepolia",
   "drips": {
     "address": "0x74A32a38D945b9527524900429b083547DeB9bF4",
     "block": 10872697
