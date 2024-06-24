@@ -62,6 +62,18 @@ export default class StreamsSetEventModel
         sequelize,
         schema: getSchema(),
         tableName: 'StreamsSetEvents',
+        indexes: [
+          {
+            fields: ['receiversHash'],
+            name: `IX_${this.tableName}_receiversHash`,
+            unique: false,
+          },
+          {
+            fields: ['accountId'],
+            name: `IX_${this.tableName}_accountId`,
+            unique: false,
+          },
+        ],
       },
     );
   }

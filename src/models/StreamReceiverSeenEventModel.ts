@@ -47,6 +47,13 @@ export default class StreamReceiverSeenEventModel
         sequelize,
         schema: getSchema(),
         tableName: 'StreamReceiverSeenEvents',
+        indexes: [
+          {
+            fields: ['accountId'],
+            name: `IX_${this.tableName}_accountId`,
+            unique: false,
+          },
+        ],
       },
     );
   }

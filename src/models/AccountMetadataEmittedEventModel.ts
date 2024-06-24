@@ -47,6 +47,13 @@ export default class AccountMetadataEmittedEventModel
         sequelize,
         schema: getSchema(),
         tableName: 'AccountMetadataEmittedEvents',
+        indexes: [
+          {
+            fields: ['accountId'],
+            name: `IX_${this.tableName}_accountId`,
+            unique: false,
+          },
+        ],
       },
     );
   }

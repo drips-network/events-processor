@@ -52,6 +52,13 @@ export default class SplitEventModel
         sequelize,
         schema: getSchema(),
         tableName: 'SplitEvents',
+        indexes: [
+          {
+            fields: ['receiver'],
+            name: `IX_${this.tableName}_receiver`,
+            unique: false,
+          },
+        ],
       },
     );
   }

@@ -52,6 +52,18 @@ export default class GivenEventModel
         sequelize,
         schema: getSchema(),
         tableName: 'GivenEvents',
+        indexes: [
+          {
+            fields: ['accountId'],
+            name: `IX_${this.tableName}_accountId`,
+            unique: false,
+          },
+          {
+            fields: ['receiver'],
+            name: `IX_${this.tableName}_receiver`,
+            unique: false,
+          },
+        ],
       },
     );
   }

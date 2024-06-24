@@ -84,6 +84,13 @@ export default class AddressDriverSplitReceiverModel extends Model<
         sequelize,
         schema: getSchema(),
         tableName: 'AddressDriverSplitReceivers',
+        indexes: [
+          {
+            fields: ['fundeeAccountId'],
+            name: `IX_${this.tableName}_fundeeAccountId`,
+            unique: false,
+          },
+        ],
       },
     );
   }
