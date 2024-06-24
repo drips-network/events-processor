@@ -87,7 +87,7 @@ export default class AddressDriverSplitReceiverModel extends Model<
         indexes: [
           {
             fields: ['fundeeAccountId'],
-            name: `IX_${this.tableName}_fundeeAccountId`,
+            name: `IX_AddressDriverSplitReceivers_fundeeAccountId`,
             unique: false,
           },
         ],

@@ -55,7 +55,7 @@ export default class SplitEventModel
         indexes: [
           {
             fields: ['receiver'],
-            name: `IX_${this.tableName}_receiver`,
+            name: `IX_SplitEvents_receiver`,
             unique: false,
           },
         ],

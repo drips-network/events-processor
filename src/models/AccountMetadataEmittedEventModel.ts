@@ -50,7 +50,7 @@ export default class AccountMetadataEmittedEventModel
         indexes: [
           {
             fields: ['accountId'],
-            name: `IX_${this.tableName}_accountId`,
+            name: `IX_AccountMetadataEmittedEvents_accountId`,
             unique: false,
           },
         ],

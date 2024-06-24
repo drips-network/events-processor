@@ -65,12 +65,12 @@ export default class StreamsSetEventModel
         indexes: [
           {
             fields: ['receiversHash'],
-            name: `IX_${this.tableName}_receiversHash`,
+            name: `IX_StreamsSetEvents_receiversHash`,
             unique: false,
           },
           {
             fields: ['accountId'],
-            name: `IX_${this.tableName}_accountId`,
+            name: `IX_StreamsSetEvents}_accountId`,
             unique: false,
           },
         ],

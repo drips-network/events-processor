@@ -50,7 +50,7 @@ export default class StreamReceiverSeenEventModel
         indexes: [
           {
             fields: ['accountId'],
-            name: `IX_${this.tableName}_accountId`,
+            name: `IX_StreamReceiverSeenEvents_accountId`,
             unique: false,
           },
         ],

@@ -55,12 +55,12 @@ export default class GivenEventModel
         indexes: [
           {
             fields: ['accountId'],
-            name: `IX_${this.tableName}_accountId`,
+            name: `IX_GivenEvents_accountId`,
             unique: false,
           },
           {
             fields: ['receiver'],
-            name: `IX_${this.tableName}_receiver`,
+            name: `IX_GivenEvents_receiver`,
             unique: false,
           },
         ],
