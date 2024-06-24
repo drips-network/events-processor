@@ -123,6 +123,32 @@ export default class GitProjectModel extends Model<
         sequelize,
         schema: getSchema(),
         tableName: 'GitProjects',
+        indexes: [
+          {
+            fields: ['ownerAddress'],
+            name: `IX_GitProjects_ownerAddress`,
+            unique: false,
+            where: {
+              isValid: true,
+            },
+          },
+          {
+            fields: ['verificationStatus'],
+            name: `IX_GitProjects_verificationStatus`,
+            where: {
+              isValid: true,
+            },
+            unique: false,
+          },
+          {
+            fields: ['url'],
+            name: `IX_GitProjects_url`,
+            where: {
+              isValid: true,
+            },
+            unique: false,
+          },
+        ],
       },
     );
   }

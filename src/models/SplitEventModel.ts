@@ -58,6 +58,11 @@ export default class SplitEventModel
             name: `IX_SplitEvents_receiver`,
             unique: false,
           },
+          {
+            fields: ['accountId', 'receiver'],
+            name: `IX_SplitEvents_accountId_receiver`,
+            unique: false,
+          },
         ],
       },
     );

@@ -76,6 +76,29 @@ export default class RepoDriverSplitReceiverModel extends Model<
         sequelize,
         schema: getSchema(),
         tableName: 'RepoDriverSplitReceivers',
+        indexes: [
+          {
+            fields: ['fundeeProjectId'],
+            name: `IX_RepoDriverSplitReceivers_fundeeProjectId`,
+            unique: false,
+          },
+          {
+            fields: ['funderProjectId'],
+            name: `IX_RepoDriverSplitReceivers_funderProjectId`,
+            where: {
+              type: DependencyType.ProjectDependency,
+            },
+            unique: false,
+          },
+          {
+            fields: ['funderDripListId'],
+            name: `IX_RepoDriverSplitReceivers_funderDripListId`,
+            where: {
+              type: DependencyType.DripListDependency,
+            },
+            unique: false,
+          },
+        ],
       },
     );
   }

@@ -90,6 +90,14 @@ export default class AddressDriverSplitReceiverModel extends Model<
             name: `IX_AddressDriverSplitReceivers_fundeeAccountId`,
             unique: false,
           },
+          {
+            fields: ['funderDripListId'],
+            name: `IX_AddressDriverSplitReceivers_funderDripListId`,
+            where: {
+              type: AddressDriverSplitReceiverType.DripListDependency,
+            },
+            unique: false,
+          },
         ],
       },
     );

@@ -76,6 +76,29 @@ export default class DripListSplitReceiverModel extends Model<
         sequelize,
         schema: getSchema(),
         tableName: 'DripListSplitReceivers',
+        indexes: [
+          {
+            fields: ['fundeeDripListId'],
+            name: `IX_DripListSplitReceivers_fundeeDripListId`,
+            unique: false,
+          },
+          {
+            fields: ['funderProjectId'],
+            name: `IX_DripListSplitReceivers_funderProjectId`,
+            where: {
+              type: DependencyType.ProjectDependency,
+            },
+            unique: false,
+          },
+          {
+            fields: ['funderDripListId'],
+            name: `IX_DripListSplitReceivers_funderDripListId`,
+            where: {
+              type: DependencyType.DripListDependency,
+            },
+            unique: false,
+          },
+        ],
       },
     );
   }

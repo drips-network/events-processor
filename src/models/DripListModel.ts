@@ -67,6 +67,16 @@ export default class DripListModel extends Model<
         sequelize,
         schema: getSchema(),
         tableName: 'DripLists',
+        indexes: [
+          {
+            fields: ['ownerAddress'],
+            name: `IX_DripLists_ownerAddress`,
+            where: {
+              isValid: true,
+            },
+            unique: false,
+          },
+        ],
       },
     );
   }

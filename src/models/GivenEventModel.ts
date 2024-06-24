@@ -63,6 +63,16 @@ export default class GivenEventModel
             name: `IX_GivenEvents_receiver`,
             unique: false,
           },
+          {
+            fields: ['erc20'],
+            name: `IX_GivenEvents_erc20`,
+            unique: false,
+          },
+          {
+            fields: ['transactionHash', 'logIndex'],
+            name: `IX_GivenEvents_transactionHash_logIndex`,
+            unique: false,
+          },
         ],
       },
     );
