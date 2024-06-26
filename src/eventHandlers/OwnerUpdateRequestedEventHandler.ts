@@ -17,6 +17,7 @@ import { toRepoDriverId } from '../utils/accountIdUtils';
 import { isLatestEvent } from '../utils/eventUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import { dbConnection } from '../db/database';
+import { singleOrDefault } from '../utils/linq';
 
 export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'OwnerUpdateRequested(uint256,uint8,bytes)'> {
   public readonly eventSignature =
@@ -155,4 +156,16 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
       this.eventSignature,
     );
   };
+
+  override async afterHandle(accountId: bigint): Promise<void> {
+    const ownerAccountId = singleOrDefault(
+      await GitProjectModel.findAll({
+        where: {
+          id: toRepoDriverId(accountId),
+        },
+      }),
+    )?.ownerAccountId;
+
+    super.afterHandle(...[accountId, ownerAccountId].filter(Boolean));
+  }
 }

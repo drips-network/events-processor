@@ -17,6 +17,9 @@ const appSettings = {
     (process.env.SHOULD_START_MONITORING_UI as unknown as string) === 'true',
   shouldProcessPastEvents:
     (process.env.SHOULD_PROCESS_PAST_EVENTS as unknown as string) === 'true',
+  cacheInvalidationEndpoint:
+    process.env.CACHE_INVALIDATION_ENDPOINT ||
+    shouldNeverHappen('CACHE_INVALIDATION_ENDPOINT is not set.'),
 } as const;
 
 export default appSettings;

@@ -139,4 +139,10 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       this.eventSignature,
     );
   };
+
+  override async afterHandle(accountId: bigint, owner: string): Promise<void> {
+    const ownerAccountId = await calcAccountId(owner);
+
+    super.afterHandle(...[accountId, ownerAccountId]);
+  }
 }

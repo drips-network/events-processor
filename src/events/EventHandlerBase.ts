@@ -1,5 +1,8 @@
 import type { TypedListener } from '../../contracts/common';
-import type { Result } from '../core/types';
+import appSettings from '../config/appSettings';
+import logger from '../core/logger';
+import type { AccountId, Result } from '../core/types';
+import { toAccountId } from '../utils/accountIdUtils';
 import { getContractInfoFromEvent } from '../utils/contractUtils';
 import getResult from '../utils/getResult';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
@@ -91,6 +94,46 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
       }
       default: {
         shouldNeverHappen('No contract found to register event listener on.');
+      }
+    }
+  }
+
+  public async afterHandle(...eventArgs: any): Promise<void> {
+    if (!appSettings.cacheInvalidationEndpoint) {
+      return;
+    }
+
+    const accountIds = [] as AccountId[];
+
+    for (const arg of eventArgs) {
+      try {
+        const argAsString = arg.toString();
+
+        const accountId = toAccountId(argAsString);
+
+        if (!accountIds.includes(accountId)) {
+          accountIds.push(accountId);
+        }
+      } catch (error: any) {
+        /* empty */
+      }
+    }
+
+    if (accountIds.length > 0) {
+      try {
+        fetch(appSettings.cacheInvalidationEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(accountIds),
+        });
+
+        logger.info(
+          `Cache invalidated for accountIds: ${accountIds.join(', ')}`,
+        );
+      } catch (error: any) {
+        logger.error(`Failed to invalidate cache: ${error.message}`);
       }
     }
   }

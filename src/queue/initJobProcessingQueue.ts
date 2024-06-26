@@ -3,6 +3,7 @@ import type { KnownAny } from '../core/types';
 import eventProcessingQueue from './queue';
 import { assertRequestId } from '../utils/assert';
 import EventHandlerRequest from '../events/EventHandlerRequest';
+import logger from '../core/logger';
 
 export default async function initJobProcessingQueue() {
   eventProcessingQueue.process(5, async (job) => {
@@ -37,5 +38,11 @@ export default async function initJobProcessingQueue() {
     );
 
     await handler.executeHandle(handleContext as KnownAny);
+
+    try {
+      await handler.afterHandle(...handleContext.event.args);
+    } catch (error: any) {
+      logger.error(`❌ ${handler.name} 'afterHandle' error: ${error.message}.`);
+    }
   });
 }
