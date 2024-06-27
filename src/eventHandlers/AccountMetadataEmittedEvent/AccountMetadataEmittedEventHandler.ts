@@ -3,7 +3,7 @@ import type {
   TypedListener,
 } from '../../../contracts/common';
 import type { AccountMetadataEmittedEvent } from '../../../contracts/Drips';
-import type { KnownAny } from '../../core/types';
+import type { AccountId, KnownAny } from '../../core/types';
 
 import EventHandlerBase from '../../events/EventHandlerBase';
 import saveEventProcessingJob from '../../queue/saveEventProcessingJob';
@@ -21,6 +21,7 @@ import handleDripListMetadata from './dripList/handleDripListMetadata';
 import type EventHandlerRequest from '../../events/EventHandlerRequest';
 import { AccountMetadataEmittedEventModel } from '../../models';
 import { dbConnection } from '../../db/database';
+import { getCurrentSplitsByAccountId } from '../../utils/getCurrentSplits';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignature =
@@ -149,6 +150,24 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       this.eventSignature,
     );
   };
+
+  public override async beforeHandle(
+    request: EventHandlerRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
+  ): Promise<{
+    accountIdsToInvalidate: AccountId[];
+  }> {
+    const {
+      event: { args },
+    } = request;
+
+    const [accountId] = args as AccountMetadataEmittedEvent.OutputTuple;
+
+    const typedAccountId = toAccountId(accountId);
+
+    return {
+      accountIdsToInvalidate: await getCurrentSplitsByAccountId(typedAccountId),
+    };
+  }
 
   private _isEmittedByTheDripsApp(key: string): boolean {
     if (key === DRIPS_APP_USER_METADATA_KEY) {

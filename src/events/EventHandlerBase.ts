@@ -98,6 +98,13 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
     }
   }
 
+  // eslint-disable-next-line no-unused-vars
+  public beforeHandle(_context: EventHandlerRequest<T>): Promise<{
+    accountIdsToInvalidate: AccountId[];
+  }> {
+    return Promise.resolve({ accountIdsToInvalidate: [] });
+  }
+
   public async afterHandle(...eventArgs: any): Promise<void> {
     if (!appSettings.cacheInvalidationEndpoint) {
       return;

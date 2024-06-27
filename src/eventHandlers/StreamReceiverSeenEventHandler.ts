@@ -1,7 +1,7 @@
 import type { TypedListener, TypedContractEvent } from '../../contracts/common';
 import type { StreamReceiverSeenEvent } from '../../contracts/Drips';
 import LogManager from '../core/LogManager';
-import type { KnownAny } from '../core/types';
+import type { AccountId, KnownAny } from '../core/types';
 import { dbConnection } from '../db/database';
 import EventHandlerBase from '../events/EventHandlerBase';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
@@ -9,6 +9,7 @@ import StreamReceiverSeenEventModel from '../models/StreamReceiverSeenEventModel
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { toAccountId } from '../utils/accountIdUtils';
 import { toBigIntString } from '../utils/bigintUtils';
+import { getCurrentSplitsByReceiversHash } from '../utils/getCurrentSplits';
 
 export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'StreamReceiverSeen(bytes32,uint256,uint256)'> {
   public eventSignature =
@@ -80,4 +81,21 @@ export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'St
       this.eventSignature,
     );
   };
+
+  public override async beforeHandle(
+    request: EventHandlerRequest<'StreamReceiverSeen(bytes32,uint256,uint256)'>,
+  ): Promise<{
+    accountIdsToInvalidate: AccountId[];
+  }> {
+    const {
+      event: { args },
+    } = request;
+
+    const [rawReceiversHash] = args as StreamReceiverSeenEvent.OutputTuple;
+
+    return {
+      accountIdsToInvalidate:
+        await getCurrentSplitsByReceiversHash(rawReceiversHash),
+    };
+  }
 }

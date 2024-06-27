@@ -37,10 +37,16 @@ export default async function initJobProcessingQueue() {
       job.id,
     );
 
+    const { accountIdsToInvalidate } = await handler.beforeHandle(
+      handleContext as KnownAny,
+    );
+
     await handler.executeHandle(handleContext as KnownAny);
 
     try {
-      await handler.afterHandle(...handleContext.event.args);
+      await handler.afterHandle(
+        ...[handleContext.event.args.concat(accountIdsToInvalidate)],
+      );
     } catch (error: any) {
       logger.error(`❌ ${handler.name} 'afterHandle' error: ${error.message}.`);
     }
