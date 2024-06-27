@@ -18,6 +18,7 @@ export async function getCurrentSplitsByAccountId(
           { funderDripListId: emmiterAccountId },
         ],
       },
+      lock: true,
     }),
     await DripListSplitReceiverModel.findAll({
       where: {
@@ -26,6 +27,7 @@ export async function getCurrentSplitsByAccountId(
           { funderDripListId: emmiterAccountId },
         ],
       },
+      lock: true,
     }),
     await RepoDriverSplitReceiverModel.findAll({
       where: {
@@ -34,15 +36,17 @@ export async function getCurrentSplitsByAccountId(
           { funderDripListId: emmiterAccountId },
         ],
       },
+      lock: true,
     }),
   ]);
 
-  const allSplits = [...addressSplits, ...dripListSplits, ...projectSplits].map(
-    extractAccountId,
-  );
-  const accountIds = allSplits.map(extractAccountId);
+  const accountIds = [
+    ...addressSplits.map((receiver) => receiver.fundeeAccountId),
+    ...dripListSplits.map((receiver) => receiver.fundeeDripListId),
+    ...projectSplits.map((receiver) => receiver.fundeeProjectId),
+  ];
 
-  return accountIds;
+  return Array.from(new Set(accountIds));
 }
 
 export async function getCurrentSplitsByReceiversHash(
@@ -52,21 +56,10 @@ export async function getCurrentSplitsByReceiversHash(
     where: {
       receiversHash,
     },
+    lock: true,
   });
 
   const accountIds = streamReceiverSeenEvents.map((event) => event.accountId);
 
   return Array.from(new Set(accountIds));
-}
-
-function extractAccountId(split: any): AccountId {
-  const { funderProjectId, funderDripListId } = split;
-
-  if (funderProjectId && funderDripListId) {
-    throw new Error(
-      "Invalid split record: both 'funderProjectId' and 'funderDripListId are set.",
-    );
-  }
-
-  return funderProjectId || funderDripListId;
 }
