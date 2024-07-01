@@ -1,3 +1,4 @@
+import { isAddress } from 'ethers';
 import type { TypedListener } from '../../contracts/common';
 import appSettings from '../config/appSettings';
 import logger from '../core/logger';
@@ -105,18 +106,30 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
     return Promise.resolve({ accountIdsToInvalidate: [] });
   }
 
-  public async afterHandle(...eventArgs: any): Promise<void> {
+  public async afterHandle(context: {
+    args: any[];
+    blockTimestamp: Date;
+  }): Promise<void> {
+    const { args, blockTimestamp } = context;
+
+    // If the block is older than 1 minute, we don't invalidate the cache to avoid unnecessary requests while indexing.
+    if (new Date(blockTimestamp).getTime() < Date.now() - 60000) {
+      return;
+    }
+
     if (!appSettings.cacheInvalidationEndpoint) {
       return;
     }
 
     const accountIds = [] as AccountId[];
 
-    for (const arg of eventArgs) {
-      try {
-        const argAsString = arg.toString();
+    for (const arg of args) {
+      if (isAddress(arg)) {
+        return;
+      }
 
-        const accountId = toAccountId(argAsString);
+      try {
+        const accountId = toAccountId(arg);
 
         if (!accountIds.includes(accountId)) {
           accountIds.push(accountId);
@@ -137,7 +150,11 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
         });
 
         logger.info(
-          `Cache invalidated for accountIds: ${accountIds.join(', ')}`,
+          `'${
+            this.name
+          }' invalidated cache entries for accountIds: ${accountIds.join(
+            ', ',
+          )}`,
         );
       } catch (error: any) {
         logger.error(`Failed to invalidate cache: ${error.message}`);
