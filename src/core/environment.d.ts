@@ -5,6 +5,7 @@ declare global {
     interface ProcessEnv {
       NETWORK: SupportedNetwork;
       RPC_URL: string;
+      RPC_ACCESS_TOKEN: string | undefined;
       NODE_ENV: 'development' | 'production';
       LOG_LEVEL: 'debug' | 'info' | 'warn' | 'error';
       POLLING_INTERVAL: number;
