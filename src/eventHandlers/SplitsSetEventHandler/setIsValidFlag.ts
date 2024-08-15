@@ -9,7 +9,7 @@ import {
 } from '../../models';
 import { isNftDriverId, isRepoDriverId } from '../../utils/accountIdUtils';
 import type { SplitsReceiverStruct } from '../../../contracts/Drips';
-import shouldNeverHappen from '../../utils/shouldNeverHappen';
+import unreachableError from '../../utils/unreachableError';
 import { dripsContract } from '../../core/contractClients';
 import type LogManager from '../../core/LogManager';
 import { formatSplitReceivers } from '../AccountMetadataEmittedEvent/splitsValidator';
@@ -133,7 +133,7 @@ async function getProjectDbReceivers(accountId: RepoDriverId) {
       },
     }).then((receivers) =>
       receivers.map((receiver) => ({
-        accountId: receiver.fundeeAccountId ?? shouldNeverHappen(),
+        accountId: receiver.fundeeAccountId ?? unreachableError(),
         weight: receiver.weight,
       })),
     );
@@ -147,7 +147,7 @@ async function getProjectDbReceivers(accountId: RepoDriverId) {
       },
     }).then((receivers) =>
       receivers.map((receiver) => ({
-        accountId: receiver.fundeeProjectId ?? shouldNeverHappen(),
+        accountId: receiver.fundeeProjectId ?? unreachableError(),
         weight: receiver.weight,
       })),
     );
@@ -161,7 +161,7 @@ async function getProjectDbReceivers(accountId: RepoDriverId) {
       },
     }).then((receivers) =>
       receivers.map((receiver) => ({
-        accountId: receiver.fundeeDripListId ?? shouldNeverHappen(),
+        accountId: receiver.fundeeDripListId ?? unreachableError(),
         weight: receiver.weight,
       })),
     );
@@ -179,7 +179,7 @@ async function getDripListDbReceivers(accountId: DripListId) {
       },
     }).then((receivers) =>
       receivers.map((receiver) => ({
-        accountId: receiver.fundeeAccountId ?? shouldNeverHappen(),
+        accountId: receiver.fundeeAccountId ?? unreachableError(),
         weight: receiver.weight,
       })),
     );
@@ -193,7 +193,7 @@ async function getDripListDbReceivers(accountId: DripListId) {
       },
     }).then((receivers) =>
       receivers.map((receiver) => ({
-        accountId: receiver.fundeeProjectId ?? shouldNeverHappen(),
+        accountId: receiver.fundeeProjectId ?? unreachableError(),
         weight: receiver.weight,
       })),
     );
@@ -207,7 +207,7 @@ async function getDripListDbReceivers(accountId: DripListId) {
       },
     }).then((receivers) =>
       receivers.map((receiver) => ({
-        accountId: receiver.fundeeDripListId ?? shouldNeverHappen(),
+        accountId: receiver.fundeeDripListId ?? unreachableError(),
         weight: receiver.weight,
       })),
     );

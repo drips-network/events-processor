@@ -5,7 +5,7 @@ import type { AccountId, Result } from '../core/types';
 import { toAccountId } from '../utils/accountIdUtils';
 import { getContractInfoFromEvent } from '../utils/contractUtils';
 import getResult from '../utils/getResult';
-import shouldNeverHappen from '../utils/shouldNeverHappen';
+import unreachableError from '../utils/unreachableError';
 import type EventHandlerRequest from './EventHandlerRequest';
 import type {
   EventSignature,
@@ -93,7 +93,7 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
         break;
       }
       default: {
-        shouldNeverHappen('No contract found to register event listener on.');
+        unreachableError('No contract found to register event listener on.');
       }
     }
   }

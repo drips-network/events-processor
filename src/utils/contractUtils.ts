@@ -11,7 +11,7 @@ import {
   isNftDriverEvent,
   isRepoDriverEvent,
 } from './eventUtils';
-import shouldNeverHappen from './shouldNeverHappen';
+import unreachableError from './unreachableError';
 
 export function getContractNameFromAccountId(id: string): DripsContract {
   if (Number.isNaN(Number(id))) {
@@ -81,7 +81,7 @@ export async function getContractInfoFromEvent(
     };
   }
 
-  throw shouldNeverHappen(`No contract found for ${eventSignature} event.`);
+  throw unreachableError(`No contract found for ${eventSignature} event.`);
 }
 
 export async function removeAllListeners(): Promise<void> {

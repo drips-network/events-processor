@@ -1,16 +1,14 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
 import type { GitProjectModel } from '../../../models';
-import shouldNeverHappen from '../../../utils/shouldNeverHappen';
+import unreachableError from '../../../utils/unreachableError';
 
 export default async function validateProjectMetadata(
   project: GitProjectModel,
   metadata: AnyVersion<typeof repoDriverAccountMetadataParser>,
 ): Promise<void> {
   if (!metadata) {
-    shouldNeverHappen(
-      `Metadata for Git Project with ID ${project.id} is null.`,
-    );
+    unreachableError(`Metadata for Git Project with ID ${project.id} is null.`);
   }
 
   const errors = [];

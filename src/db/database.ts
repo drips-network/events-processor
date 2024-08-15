@@ -9,7 +9,7 @@ import {
   RepoDriverSplitReceiverModel,
 } from '../models';
 import appSettings from '../config/appSettings';
-import shouldNeverHappen from '../utils/shouldNeverHappen';
+import unreachableError from '../utils/unreachableError';
 
 const { postgresConnectionString } = appSettings;
 
@@ -40,7 +40,7 @@ async function authenticate(): Promise<void> {
 
     const schema = `"${(
       appSettings.network ||
-      shouldNeverHappen('Missing network in app settings.')
+      unreachableError('Missing network in app settings.')
     ).replace(/"/g, '""')}"`;
 
     await dbConnection.query(`CREATE SCHEMA IF NOT EXISTS ${schema};`);
