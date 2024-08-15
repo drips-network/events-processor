@@ -6,6 +6,7 @@ dotenv.config();
 const appSettings = {
   network: process.env.NETWORK || shouldNeverHappen('NETWORK is not set.'),
   rpcUrl: process.env.RPC_URL || shouldNeverHappen('RPC_URL is not set.'),
+  rpcAccessToken: process.env.RPC_ACCESS_TOKEN,
   logLevel: process.env.LOG_LEVEL || 'debug',
   pollingInterval: Number(process.env.POLLING_INTERVAL) ?? 5000,
   ipfsGatewayUrl:
@@ -18,7 +19,6 @@ const appSettings = {
   shouldProcessPastEvents:
     (process.env.SHOULD_PROCESS_PAST_EVENTS as unknown as string) === 'true',
   cacheInvalidationEndpoint: process.env.CACHE_INVALIDATION_ENDPOINT,
-  glifToken: process.env.GLIF_TOKEN,
 } as const;
 
 export default appSettings;
