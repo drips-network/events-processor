@@ -4,10 +4,10 @@ import { DataTypes } from 'sequelize';
 export const SUPPORTED_NETWORKS = [
   'mainnet',
   'sepolia',
-  'goerli',
   'localtestnet',
   'optimism_sepolia',
-  'polygon-amoy',
+  'polygon_amoy',
+  'filecoin',
 ] as const;
 
 export const FORGES_MAP = {

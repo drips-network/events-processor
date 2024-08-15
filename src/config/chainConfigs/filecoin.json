@@ -1,0 +1,23 @@
+{
+  "network": "filecoin",
+  "drips": {
+    "address": "0x29252acF5a3dA105CB3aC245B7758F6e50281ba7",
+    "block": 4173200
+  },
+  "repoDriver": {
+    "address": "0x249e35aC49ccC4B1F0688Bc4c0bFA866a1b1E3fE",
+    "block": 4173200
+  },
+  "addressDriver": {
+    "address": "0xE13A4f3671ee451F81Df3aa1AEb6653e4c33D5e0",
+    "block": 4173200
+  },
+  "nftDriver": {
+    "address": "0xE03d510d927816f3482C3C0204F14203403c0ee2",
+    "block": 4173200
+  },
+  "immutableSplitsDriver": {
+    "address": "0xf07bF47a4a118792f5392560C27EE6530Ca36cA3",
+    "block": 4173200
+  }
+}

@@ -6,7 +6,6 @@ declare global {
       NETWORK: SupportedNetwork;
       RPC_URL: string;
       NODE_ENV: 'development' | 'production';
-      ENV: 'local' | SupportedNetwork;
       LOG_LEVEL: 'debug' | 'info' | 'warn' | 'error';
       POLLING_INTERVAL: number;
       IPFS_GATEWAY_URL: string;

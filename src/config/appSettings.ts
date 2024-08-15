@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import shouldNeverHappen from '../utils/shouldNeverHappen';
 
-dotenv.config({ path: `.env.${process.env.ENV}` });
+dotenv.config();
 
 const appSettings = {
   network: process.env.NETWORK || shouldNeverHappen('NETWORK is not set.'),
@@ -18,6 +18,7 @@ const appSettings = {
   shouldProcessPastEvents:
     (process.env.SHOULD_PROCESS_PAST_EVENTS as unknown as string) === 'true',
   cacheInvalidationEndpoint: process.env.CACHE_INVALIDATION_ENDPOINT,
+  glifToken: process.env.GLIF_TOKEN,
 } as const;
 
 export default appSettings;

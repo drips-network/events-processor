@@ -4,12 +4,13 @@ import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { getContractInfoFromEvent } from '../utils/contractUtils';
 import { getTypedEvent } from '../utils/eventUtils';
 import loadChainConfig from '../config/loadChainConfig';
-import appProvider from './appProvider';
+import getProvider from './getProvider';
 
 export default async function processPastEvents(): Promise<void> {
   logger.info('Start processing past events. This might take a while...');
 
-  const endBlock = await appProvider.getBlockNumber();
+  const provider = getProvider();
+  const endBlock = await provider.getBlockNumber();
   logger.info(`End block number: ${endBlock}`);
 
   await Promise.all(
