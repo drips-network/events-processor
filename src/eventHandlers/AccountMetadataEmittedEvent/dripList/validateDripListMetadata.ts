@@ -1,6 +1,6 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
-import shouldNeverHappen from '../../../utils/shouldNeverHappen';
+import unreachableError from '../../../utils/unreachableError';
 import type { DripListModel } from '../../../models';
 
 export default async function validateDripListMetadata(
@@ -25,7 +25,7 @@ export default async function validateDripListMetadata(
   }
 
   if (!isDripList) {
-    shouldNeverHappen(
+    unreachableError(
       `isDripList mismatch with: got ${isDripList}, expected true`,
     );
   }

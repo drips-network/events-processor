@@ -1,11 +1,11 @@
 import dotenv from 'dotenv';
-import shouldNeverHappen from '../utils/shouldNeverHappen';
+import unreachableError from '../utils/unreachableError';
 
 dotenv.config({ path: `.env.${process.env.ENV}` });
 
 const appSettings = {
-  network: process.env.NETWORK || shouldNeverHappen('NETWORK is not set.'),
-  rpcUrl: process.env.RPC_URL || shouldNeverHappen('RPC_URL is not set.'),
+  network: process.env.NETWORK || unreachableError('NETWORK is not set.'),
+  rpcUrl: process.env.RPC_URL || unreachableError('RPC_URL is not set.'),
   logLevel: process.env.LOG_LEVEL || 'debug',
   pollingInterval: Number(process.env.POLLING_INTERVAL) ?? 5000,
   ipfsGatewayUrl:

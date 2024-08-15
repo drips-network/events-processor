@@ -4,7 +4,7 @@ import {
   NftDriver__factory,
   RepoDriver__factory,
 } from '../../contracts';
-import shouldNeverHappen from './shouldNeverHappen';
+import unreachableError from './unreachableError';
 import type {
   DripsEventSignature,
   EventSignature,
@@ -52,7 +52,7 @@ export async function getTypedEvent(
     return repoDriverContract.filters[eventSignature];
   }
 
-  return shouldNeverHappen(
+  return unreachableError(
     `No event found for filter signature ${eventSignature}.`,
   );
 }

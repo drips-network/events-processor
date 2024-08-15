@@ -24,7 +24,7 @@ import {
 import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
 import { assertDependencyOfProjectType } from '../../../utils/assert';
 import createDbEntriesForProjectDependency from '../createDbEntriesForProjectDependency';
-import shouldNeverHappen from '../../../utils/shouldNeverHappen';
+import unreachableError from '../../../utils/unreachableError';
 import { getProjectMetadata } from '../../../utils/metadataUtils';
 import validateProjectMetadata from './validateProjectMetadata';
 import validateSplitsReceivers from '../splitsValidator';
@@ -194,7 +194,7 @@ async function createDbEntriesForProjectSplits(
       );
     }
 
-    return shouldNeverHappen(
+    return unreachableError(
       `Dependency with account ID ${dependency.accountId} is not an Address nor a Git Project.`,
     );
   });
