@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { TypedEventLog } from '../../contracts/common';
 import { assertEventSignature } from '../utils/assert';
-import shouldNeverHappen from '../utils/shouldNeverHappen';
+import unreachableError from '../utils/unreachableError';
 import eventProcessingQueue from './queue';
 import type { EventSignature, EventSignatureToEventMap } from '../events/types';
 
@@ -20,7 +20,7 @@ export default async function saveEventProcessingJob<T extends EventSignature>(
       transactionHash,
       blockNumber,
       logIndex: index,
-      blockTimestamp: (await eventLog.getBlock()).date ?? shouldNeverHappen(),
+      blockTimestamp: (await eventLog.getBlock()).date ?? unreachableError(),
       args: JSON.stringify(args, (_, value) => {
         if (typeof value === 'bigint') {
           return value.toString();

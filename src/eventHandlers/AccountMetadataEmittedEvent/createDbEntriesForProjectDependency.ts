@@ -9,7 +9,7 @@ import GitProjectModel, {
   ProjectVerificationStatus,
 } from '../../models/GitProjectModel';
 import { FORGES_MAP } from '../../core/constants';
-import shouldNeverHappen from '../../utils/shouldNeverHappen';
+import unreachableError from '../../utils/unreachableError';
 import RepoDriverSplitReceiverModel from '../../models/RepoDriverSplitReceiverModel';
 import { isNftDriverId, isRepoDriverId } from '../../utils/accountIdUtils';
 
@@ -40,7 +40,7 @@ export default async function createDbEntriesForProjectDependency(
       forge:
         Object.values(FORGES_MAP).find(
           (f) => f.toLocaleLowerCase() === forge.toLowerCase(),
-        ) ?? shouldNeverHappen(),
+        ) ?? unreachableError(),
     },
   });
 

@@ -4,7 +4,7 @@ import { FORGES_MAP } from '../core/constants';
 import type { Forge } from '../core/types';
 import type { GitProjectModel } from '../models';
 import { ProjectVerificationStatus } from '../models/GitProjectModel';
-import shouldNeverHappen from './shouldNeverHappen';
+import unreachableError from './unreachableError';
 
 export function toProjectOwnerAddress(address: string): AddressLike {
   if (!ethers.isAddress(address)) {
@@ -56,7 +56,7 @@ export function calculateProjectStatus(
     return ProjectVerificationStatus.PendingOwner;
   }
 
-  return shouldNeverHappen(
+  return unreachableError(
     `Project with ID ${project.id} (${project.name}) has an invalid status.
     \r\tProject: ${JSON.stringify(project, null, 2)}`,
   );

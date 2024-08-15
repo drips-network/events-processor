@@ -24,7 +24,7 @@ import {
   RepoDriverSplitReceiverModel,
   DripListSplitReceiverModel,
 } from '../../../models';
-import shouldNeverHappen from '../../../utils/shouldNeverHappen';
+import unreachableError from '../../../utils/unreachableError';
 import validateSplitsReceivers from '../splitsValidator';
 import getUserAddress from '../../../utils/getAccountAddress';
 import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
@@ -159,7 +159,7 @@ async function createDbEntriesForDripListSplits(
       );
     }
 
-    return shouldNeverHappen(
+    return unreachableError(
       `Split with account ID ${split.accountId} is not an Address, Drip List, or a Git Project.`,
     );
   });
