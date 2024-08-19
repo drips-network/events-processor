@@ -8,10 +8,7 @@ import type EventHandlerBase from './EventHandlerBase';
 import type { EventSignature } from './types';
 import _LastIndexedBlockModel from '../models/_LastIndexedBlockModel';
 import logger from '../core/logger';
-
-const POLL_INTERVAL = 1000;
-const CHUNK_SIZE = 10000;
-const CONFIRMATIONS = 1;
+import appSettings from '../config/appSettings';
 
 async function getLatestIndexedBlock() {
   const record = await _LastIndexedBlockModel.findOne({
@@ -28,6 +25,8 @@ function setLatestIndexedBlock(blockNumber: number) {
   });
 }
 
+const { pollingInterval, chunkSize, confirmations } = appSettings;
+
 export default async function poll(
   contracts: {
     contract: BaseContract;
@@ -42,8 +41,8 @@ export default async function poll(
 
   let fromBlock = Math.max(startFromBlock ?? 0, lastIndexedBlock + 1);
   const toBlock = Math.min(
-    fromBlock + CHUNK_SIZE - 1,
-    latestBlock - CONFIRMATIONS,
+    fromBlock + chunkSize - 1,
+    latestBlock - confirmations,
   );
 
   fromBlock = Math.min(fromBlock, toBlock);
@@ -66,7 +65,7 @@ export default async function poll(
 
         const parsedLog = contractW.contract.interface.parseLog(l);
         if (!parsedLog) {
-          logger.warn('Unable to parse log', l);
+          logger.warn(`Unable to parse log: ${JSON.stringify(l)}`);
           return undefined;
         }
 
@@ -103,7 +102,7 @@ export default async function poll(
     await setLatestIndexedBlock(toBlock);
   }
 
-  const delay = toBlock === fromBlock ? POLL_INTERVAL : 0;
+  const delay = toBlock === fromBlock ? pollingInterval : 0;
 
   setTimeout(() => {
     poll(contracts, registrations, provider);
