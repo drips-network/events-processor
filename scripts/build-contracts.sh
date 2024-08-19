@@ -1,5 +1,7 @@
 #!/bin/bash
 
+rm -rf ./contracts/*
+
 echo ⚠️ Important! The code this step generates depends on the current NETWORK environment variable.
 echo ⚠️ It\'s currently set to $NETWORK
 echo ⚠️ If you change the NETWORK environment variable, you must re-run this script.
@@ -30,6 +32,8 @@ source .env
 # matching the $NETWORK env var
 mkdir -p contracts/CURRENT_NETWORK
 cp -r contracts/$NETWORK/* contracts/CURRENT_NETWORK/
+
+echo "export default '$NETWORK';" > contracts/CURRENT_NETWORK/network-constant.ts
 
 echo ✅ Done
 echo
