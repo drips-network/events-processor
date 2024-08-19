@@ -1,4 +1,4 @@
-import type { SplitsReceiverStruct } from '../../../contracts/Drips';
+import type { SplitsReceiverStruct } from '../../../contracts/CURRENT_NETWORK/Drips';
 import type { DripListId, ProjectId } from '../../core/types';
 import { dripsContract } from '../../core/contractClients';
 
@@ -49,8 +49,8 @@ export function formatSplitReceivers(
     BigInt(a.accountId) > BigInt(b.accountId)
       ? 1
       : BigInt(a.accountId) < BigInt(b.accountId)
-      ? -1
-      : 0,
+        ? -1
+        : 0,
   );
 
   return sortedReceivers;

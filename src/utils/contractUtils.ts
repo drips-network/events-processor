@@ -1,17 +1,4 @@
-import type { Drips, NftDriver, RepoDriver } from '../../contracts';
 import type { DripsContract } from '../core/types';
-import type { EventSignature } from '../events/types';
-import {
-  dripsContract,
-  nftDriverContract,
-  repoDriverContract,
-} from '../core/contractClients';
-import {
-  isDripsEvent,
-  isNftDriverEvent,
-  isRepoDriverEvent,
-} from './eventUtils';
-import unreachableError from './unreachableError';
 
 export function getContractNameFromAccountId(id: string): DripsContract {
   if (Number.isNaN(Number(id))) {
@@ -42,52 +29,4 @@ export function getContractNameFromAccountId(id: string): DripsContract {
     default:
       throw new Error(`Unknown driver for ID ${id}.`);
   }
-}
-
-export async function getContractInfoFromEvent(
-  eventSignature: EventSignature,
-): Promise<
-  | {
-      name: 'drips';
-      contract: Drips;
-    }
-  | {
-      name: 'nftDriver';
-      contract: NftDriver;
-    }
-  | {
-      name: 'repoDriver';
-      contract: RepoDriver;
-    }
-> {
-  if (isDripsEvent(eventSignature)) {
-    return {
-      contract: dripsContract,
-      name: 'drips',
-    };
-  }
-
-  if (isNftDriverEvent(eventSignature)) {
-    return {
-      contract: nftDriverContract,
-      name: 'nftDriver',
-    };
-  }
-
-  if (isRepoDriverEvent(eventSignature)) {
-    return {
-      contract: repoDriverContract,
-      name: 'repoDriver',
-    };
-  }
-
-  throw unreachableError(`No contract found for ${eventSignature} event.`);
-}
-
-export async function removeAllListeners(): Promise<void> {
-  await Promise.all([
-    dripsContract.removeAllListeners(),
-    nftDriverContract.removeAllListeners(),
-    repoDriverContract.removeAllListeners(),
-  ]);
 }

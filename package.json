@@ -11,7 +11,7 @@
     "test": "AUTH_STRATEGY=dev jest --detectOpenHandles --config=jest.config.ts",
     "test:coverage": "jest --coverage",
     "build": "npm run build:contracts && tsc",
-    "build:contracts": "typechain --target=ethers-v6 --out-dir contracts ./src/abi/**.json",
+    "build:contracts": "./scripts/build-contracts.sh && ./scripts/codegen-any-chain-types.sh",
     "postbuild": "rm -rf ./dist/src/config/chainConfigs && cp -r ./src/config/chainConfigs ./dist/src/config/chainConfigs",
     "dev": "npx nodemon",
     "start": "npm run build && node dist/src/index.js",

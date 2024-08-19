@@ -1,19 +1,18 @@
-import type { TypedListener, TypedContractEvent } from '../../contracts/common';
-import type { StreamReceiverSeenEvent } from '../../contracts/Drips';
+import type { StreamReceiverSeenEvent } from '../../contracts/CURRENT_NETWORK/Drips';
 import LogManager from '../core/LogManager';
-import type { AccountId, KnownAny } from '../core/types';
+import type { AccountId } from '../core/types';
 import { dbConnection } from '../db/database';
 import EventHandlerBase from '../events/EventHandlerBase';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import StreamReceiverSeenEventModel from '../models/StreamReceiverSeenEventModel';
-import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { toAccountId } from '../utils/accountIdUtils';
 import { toBigIntString } from '../utils/bigintUtils';
 import { getCurrentSplitsByReceiversHash } from '../utils/getCurrentSplits';
 
 export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'StreamReceiverSeen(bytes32,uint256,uint256)'> {
-  public eventSignature =
-    'StreamReceiverSeen(bytes32,uint256,uint256)' as const;
+  public eventSignatures = [
+    'StreamReceiverSeen(bytes32,uint256,uint256)' as const,
+  ];
 
   protected async _handle(
     request: EventHandlerRequest<'StreamReceiverSeen(bytes32,uint256,uint256)'>,
@@ -30,7 +29,7 @@ export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'St
     const config = toBigIntString(rawConfig.toString());
 
     LogManager.logRequestInfo(
-      `📥 ${this.name} is processing the following ${this.eventSignature}:
+      `📥 ${this.name} is processing the following ${request.event.eventSignature}:
       \r\t - receiversHash: ${rawReceiversHash}
       \r\t - accountId:     ${accountId}
       \r\t - config:        ${config}
@@ -68,19 +67,6 @@ export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'St
       );
     });
   }
-
-  protected onReceive: TypedListener<
-    TypedContractEvent<
-      StreamReceiverSeenEvent.InputTuple,
-      StreamReceiverSeenEvent.OutputTuple,
-      StreamReceiverSeenEvent.OutputObject
-    >
-  > = async (_receiversHash, _accountId, _config, eventLog) => {
-    await saveEventProcessingJob(
-      (eventLog as KnownAny).log,
-      this.eventSignature,
-    );
-  };
 
   public override async beforeHandle(
     request: EventHandlerRequest<'StreamReceiverSeen(bytes32,uint256,uint256)'>,

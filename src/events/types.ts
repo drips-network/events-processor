@@ -1,78 +1,35 @@
-import type { Drips, NftDriver, RepoDriver } from '../../contracts';
-import type {
-  TypedContractEvent,
-  TypedLogDescription,
-} from '../../contracts/common';
 import type EventHandlerBase from './EventHandlerBase';
 import type { ValuesOf } from '../core/types';
+import type {
+  AnyChainDripsFilters,
+  AnyChainNftDriverFilters,
+  AnyChainRepoDriverFilters,
+  AnyChainTypedLogDescription,
+} from '../../contracts/contract-types';
 
-// -------------------------- Filter types inference -----------------------------------------
-// ! DO NOT EXPORT THESE. It will fail in runtime.
-// This is a utility code snippet used for inferring filter types from different contracts.
+// flat object type with all keys and values from the above
+type AllFilters = AnyChainDripsFilters &
+  AnyChainNftDriverFilters &
+  AnyChainRepoDriverFilters;
 
-const _dripsFilters = ({} as Drips).filters;
-const _nftDriverFilters = ({} as NftDriver).filters;
-const _repoDriverFilters = ({} as RepoDriver).filters;
+export type DripsContractEvent = ValuesOf<AnyChainDripsFilters>;
+export type NftDriverContractEvent = ValuesOf<AnyChainNftDriverFilters>;
+export type RepoDriverContractEvent = ValuesOf<AnyChainRepoDriverFilters>;
 
-// Drips event names across different drivers are unique.
-// If the events were not unique, spreading filters like this could cause some filters to be overwritten!
-const _allFilters = {
-  ..._dripsFilters,
-  ..._nftDriverFilters,
-  ..._repoDriverFilters,
-};
-// -------------------------------------------------------------------------------------------
+type OnlySignatures<T> = T extends `${infer Prefix}(${infer Suffix})`
+  ? `${Prefix}(${Suffix})`
+  : never;
 
-export type DripsContractEvent = ValuesOf<typeof _dripsFilters>;
-export type NftDriverContractEvent = ValuesOf<typeof _nftDriverFilters>;
-export type RepoDriverContractEvent = ValuesOf<typeof _repoDriverFilters>;
-
-type EventSignaturePattern = `${string}(${string})`;
-
-export type DripsEventSignature = {
-  [T in keyof typeof _dripsFilters]: T extends string
-    ? T extends EventSignaturePattern
-      ? T
-      : never
-    : never;
-}[keyof typeof _dripsFilters];
-
-export type NftDriverEventSignature = {
-  [T in keyof typeof _nftDriverFilters]: T extends string
-    ? T extends EventSignaturePattern
-      ? T
-      : never
-    : never;
-}[keyof typeof _nftDriverFilters];
-
-export type RepoDriverEventSignature = {
-  [T in keyof typeof _repoDriverFilters]: T extends string
-    ? T extends EventSignaturePattern
-      ? T
-      : never
-    : never;
-}[keyof typeof _repoDriverFilters];
-
-export type EventSignature =
-  | DripsEventSignature
-  | NftDriverEventSignature
-  | RepoDriverEventSignature;
+export type EventSignature = OnlySignatures<keyof AllFilters>;
 
 export type EventSignatureToEventMap = {
-  [K in EventSignature]: (typeof _allFilters)[K];
+  [K in EventSignature]: AllFilters[K];
 };
 
 export type SupportedEvent = ValuesOf<EventSignatureToEventMap>;
 
-export type ExtractOutputObject<T> = T extends TypedContractEvent<
-  any,
-  infer TOutputTuple,
-  any
->
-  ? TOutputTuple
-  : never;
-
-type EventArgs<T extends SupportedEvent> = TypedLogDescription<T>['args'];
+type EventArgs<T extends SupportedEvent> =
+  AnyChainTypedLogDescription<T>['args'];
 
 export type EventData<T extends EventSignature> = {
   logIndex: number;

@@ -8,7 +8,7 @@ import {
   RepoDriverSplitReceiverModel,
 } from '../../models';
 import { isNftDriverId, isRepoDriverId } from '../../utils/accountIdUtils';
-import type { SplitsReceiverStruct } from '../../../contracts/Drips';
+import type { SplitsReceiverStruct } from '../../../contracts/CURRENT_NETWORK/Drips';
 import unreachableError from '../../utils/unreachableError';
 import { dripsContract } from '../../core/contractClients';
 import type LogManager from '../../core/LogManager';

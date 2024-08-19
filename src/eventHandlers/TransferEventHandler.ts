@@ -1,17 +1,14 @@
-import type { TransferEvent } from '../../contracts/NftDriver';
+import type { TransferEvent } from '../../contracts/CURRENT_NETWORK/NftDriver';
 import EventHandlerBase from '../events/EventHandlerBase';
 import LogManager from '../core/LogManager';
-import type { TypedContractEvent, TypedListener } from '../../contracts/common';
-import type { KnownAny } from '../core/types';
 import { calcAccountId, toNftDriverId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import { DripListModel, TransferEventModel } from '../models';
-import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { dbConnection } from '../db/database';
 import { isLatestEvent } from '../utils/eventUtils';
 
 export default class TransferEventHandler extends EventHandlerBase<'Transfer(address,address,uint256)'> {
-  public eventSignature = 'Transfer(address,address,uint256)' as const;
+  public eventSignatures = ['Transfer(address,address,uint256)' as const];
 
   protected async _handle(
     request: EventHandlerRequest<'Transfer(address,address,uint256)'>,
@@ -26,7 +23,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
     const id = toNftDriverId(tokenId);
 
     LogManager.logRequestInfo(
-      `📥 ${this.name} is processing the following ${this.eventSignature}:
+      `📥 ${this.name} is processing the following ${request.event.eventSignature}:
       \r\t - from:        ${from}
       \r\t - to:          ${to}
       \r\t - tokenId:     ${tokenId}
@@ -120,26 +117,5 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
 
       logManager.logAllInfo();
     });
-  }
-
-  protected onReceive: TypedListener<
-    TypedContractEvent<
-      TransferEvent.InputTuple,
-      TransferEvent.OutputTuple,
-      TransferEvent.OutputObject
-    >
-  > = async (_from, _to, _tokenId, eventLog) => {
-    await saveEventProcessingJob(
-      (eventLog as KnownAny).log,
-      this.eventSignature,
-    );
-  };
-
-  override async afterHandle(
-    from: string,
-    to: string,
-    tokenId: bigint,
-  ): Promise<void> {
-    super.afterHandle(...[tokenId, calcAccountId(from), calcAccountId(to)]);
   }
 }

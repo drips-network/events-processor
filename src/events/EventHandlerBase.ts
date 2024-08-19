@@ -1,39 +1,25 @@
-import type { TypedListener } from '../../contracts/common';
 import appSettings from '../config/appSettings';
 import logger from '../core/logger';
 import type { AccountId, Result } from '../core/types';
+import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { toAccountId } from '../utils/accountIdUtils';
-import { getContractInfoFromEvent } from '../utils/contractUtils';
 import getResult from '../utils/getResult';
-import unreachableError from '../utils/unreachableError';
 import type EventHandlerRequest from './EventHandlerRequest';
-import type {
-  EventSignature,
-  EventSignatureToEventMap,
-  DripsContractEvent,
-  RepoDriverContractEvent,
-  DripsEventSignature,
-  RepoDriverEventSignature,
-  NftDriverEventSignature,
-  NftDriverContractEvent,
-} from './types';
+import type { EventSignature } from './types';
 
 export default abstract class EventHandlerBase<T extends EventSignature> {
   public readonly name = Object.getPrototypeOf(this).constructor.name;
 
-  public abstract readonly eventSignature: T;
-
-  /**
-   * The callback function that will be called when the event is received.
-   */
-  protected abstract readonly onReceive: TypedListener<
-    EventSignatureToEventMap[T]
-  >;
+  public abstract readonly eventSignatures: T[];
 
   /**
    * Contains the handler's logic.
    */
   protected abstract _handle(request: EventHandlerRequest<T>): Promise<void>;
+
+  public async createJob(request: EventHandlerRequest<T>): Promise<void> {
+    await saveEventProcessingJob(request, request.event.eventSignature);
+  }
 
   /**
    * Executes the handler.
@@ -48,54 +34,6 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
     }
 
     return result;
-  }
-
-  /**
-   * Registers the {@link onReceive} listener for the event.
-   */
-  public async registerEventListener(): Promise<void> {
-    const { contract, name: contractName } = await getContractInfoFromEvent(
-      this.eventSignature,
-    );
-
-    switch (contractName) {
-      case 'drips': {
-        const eventFilter =
-          contract.filters[this.eventSignature as DripsEventSignature];
-
-        await contract.on(
-          eventFilter,
-          this.onReceive as TypedListener<DripsContractEvent>,
-        );
-
-        break;
-      }
-      case 'repoDriver': {
-        const eventFilter =
-          contract.filters[this.eventSignature as RepoDriverEventSignature];
-
-        await contract.on(
-          eventFilter,
-          this.onReceive as TypedListener<RepoDriverContractEvent>,
-        );
-
-        break;
-      }
-      case 'nftDriver': {
-        const eventFilter =
-          contract.filters[this.eventSignature as NftDriverEventSignature];
-
-        await contract.on(
-          eventFilter,
-          this.onReceive as TypedListener<NftDriverContractEvent>,
-        );
-
-        break;
-      }
-      default: {
-        unreachableError('No contract found to register event listener on.');
-      }
-    }
   }
 
   // eslint-disable-next-line no-unused-vars

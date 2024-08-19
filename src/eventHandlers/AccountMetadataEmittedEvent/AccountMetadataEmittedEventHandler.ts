@@ -1,12 +1,7 @@
-import type {
-  TypedContractEvent,
-  TypedListener,
-} from '../../../contracts/common';
-import type { AccountMetadataEmittedEvent } from '../../../contracts/Drips';
-import type { AccountId, KnownAny } from '../../core/types';
+import type { AccountMetadataEmittedEvent } from '../../../contracts/CURRENT_NETWORK/Drips';
+import type { AccountId } from '../../core/types';
 
 import EventHandlerBase from '../../events/EventHandlerBase';
-import saveEventProcessingJob from '../../queue/saveEventProcessingJob';
 import { DRIPS_APP_USER_METADATA_KEY } from '../../core/constants';
 import handleGitProjectMetadata from './gitProject/handleGitProjectMetadata';
 import LogManager from '../../core/LogManager';
@@ -24,8 +19,9 @@ import { dbConnection } from '../../db/database';
 import { getCurrentSplitsByAccountId } from '../../utils/getCurrentSplits';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
-  public readonly eventSignature =
-    'AccountMetadataEmitted(uint256,bytes32,bytes)' as const;
+  public readonly eventSignatures = [
+    'AccountMetadataEmitted(uint256,bytes32,bytes)' as const,
+  ];
 
   protected async _handle(
     request: EventHandlerRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
@@ -40,7 +36,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
 
     if (!this._isEmittedByTheDripsApp(key)) {
       LogManager.logRequestInfo(
-        `Skipping ${this.eventSignature} event processing because the key '${key}' is not emitted by the Drips App.`,
+        `Skipping ${request.event.eventSignature} event processing because the key '${key}' is not emitted by the Drips App.`,
         requestId,
       );
 
@@ -51,7 +47,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
     const ipfsHash = toIpfsHash(value);
 
     LogManager.logRequestInfo(
-      `📥 ${this.name} is processing the following ${this.eventSignature}:
+      `📥 ${this.name} is processing the following ${request.event.eventSignature}:
       \r\t - key:         ${key}
       \r\t - value:       ${value} (ipfs hash: ${ipfsHash})
       \r\t - accountId:   ${typedAccountId}
@@ -137,19 +133,6 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       logManager.logAllInfo();
     });
   }
-
-  protected onReceive: TypedListener<
-    TypedContractEvent<
-      AccountMetadataEmittedEvent.InputTuple,
-      AccountMetadataEmittedEvent.OutputTuple,
-      AccountMetadataEmittedEvent.OutputObject
-    >
-  > = async (_accountId, _key, _value, eventLog) => {
-    await saveEventProcessingJob(
-      (eventLog as KnownAny).log,
-      this.eventSignature,
-    );
-  };
 
   public override async beforeHandle(
     request: EventHandlerRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,

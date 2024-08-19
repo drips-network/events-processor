@@ -14,6 +14,7 @@ import {
   StreamsSetEventModel,
   StreamReceiverSeenEventModel,
 } from '../models';
+import _LastIndexedBlockModel from '../models/_LastIndexedBlockModel';
 import SplitEventModel from '../models/SplitEventModel';
 import SqueezedStreamsEventModel from '../models/SqueezedStreamsEventModel';
 
@@ -28,6 +29,8 @@ export function getRegisteredModels(): ModelStaticMembers[] {
 }
 
 export function registerModels(): void {
+  registerModel(_LastIndexedBlockModel);
+
   registerModel(DripListModel);
   registerModel(GivenEventModel);
   registerModel(SplitEventModel);

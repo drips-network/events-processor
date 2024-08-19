@@ -1,9 +1,7 @@
-import type { OwnerUpdateRequestedEvent } from '../../contracts/RepoDriver';
+import type { OwnerUpdateRequestedEvent as CurrentNetworkOwnerUpdateRequestedEvent } from '../../contracts/CURRENT_NETWORK/RepoDriver';
+import type { OwnerUpdateRequestedEvent as FilecoinOwnerUpdateRequestedEvent } from '../../contracts/filecoin/RepoDriver';
 import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
-import type { TypedContractEvent, TypedListener } from '../../contracts/common';
-import type { KnownAny } from '../core/types';
 import EventHandlerBase from '../events/EventHandlerBase';
-import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { GitProjectModel } from '../models';
 import { ProjectVerificationStatus } from '../models/GitProjectModel';
 import {
@@ -19,27 +17,36 @@ import type EventHandlerRequest from '../events/EventHandlerRequest';
 import { dbConnection } from '../db/database';
 import { singleOrDefault } from '../utils/linq';
 
-export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'OwnerUpdateRequested(uint256,uint8,bytes)'> {
-  public readonly eventSignature =
-    'OwnerUpdateRequested(uint256,uint8,bytes)' as const;
+export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<
+  | 'OwnerUpdateRequested(uint256,uint8,bytes,address)'
+  | 'OwnerUpdateRequested(uint256,uint8,bytes)'
+> {
+  public readonly eventSignatures = [
+    'OwnerUpdateRequested(uint256,uint8,bytes,address)' as const,
+    'OwnerUpdateRequested(uint256,uint8,bytes)' as const,
+  ];
 
   protected async _handle(
-    request: EventHandlerRequest<'OwnerUpdateRequested(uint256,uint8,bytes)'>,
+    request: EventHandlerRequest<
+      | 'OwnerUpdateRequested(uint256,uint8,bytes,address)'
+      | 'OwnerUpdateRequested(uint256,uint8,bytes)'
+    >,
   ): Promise<void> {
     const {
       id: requestId,
       event: { args, logIndex, blockNumber, blockTimestamp, transactionHash },
     } = request;
 
-    const [accountId, forge, name] =
-      args as OwnerUpdateRequestedEvent.OutputTuple;
+    const [accountId, forge, name] = args as
+      | CurrentNetworkOwnerUpdateRequestedEvent.OutputTuple
+      | FilecoinOwnerUpdateRequestedEvent.OutputTuple;
 
     const repoDriverId = toRepoDriverId(accountId);
     const forgeAsString = toForge(forge);
     const decodedName = toReadable(name);
 
     LogManager.logRequestInfo(
-      `📥 ${this.name} is processing the following ${this.eventSignature}:
+      `📥 ${this.name} is processing the following ${request.event.eventSignature}:
       \r\t - forge:       ${forgeAsString}
       \r\t - name:        ${decodedName}
       \r\t - accountId:   ${repoDriverId}
@@ -139,23 +146,6 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<'
       logManager.logAllInfo();
     });
   }
-
-  protected onReceive: TypedListener<
-    TypedContractEvent<
-      OwnerUpdateRequestedEvent.InputTuple,
-      OwnerUpdateRequestedEvent.OutputTuple,
-      OwnerUpdateRequestedEvent.OutputObject
-    >
-    // TODO: change `eventLog` type.
-    // Until ethers/typechain fixes the related bug, the received `eventLog` is typed as 'any' (in ALL listeners).
-    // It should be of `TypedEventLog<TypedContractEvent<...>>`, which TS infers by default.
-    // When fixed, we won't need to pass event.log to `executeHandle`.
-  > = async (_accountId, _forge, _name, eventLog) => {
-    await saveEventProcessingJob(
-      (eventLog as KnownAny).log,
-      this.eventSignature,
-    );
-  };
 
   override async afterHandle(accountId: bigint): Promise<void> {
     const ownerAccountId = singleOrDefault(
