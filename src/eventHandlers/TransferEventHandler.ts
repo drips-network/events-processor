@@ -118,4 +118,12 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
       logManager.logAllInfo();
     });
   }
+
+  override async afterHandle(
+    from: string,
+    to: string,
+    tokenId: bigint,
+  ): Promise<void> {
+    super.afterHandle(...[tokenId, calcAccountId(from), calcAccountId(to)]);
+  }
 }
