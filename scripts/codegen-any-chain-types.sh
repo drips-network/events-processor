@@ -32,6 +32,8 @@ for chain_name in ./src/abi/*/; do
     chain_names+=("$chain_name")
 done
 
+filters_string="'filters'"
+
 cat > ./contracts/contract-types.ts <<EOF
 // This file is auto-generated, do not edit manually
 
@@ -54,13 +56,13 @@ export type AnyChainAddressDriver = \
 $(echo "${chain_names[*]/%/AddressDriver |}" | sed 's/|$//')
 
 export type AnyChainDripsFilters = \
-$(echo "${chain_names[*]/%/Drips['filters'] &}" | sed 's/&$//')
+$(echo "${chain_names[*]/%/Drips[$filters_string] &}" | sed 's/&$//')
 export type AnyChainNftDriverFilters = \
-$(echo "${chain_names[*]/%/NftDriver['filters'] &}" | sed 's/&$//')
+$(echo "${chain_names[*]/%/NftDriver[$filters_string] &}" | sed 's/&$//')
 export type AnyChainRepoDriverFilters = \
-$(echo "${chain_names[*]/%/RepoDriver['filters'] &}" | sed 's/&$//')
+$(echo "${chain_names[*]/%/RepoDriver[$filters_string] &}" | sed 's/&$//')
 export type AnyChainAddressDriverFilters = \
-$(echo "${chain_names[*]/%/AddressDriver['filters'] &}" | sed 's/&$//')
+$(echo "${chain_names[*]/%/AddressDriver[$filters_string] &}" | sed 's/&$//')
 
 export type AnyChainTypedContractEvent = \
 $(echo "${chain_names[*]/%/TypedContractEvent |}" | sed 's/|$//')
