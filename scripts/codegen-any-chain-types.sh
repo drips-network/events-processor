@@ -92,4 +92,5 @@ export const getAddressDriverContract: (contractAddress: string, provider: Provi
 );
 EOF
 
-echo ✅ All done
+echo ✅ All done, generated code:
+cat ./contracts/contract-types.ts
