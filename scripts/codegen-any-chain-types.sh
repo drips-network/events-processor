@@ -1,9 +1,13 @@
 #!/bin/bash
 
-source .env
-
 echo 🤓 Generating code for contract types
 echo
+
+if [ -f .env ]; then
+    source .env
+else
+    echo ⚠️ Warning: .env file not found. Make sure the NETWORK env var is set as expected.
+fi
 
 # Error if the NETWORK environment variable is not set
 if [ -z "$NETWORK" ]; then

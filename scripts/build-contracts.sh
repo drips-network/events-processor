@@ -1,13 +1,26 @@
 #!/bin/bash
 
+echo 🤓 Building contract types with Typechain
+echo
+
+if [ -f .env ]; then
+    source .env
+else
+    echo ⚠️ Warning: .env file not found. Make sure the NETWORK env var is set as expected.
+fi
+
+
+# Error if the NETWORK environment variable is not set
+if [ -z "$NETWORK" ]; then
+    echo "- 🤡 NETWORK environment variable is not set"
+    exit 1
+fi
+
 rm -rf ./contracts/*
 
 echo ⚠️ Important! The code this step generates depends on the current NETWORK environment variable.
 echo ⚠️ It\'s currently set to $NETWORK
 echo ⚠️ If you change the NETWORK environment variable, you must re-run this script.
-echo
-
-echo 🤓 Building contract types with Typechain
 echo
 
 # Find all directories (representing chain names) within ./src/abi/
@@ -25,8 +38,6 @@ for chain_name in ./src/abi/*/; do
 done
 
 echo
-
-source .env
 
 # Create a folder `CURRENT_NETWORK` in the contracts directory and copy all files from the network dir
 # matching the $NETWORK env var
