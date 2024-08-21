@@ -124,9 +124,18 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
     });
   }
 
-  override async afterHandle(accountId: bigint, owner: string): Promise<void> {
+  override async afterHandle(context: {
+    args: [accountId: bigint, owner: string];
+    blockTimestamp: Date;
+  }): Promise<void> {
+    const { args, blockTimestamp } = context;
+    const [accountId, owner] = args;
+
     const ownerAccountId = await calcAccountId(owner);
 
-    super.afterHandle(...[accountId, ownerAccountId]);
+    super.afterHandle({
+      args: [accountId, ownerAccountId],
+      blockTimestamp,
+    });
   }
 }

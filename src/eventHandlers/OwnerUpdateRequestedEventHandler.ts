@@ -147,7 +147,13 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<
     });
   }
 
-  override async afterHandle(accountId: bigint): Promise<void> {
+  override async afterHandle(context: {
+    args: [accountId: bigint];
+    blockTimestamp: Date;
+  }): Promise<void> {
+    const { args, blockTimestamp } = context;
+    const [accountId] = args;
+
     const ownerAccountId = singleOrDefault(
       await GitProjectModel.findAll({
         where: {
@@ -156,6 +162,9 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<
       }),
     )?.ownerAccountId;
 
-    super.afterHandle(...[accountId, ownerAccountId].filter(Boolean));
+    super.afterHandle({
+      args: [accountId, ownerAccountId],
+      blockTimestamp,
+    });
   }
 }
