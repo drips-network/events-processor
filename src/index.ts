@@ -107,7 +107,7 @@ async function initFailoverProvider() {
         maxRetries: Infinity, // Retry indefinitely.
         baseBackoffDelay: 30000, // Start with a 30 second delay.
         maxBackoffDelay: 600000, // Cap the delay at 10 minutes.
-        maxRetryDuration: maxPrimaryProviderRetryDuration, // Retry for up to 24 hours.
+        maxRetryDuration: maxPrimaryProviderRetryDuration,
       },
       name: primaryRpcUrl,
     },
