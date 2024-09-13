@@ -83,6 +83,7 @@ async function init() {
     startQueueMonitoringUI();
   }
 }
+
 async function initFailoverProvider() {
   const {
     primaryRpcUrl,
@@ -125,7 +126,7 @@ async function initFailoverProvider() {
         ]
       : undefined,
     logger,
-    pingInterval: 10000, // 30 * 60 * 1000, // 30 minutes
+    pingInterval: 30 * 60 * 1000, // 30 minutes
   });
 }
 
