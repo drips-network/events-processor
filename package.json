@@ -8,7 +8,7 @@
     "format": "prettier --write .",
     "docker:clean": "docker-compose down && docker volume rm events-processor_postgres_data",
     "lint": "prettier --check . && eslint src/**/*.ts",
-    "test": "AUTH_STRATEGY=dev jest --detectOpenHandles --config=jest.config.ts",
+    "test": "jest --detectOpenHandles --config=jest.config.ts",
     "test:coverage": "jest --coverage",
     "build": "npm run build:contracts && tsc",
     "build:contracts": "./scripts/build-contracts.sh && ./scripts/codegen-any-chain-types.sh",

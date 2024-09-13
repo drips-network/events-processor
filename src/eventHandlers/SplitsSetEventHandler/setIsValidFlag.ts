@@ -10,15 +10,23 @@ import {
 import { isNftDriverId, isRepoDriverId } from '../../utils/accountIdUtils';
 import type { SplitsReceiverStruct } from '../../../contracts/CURRENT_NETWORK/Drips';
 import unreachableError from '../../utils/unreachableError';
-import { dripsContract } from '../../core/contractClients';
 import type LogManager from '../../core/LogManager';
 import { formatSplitReceivers } from '../AccountMetadataEmittedEvent/splitsValidator';
+import { getDripsContract } from '../../../contracts/contract-types';
+import loadChainConfig from '../../config/loadChainConfig';
+import FailoverProvider from '../../core/FailoverProvider';
 
 export default async function setIsValidFlag(
   splitsSetEvent: SplitsSetEventModel,
   logManager: LogManager,
 ): Promise<void> {
   const { accountId, receiversHash } = splitsSetEvent;
+
+  const dripsContract = getDripsContract(
+    loadChainConfig().contracts.drips.address,
+    FailoverProvider.getActiveProvider(),
+  );
+
   const onChainSplitsHash = await dripsContract.splitsHash(accountId);
 
   // Only if the `SplitsSet` event is the latest event (on-chain), we validate the splits.

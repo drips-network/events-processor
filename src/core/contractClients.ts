@@ -5,26 +5,32 @@ import {
   getRepoDriverContract,
 } from '../../contracts/contract-types';
 import loadChainConfig from '../config/loadChainConfig';
-import getProvider from './getProvider';
+import FailoverProvider from './FailoverProvider';
 
 const { contracts } = loadChainConfig();
 const { drips, addressDriver, nftDriver, repoDriver } = contracts;
 
-const provider = getProvider();
+export async function dripContract() {
+  return getDripsContract(drips.address, FailoverProvider.getActiveProvider());
+}
 
-export const dripsContract = getDripsContract(drips.address, provider);
+export async function addressDriverContract() {
+  return getAddressDriverContract(
+    addressDriver.address,
+    FailoverProvider.getActiveProvider(),
+  );
+}
 
-export const addressDriverContract = getAddressDriverContract(
-  addressDriver.address,
-  provider,
-);
+export async function nftDriverContract() {
+  return getNftDriverContract(
+    nftDriver.address,
+    FailoverProvider.getActiveProvider(),
+  );
+}
 
-export const nftDriverContract = getNftDriverContract(
-  nftDriver.address,
-  provider,
-);
-
-export const repoDriverContract = getRepoDriverContract(
-  repoDriver.address,
-  provider,
-);
+export async function repoDriverContract() {
+  return getRepoDriverContract(
+    repoDriver.address,
+    FailoverProvider.getActiveProvider(),
+  );
+}

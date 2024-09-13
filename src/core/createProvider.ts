@@ -1,16 +1,17 @@
-import type { Provider } from 'ethers';
 import { FetchRequest, JsonRpcProvider, WebSocketProvider } from 'ethers';
 import unreachableError from '../utils/unreachableError';
-import appSettings from '../config/appSettings';
+import logger from './logger';
 
-let providerInstance: Provider | null = null;
+export async function createProvider(
+  rpcUrl: string,
+  pollingInterval: number,
+  rpcAccessToken?: string,
+): Promise<JsonRpcProvider | WebSocketProvider | null> {
+  let provider: JsonRpcProvider | WebSocketProvider | null = null;
 
-export default function getProvider(): Provider {
-  if (!providerInstance) {
-    const { rpcUrl, rpcAccessToken, pollingInterval } = appSettings;
-
+  try {
     if (rpcUrl.startsWith('http')) {
-      providerInstance = rpcAccessToken
+      provider = rpcAccessToken
         ? new JsonRpcProvider(
             createAuthFetchRequest(rpcUrl, rpcAccessToken),
             undefined,
@@ -18,13 +19,19 @@ export default function getProvider(): Provider {
           )
         : new JsonRpcProvider(rpcUrl, undefined, { pollingInterval });
     } else if (rpcUrl.startsWith('wss')) {
-      providerInstance = new WebSocketProvider(rpcUrl);
+      provider = new WebSocketProvider(rpcUrl);
     } else {
-      unreachableError(`Invalid RPC URL: ${rpcUrl}`);
+      return unreachableError(`Unsupported RPC URL: ${rpcUrl}`);
     }
+
+    logger.info(`Provider initialized for '${rpcUrl}'.`);
+  } catch (error) {
+    logger.error(`Failed to initialize provider for '${rpcUrl}': ${error}`);
+    provider?.destroy();
+    provider = null;
   }
 
-  return providerInstance;
+  return provider;
 }
 
 function createAuthFetchRequest(rpcUrl: string, token: string): FetchRequest {
@@ -32,5 +39,6 @@ function createAuthFetchRequest(rpcUrl: string, token: string): FetchRequest {
   fetchRequest.method = 'POST';
   fetchRequest.setHeader('Content-Type', 'application/json');
   fetchRequest.setHeader('Authorization', `Bearer ${token}`);
+
   return fetchRequest;
 }

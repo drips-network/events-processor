@@ -5,8 +5,10 @@ import type {
   NftDriverId,
   RepoDriverId,
 } from '../core/types';
-import { addressDriverContract } from '../core/contractClients';
 import { getContractNameFromAccountId } from './contractUtils';
+import { getAddressDriverContract } from '../../contracts/contract-types';
+import loadChainConfig from '../config/loadChainConfig';
+import FailoverProvider from '../core/FailoverProvider';
 
 export function toRepoDriverId(id: bigint): RepoDriverId {
   const repoDriverId = id.toString();
@@ -106,6 +108,10 @@ export function assertRepoDiverAccountId(
 }
 
 export async function calcAccountId(owner: AddressLike): Promise<AccountId> {
+  const addressDriverContract = getAddressDriverContract(
+    loadChainConfig().contracts.addressDriver.address,
+    FailoverProvider.getActiveProvider(),
+  );
   return (
     await addressDriverContract.calcAccountId(owner as string)
   ).toString() as AccountId;

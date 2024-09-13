@@ -9,6 +9,7 @@ import type { EventSignature } from './types';
 import _LastIndexedBlockModel from '../models/_LastIndexedBlockModel';
 import logger from '../core/logger';
 import appSettings from '../config/appSettings';
+import FailoverProvider from '../core/FailoverProvider';
 
 async function getLatestIndexedBlock() {
   const record = await _LastIndexedBlockModel.findOne({
@@ -33,9 +34,11 @@ export default async function poll(
     address: Address;
   }[],
   registrations: ReturnType<typeof getHandlers>,
-  provider: Provider,
   startFromBlock?: number,
+  provider?: Provider,
 ) {
+  provider = provider ?? FailoverProvider.getActiveProvider(); // eslint-disable-line no-param-reassign
+
   const latestBlock = await provider.getBlockNumber();
   const lastIndexedBlock = await getLatestIndexedBlock();
 
@@ -104,7 +107,11 @@ export default async function poll(
 
   const delay = toBlock === fromBlock ? pollingInterval : 0;
 
-  setTimeout(() => {
-    poll(contracts, registrations, provider);
+  setTimeout(async () => {
+    try {
+      poll(contracts, registrations);
+    } catch (error) {
+      logger.error(`Error polling for events: ${error}`);
+    }
   }, delay);
 }
