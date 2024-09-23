@@ -8,16 +8,16 @@ import { registerEventHandlers } from './events/registrations';
 import poll from './events/poll';
 import { getHandlers } from './events/eventHandlerUtils';
 import getProvider from './core/getProvider';
-import {
-  addressDriverContract,
-  dripsContract,
-  nftDriverContract,
-  repoDriverContract,
-} from './core/contractClients';
 import { toAddress } from './utils/ethereumAddressUtils';
 import loadChainConfig from './config/loadChainConfig';
 import './events/types';
 import networkConstant from '../contracts/CURRENT_NETWORK/network-constant';
+import {
+  getAddressDriverContract,
+  getDripsContract,
+  getNftDriverContract,
+  getRepoDriverContract,
+} from '../contracts/contract-types';
 
 process.on('uncaughtException', (error: Error) => {
   logger.error(`Uncaught Exception: ${error.message}`);
@@ -45,29 +45,37 @@ async function init() {
 
   registerEventHandlers();
 
-  const { block: startBlock } = loadChainConfig();
+  const { block: startBlock, contracts } = loadChainConfig();
+
+  const { drips, addressDriver, nftDriver, repoDriver } = contracts;
 
   await poll(
     [
       {
-        contract: dripsContract,
-        address: toAddress(await dripsContract.getAddress()),
+        contract: getDripsContract(drips.address, await getProvider()),
+        address: toAddress(contracts.drips.address),
       },
       {
-        contract: addressDriverContract,
-        address: toAddress(await addressDriverContract.getAddress()),
+        contract: getAddressDriverContract(
+          addressDriver.address,
+          await getProvider(),
+        ),
+        address: toAddress(contracts.addressDriver.address),
       },
       {
-        contract: nftDriverContract,
-        address: toAddress(await nftDriverContract.getAddress()),
+        contract: getNftDriverContract(nftDriver.address, await getProvider()),
+        address: toAddress(contracts.nftDriver.address),
       },
       {
-        contract: repoDriverContract,
-        address: toAddress(await repoDriverContract.getAddress()),
+        contract: getRepoDriverContract(
+          repoDriver.address,
+          await getProvider(),
+        ),
+        address: toAddress(contracts.repoDriver.address),
       },
     ],
     getHandlers(),
-    getProvider(),
+    await getProvider(),
     startBlock,
   );
 

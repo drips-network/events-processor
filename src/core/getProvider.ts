@@ -1,27 +1,41 @@
-import type { Provider } from 'ethers';
-import { FetchRequest, JsonRpcProvider, WebSocketProvider } from 'ethers';
-import unreachableError from '../utils/unreachableError';
+import { FetchRequest } from 'ethers';
 import appSettings from '../config/appSettings';
+import { FailoverJsonRpcProvider } from './FailoverProvider';
 
-let providerInstance: Provider | null = null;
+let providerInstance: FailoverJsonRpcProvider;
 
-export default function getProvider(): Provider {
+export default async function getProvider(): Promise<FailoverJsonRpcProvider> {
   if (!providerInstance) {
-    const { rpcUrl, rpcAccessToken, pollingInterval } = appSettings;
-
-    if (rpcUrl.startsWith('http')) {
-      providerInstance = rpcAccessToken
-        ? new JsonRpcProvider(
-            createAuthFetchRequest(rpcUrl, rpcAccessToken),
-            undefined,
-            { pollingInterval },
-          )
-        : new JsonRpcProvider(rpcUrl, undefined, { pollingInterval });
-    } else if (rpcUrl.startsWith('wss')) {
-      providerInstance = new WebSocketProvider(rpcUrl);
-    } else {
-      unreachableError(`Invalid RPC URL: ${rpcUrl}`);
+    const {
+      primaryRpcUrl,
+      primaryRpcAccessToken,
+      fallbackRpcUrl,
+      fallbackRpcAccessToken,
+      pollingInterval,
+    } = appSettings;
+    if (
+      !primaryRpcUrl?.startsWith('http') ||
+      (!fallbackRpcUrl && fallbackRpcUrl?.startsWith('http'))
+    ) {
+      throw new Error('Unsupported RPC URL protocol.');
     }
+
+    const primaryEndpoint = primaryRpcAccessToken
+      ? createAuthFetchRequest(primaryRpcUrl, primaryRpcAccessToken)
+      : primaryRpcUrl;
+
+    const rpcEndpoints = [primaryEndpoint];
+
+    if (fallbackRpcUrl) {
+      const fallbackEndpoint = fallbackRpcAccessToken
+        ? createAuthFetchRequest(fallbackRpcUrl, fallbackRpcAccessToken)
+        : fallbackRpcUrl;
+      rpcEndpoints.push(fallbackEndpoint);
+    }
+
+    providerInstance = await FailoverJsonRpcProvider.create(rpcEndpoints, {
+      pollingInterval,
+    });
   }
 
   return providerInstance;

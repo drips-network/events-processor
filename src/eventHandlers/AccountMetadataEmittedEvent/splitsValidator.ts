@@ -1,6 +1,8 @@
+import { getDripsContract } from '../../../contracts/contract-types';
 import type { SplitsReceiverStruct } from '../../../contracts/CURRENT_NETWORK/Drips';
+import loadChainConfig from '../../config/loadChainConfig';
+import getProvider from '../../core/getProvider';
 import type { DripListId, ProjectId } from '../../core/types';
-import { dripsContract } from '../../core/contractClients';
 
 export default async function validateSplitsReceivers(
   accountId: ProjectId | DripListId,
@@ -12,6 +14,11 @@ export default async function validateSplitsReceivers(
     calculatedSplitsHash: string,
   ]
 > {
+  const dripsContract = getDripsContract(
+    loadChainConfig().contracts.drips.address,
+    await getProvider(),
+  );
+
   const formattedSplits = formatSplitReceivers(splits);
   const calculatedSplitsHash = await dripsContract.hashSplits(formattedSplits);
   const onChainSplitsHash = await dripsContract.splitsHash(accountId);

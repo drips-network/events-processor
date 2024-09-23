@@ -4,8 +4,10 @@ declare global {
   namespace NodeJS {
     interface ProcessEnv {
       NETWORK: SupportedNetwork;
-      RPC_URL: string;
-      RPC_ACCESS_TOKEN: string | undefined;
+      PRIMARY_RPC_URL: string;
+      PRIMARY_RPC_ACCESS_TOKEN: string | undefined;
+      FALLBACK_RPC_URL: string | undefined;
+      FALLBACK_RPC_ACCESS_TOKEN: string | undefined;
       NODE_ENV: 'development' | 'production';
       LOG_LEVEL: 'debug' | 'info' | 'warn' | 'error';
       POLLING_INTERVAL: number;
