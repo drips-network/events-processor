@@ -8,16 +8,16 @@ import { registerEventHandlers } from './events/registrations';
 import poll from './events/poll';
 import { getHandlers } from './events/eventHandlerUtils';
 import getProvider from './core/getProvider';
-import { toAddress } from './utils/ethereumAddressUtils';
-import loadChainConfig from './config/loadChainConfig';
-import './events/types';
-import networkConstant from '../contracts/CURRENT_NETWORK/network-constant';
 import {
   addressDriverContract,
   dripsContract,
   nftDriverContract,
   repoDriverContract,
 } from './core/contractClients';
+import { toAddress } from './utils/ethereumAddressUtils';
+import loadChainConfig from './config/loadChainConfig';
+import './events/types';
+import networkConstant from '../contracts/CURRENT_NETWORK/network-constant';
 
 process.on('uncaughtException', (error: Error) => {
   logger.error(`Uncaught Exception: ${error.message}`);
@@ -47,8 +47,6 @@ async function init() {
 
   const { block: startBlock } = loadChainConfig();
 
-  const provider = getProvider();
-
   await poll(
     [
       {
@@ -69,7 +67,7 @@ async function init() {
       },
     ],
     getHandlers(),
-    provider,
+    getProvider(),
     startBlock,
   );
 

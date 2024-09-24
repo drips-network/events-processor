@@ -10,9 +10,9 @@ import {
 import { isNftDriverId, isRepoDriverId } from '../../utils/accountIdUtils';
 import type { SplitsReceiverStruct } from '../../../contracts/CURRENT_NETWORK/Drips';
 import unreachableError from '../../utils/unreachableError';
+import { dripsContract } from '../../core/contractClients';
 import type LogManager from '../../core/LogManager';
 import { formatSplitReceivers } from '../AccountMetadataEmittedEvent/splitsValidator';
-import { dripsContract } from '../../core/contractClients';
 
 export default async function setIsValidFlag(
   splitsSetEvent: SplitsSetEventModel,

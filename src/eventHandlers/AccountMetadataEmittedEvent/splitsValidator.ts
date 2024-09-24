@@ -1,6 +1,6 @@
 import type { SplitsReceiverStruct } from '../../../contracts/CURRENT_NETWORK/Drips';
-import { dripsContract } from '../../core/contractClients';
 import type { DripListId, ProjectId } from '../../core/types';
+import { dripsContract } from '../../core/contractClients';
 
 export default async function validateSplitsReceivers(
   accountId: ProjectId | DripListId,

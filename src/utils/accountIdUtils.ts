@@ -5,8 +5,8 @@ import type {
   NftDriverId,
   RepoDriverId,
 } from '../core/types';
-import { getContractNameFromAccountId } from './contractUtils';
 import { addressDriverContract } from '../core/contractClients';
+import { getContractNameFromAccountId } from './contractUtils';
 
 export function toRepoDriverId(id: bigint): RepoDriverId {
   const repoDriverId = id.toString();
