@@ -33,7 +33,7 @@ export default async function getProvider(): Promise<FailoverJsonRpcProvider> {
       rpcEndpoints.push(fallbackEndpoint);
     }
 
-    providerInstance = await FailoverJsonRpcProvider.create(rpcEndpoints, {
+    providerInstance = new FailoverJsonRpcProvider(rpcEndpoints, undefined, {
       pollingInterval,
     });
   }

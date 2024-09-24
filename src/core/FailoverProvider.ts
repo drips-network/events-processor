@@ -2,110 +2,48 @@ import type {
   JsonRpcApiProviderOptions,
   JsonRpcPayload,
   JsonRpcResult,
-  Network,
+  Networkish,
 } from 'ethers';
-import { JsonRpcProvider, FetchRequest } from 'ethers';
+import { FetchRequest, JsonRpcProvider } from 'ethers';
 
 /**
  * A `JsonRpcProvider` that transparently fails over to a list of backup JSON-RPC endpoints.
- *
- * Use the static `create` method to instantiate this provider.
  */
 export class FailoverJsonRpcProvider extends JsonRpcProvider {
   private readonly _rpcEndpoints: (string | FetchRequest)[];
 
-  private constructor(
+  /**
+   * @param rpcEndpoints An array of JSON-RPC endpoints. The order determines the failover order.
+   */
+  constructor(
     rpcEndpoints: (string | FetchRequest)[],
-    expectedNetwork: Network,
+    network?: Networkish,
     options?: JsonRpcApiProviderOptions,
   ) {
-    super(rpcEndpoints[0], expectedNetwork, options);
+    super(rpcEndpoints[0], network, options);
 
     this._rpcEndpoints = rpcEndpoints;
-  }
-
-  /**
-   * Creates a new `FailoverJsonRpcProvider`.
-   *
-   * @param rpcEndpoints - An array of JSON-RPC endpoints to use for failover. Order matters.
-   * @param options - Additional options for the JsonRpcProvider (optional).
-   * @returns A promise that resolves to an instance of `FailoverJsonRpcProvider`.
-   *
-   * @throws If endpoints are unreachable or are on different networks.
-   */
-  public static async create(
-    rpcEndpoints: (string | FetchRequest)[],
-    options?: JsonRpcApiProviderOptions,
-  ): Promise<FailoverJsonRpcProvider> {
-    if (!Array.isArray(rpcEndpoints) || rpcEndpoints.length === 0) {
-      throw new Error('Endpoints array must be a non-empty array of URLs.');
-    }
-
-    // Use the primary endpoint to verify that all other endpoints are on the same network.
-    let expectedNetwork: Network;
-    try {
-      const primaryProvider = new JsonRpcProvider(
-        rpcEndpoints[0],
-        undefined,
-        options,
-      );
-      expectedNetwork = await primaryProvider.getNetwork();
-    } catch (error: any) {
-      const endpointUrl = getEndpointUrl(rpcEndpoints[0]);
-      throw new Error(
-        `Failed to get network from primary endpoint '${endpointUrl}': ${error.message}`,
-      );
-    }
-
-    for (const endpoint of rpcEndpoints.slice(1)) {
-      try {
-        const provider = new JsonRpcProvider(endpoint, undefined, options);
-        const { chainId } = await provider.getNetwork();
-
-        if (chainId !== expectedNetwork.chainId) {
-          const endpointUrl = getEndpointUrl(endpoint);
-          throw new Error(
-            `Endpoint '${endpointUrl}' is on a different network (chainId: ${chainId}). Primary endpoint is on chainId: ${expectedNetwork.chainId}.`,
-          );
-        }
-      } catch (error: any) {
-        const endpointUrl = getEndpointUrl(endpoint);
-        throw new Error(
-          `Failed to verify network for endpoint '${endpointUrl}': ${error.message}`,
-        );
-      }
-    }
-
-    return new FailoverJsonRpcProvider(rpcEndpoints, expectedNetwork, options);
   }
 
   /**
    * Overrides the `_send` method to try each endpoint until the request succeeds.
    *
    * @param payload - The JSON-RPC payload or array of payloads to send.
-   * @returns A promise that resolves to the result of the JSON-RPC call(s).
+   * @returns A promise that resolves to the result of the first successful JSON-RPC call.
    */
   public override async _send(
     payload: JsonRpcPayload | Array<JsonRpcPayload>,
   ): Promise<Array<JsonRpcResult>> {
     // The actual sending of the request is the same as in the base class.
     // The only difference is that we're creating a new `FetchRequest` for each endpoint,
-    // instead of getting the `request` from `_getConnection()`, which will return the *primary* endpoint.
+    // instead of getting the `request` from `_getConnection()`, which will return the *primary* (first) endpoint.
 
-    const errors: { endpoint: string; error: any }[] = [];
+    const errors: { rpcEndpoint: string; error: any }[] = [];
 
     // Try each endpoint, in order.
-    for (const endpoint of this._rpcEndpoints) {
+    for (const rpcEndpoint of this._rpcEndpoints) {
       try {
-        // Create a FetchRequest instance from the endpoint
-        let request: FetchRequest;
-
-        if (typeof endpoint === 'string') {
-          request = new FetchRequest(endpoint);
-        } else {
-          request = endpoint.clone();
-        }
-
+        const request = new FetchRequest(this._getRpcEndpointUrl(rpcEndpoint));
         request.body = JSON.stringify(payload);
         request.setHeader('content-type', 'application/json');
         const response = await request.send();
@@ -118,8 +56,8 @@ export class FailoverJsonRpcProvider extends JsonRpcProvider {
 
         return resp;
       } catch (error: any) {
-        const endpointUrl = getEndpointUrl(endpoint);
-        errors.push({ endpoint: endpointUrl, error });
+        const endpointUrl = this._getRpcEndpointUrl(rpcEndpoint);
+        errors.push({ rpcEndpoint: endpointUrl, error });
       }
     }
 
@@ -127,13 +65,14 @@ export class FailoverJsonRpcProvider extends JsonRpcProvider {
     const errorMessages = errors
       .map(
         (e) =>
-          `Endpoint '${e.endpoint}' failed with error: ${e.error.message}.`,
+          `Endpoint '${e.rpcEndpoint}' failed with error: ${e.error.message}.`,
       )
       .join('\n');
 
     const aggregatedError = new Error(
       `All RPC endpoints failed:\n${errorMessages}`,
-    ) as Error & { errors: { endpoint: string; error: any }[] };
+    ) as Error & { errors: { rpcEndpoint: string; error: any }[] };
+
     aggregatedError.errors = errors;
 
     throw aggregatedError;
@@ -141,17 +80,14 @@ export class FailoverJsonRpcProvider extends JsonRpcProvider {
 
   /**
    * Returns a copy of the endpoint URLs used by the provider.
-   *
-   * @returns An array of endpoint URLs as strings.
    */
-  public getEndpoints(): string[] {
-    return this._rpcEndpoints.map(getEndpointUrl);
+  public getRpcEndpointUrls(): string[] {
+    return this._rpcEndpoints.map((endpoint) =>
+      this._getRpcEndpointUrl(endpoint),
+    );
   }
-}
 
-function getEndpointUrl(endpoint: string | FetchRequest): string {
-  if (typeof endpoint === 'string') {
-    return endpoint;
+  private _getRpcEndpointUrl(rpcEndpoint: string | FetchRequest): string {
+    return typeof rpcEndpoint === 'string' ? rpcEndpoint : rpcEndpoint.url;
   }
-  return endpoint.url;
 }
