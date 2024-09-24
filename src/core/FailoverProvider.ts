@@ -4,7 +4,7 @@ import type {
   JsonRpcResult,
   Networkish,
 } from 'ethers';
-import { FetchRequest, JsonRpcProvider } from 'ethers';
+import { JsonRpcProvider, FetchRequest } from 'ethers';
 
 /**
  * A `JsonRpcProvider` that transparently fails over to a list of backup JSON-RPC endpoints.
@@ -43,7 +43,14 @@ export class FailoverJsonRpcProvider extends JsonRpcProvider {
     // Try each endpoint, in order.
     for (const rpcEndpoint of this._rpcEndpoints) {
       try {
-        const request = new FetchRequest(this._getRpcEndpointUrl(rpcEndpoint));
+        let request: FetchRequest;
+
+        if (typeof rpcEndpoint === 'string') {
+          request = new FetchRequest(rpcEndpoint);
+        } else {
+          request = rpcEndpoint.clone();
+        }
+
         request.body = JSON.stringify(payload);
         request.setHeader('content-type', 'application/json');
         const response = await request.send();
@@ -82,12 +89,14 @@ export class FailoverJsonRpcProvider extends JsonRpcProvider {
    * Returns a copy of the endpoint URLs used by the provider.
    */
   public getRpcEndpointUrls(): string[] {
-    return this._rpcEndpoints.map((endpoint) =>
-      this._getRpcEndpointUrl(endpoint),
-    );
+    return this._rpcEndpoints.map(this._getRpcEndpointUrl);
   }
 
   private _getRpcEndpointUrl(rpcEndpoint: string | FetchRequest): string {
-    return typeof rpcEndpoint === 'string' ? rpcEndpoint : rpcEndpoint.url;
+    if (typeof rpcEndpoint === 'string') {
+      return rpcEndpoint;
+    }
+
+    return rpcEndpoint.url;
   }
 }
