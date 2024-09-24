@@ -13,11 +13,11 @@ import loadChainConfig from './config/loadChainConfig';
 import './events/types';
 import networkConstant from '../contracts/CURRENT_NETWORK/network-constant';
 import {
-  getAddressDriverContract,
-  getDripsContract,
-  getNftDriverContract,
-  getRepoDriverContract,
-} from '../contracts/contract-types';
+  addressDriverContract,
+  dripsContract,
+  nftDriverContract,
+  repoDriverContract,
+} from './core/contractClients';
 
 process.on('uncaughtException', (error: Error) => {
   logger.error(`Uncaught Exception: ${error.message}`);
@@ -45,37 +45,31 @@ async function init() {
 
   registerEventHandlers();
 
-  const { block: startBlock, contracts } = loadChainConfig();
+  const { block: startBlock } = loadChainConfig();
 
-  const { drips, addressDriver, nftDriver, repoDriver } = contracts;
+  const provider = getProvider();
 
   await poll(
     [
       {
-        contract: getDripsContract(drips.address, await getProvider()),
-        address: toAddress(contracts.drips.address),
+        contract: dripsContract,
+        address: toAddress(await dripsContract.getAddress()),
       },
       {
-        contract: getAddressDriverContract(
-          addressDriver.address,
-          await getProvider(),
-        ),
-        address: toAddress(contracts.addressDriver.address),
+        contract: addressDriverContract,
+        address: toAddress(await addressDriverContract.getAddress()),
       },
       {
-        contract: getNftDriverContract(nftDriver.address, await getProvider()),
-        address: toAddress(contracts.nftDriver.address),
+        contract: nftDriverContract,
+        address: toAddress(await nftDriverContract.getAddress()),
       },
       {
-        contract: getRepoDriverContract(
-          repoDriver.address,
-          await getProvider(),
-        ),
-        address: toAddress(contracts.repoDriver.address),
+        contract: repoDriverContract,
+        address: toAddress(await repoDriverContract.getAddress()),
       },
     ],
     getHandlers(),
-    await getProvider(),
+    provider,
     startBlock,
   );
 

@@ -4,7 +4,7 @@ import { FailoverJsonRpcProvider } from './FailoverProvider';
 
 let providerInstance: FailoverJsonRpcProvider;
 
-export default async function getProvider(): Promise<FailoverJsonRpcProvider> {
+export default function getProvider(): FailoverJsonRpcProvider {
   if (!providerInstance) {
     const {
       primaryRpcUrl,

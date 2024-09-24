@@ -6,9 +6,7 @@ import type {
   RepoDriverId,
 } from '../core/types';
 import { getContractNameFromAccountId } from './contractUtils';
-import { getAddressDriverContract } from '../../contracts/contract-types';
-import loadChainConfig from '../config/loadChainConfig';
-import getProvider from '../core/getProvider';
+import { addressDriverContract } from '../core/contractClients';
 
 export function toRepoDriverId(id: bigint): RepoDriverId {
   const repoDriverId = id.toString();
@@ -108,11 +106,6 @@ export function assertRepoDiverAccountId(
 }
 
 export async function calcAccountId(owner: AddressLike): Promise<AccountId> {
-  const addressDriverContract = getAddressDriverContract(
-    loadChainConfig().contracts.addressDriver.address,
-    await getProvider(),
-  );
-
   return (
     await addressDriverContract.calcAccountId(owner as string)
   ).toString() as AccountId;
