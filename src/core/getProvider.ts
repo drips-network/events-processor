@@ -15,7 +15,7 @@ export default function getProvider(): FailoverJsonRpcProvider {
     } = appSettings;
     if (
       !primaryRpcUrl?.startsWith('http') ||
-      (!fallbackRpcUrl && fallbackRpcUrl?.startsWith('http'))
+      (fallbackRpcUrl && !fallbackRpcUrl?.startsWith('http'))
     ) {
       throw new Error('Unsupported RPC URL protocol.');
     }
