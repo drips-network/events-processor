@@ -12,7 +12,7 @@ const eventProcessingQueue = new BeeQueue<{
   args: string;
 }>(`${appSettings.network}_events`, {
   activateDelayedJobs: true,
-  redis: { url: `${appSettings.redisConnectionString}?family=0` },
+  redis: { url: appSettings.redisConnectionString },
 });
 
 eventProcessingQueue.checkStalledJobs(8000, (err, numStalledJobs) => {
