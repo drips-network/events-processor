@@ -1,15 +1,7 @@
 import BeeQueue from 'bee-queue';
-import { createClient } from 'redis';
 import appSettings from '../config/appSettings';
 import logger from '../core/logger';
 import type { EventSignature } from '../events/types';
-
-const redisClient = createClient({
-  url: `${appSettings.redisConnectionString}?family=6`,
-})
-  .on('error', (err) => console.log('Redis Client Error', err))
-  .connect();
-console.log(`💧💧💧💧💧💧 ~ ${appSettings.redisConnectionString}?family=0`);
 
 const eventProcessingQueue = new BeeQueue<{
   logIndex: number;
@@ -20,7 +12,7 @@ const eventProcessingQueue = new BeeQueue<{
   args: string;
 }>(`${appSettings.network}_events`, {
   activateDelayedJobs: true,
-  redis: redisClient,
+  redis: { url: `${appSettings.redisConnectionString}?family=0` },
 });
 
 eventProcessingQueue.checkStalledJobs(8000, (err, numStalledJobs) => {
