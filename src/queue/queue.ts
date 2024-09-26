@@ -9,7 +9,7 @@ const redisClient = createClient({
 })
   .on('error', (err) => console.log('Redis Client Error', err))
   .connect();
-console.log(`💧💧💧💧💧💧 ~ ${appSettings.redisConnectionString}?family=6`);
+console.log(`💧💧💧💧💧💧 ~ ${appSettings.redisConnectionString}?family=0`);
 
 const eventProcessingQueue = new BeeQueue<{
   logIndex: number;
