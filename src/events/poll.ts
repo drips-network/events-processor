@@ -47,6 +47,7 @@ export default async function poll(
 
   fromBlock = Math.min(fromBlock, toBlock);
 
+  logger.info(`Testing PR environments...`);
   logger.info(`Polling for events from block ${fromBlock} to ${toBlock}`);
 
   if (toBlock !== lastIndexedBlock) {
