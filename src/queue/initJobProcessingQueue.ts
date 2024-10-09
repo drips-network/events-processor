@@ -6,7 +6,7 @@ import EventHandlerRequest from '../events/EventHandlerRequest';
 import logger from '../core/logger';
 
 export default async function initJobProcessingQueue() {
-  eventProcessingQueue.process(5, async (job) => {
+  eventProcessingQueue.process(100, async (job) => {
     const handler = getEventHandler(job.data.eventSignature);
 
     const {
