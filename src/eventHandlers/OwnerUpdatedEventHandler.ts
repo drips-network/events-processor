@@ -1,8 +1,5 @@
-import type { OwnerUpdatedEvent } from '../../contracts/RepoDriver';
-import type { TypedContractEvent, TypedListener } from '../../contracts/common';
-import type { KnownAny } from '../core/types';
+import type { OwnerUpdatedEvent } from '../../contracts/CURRENT_NETWORK/RepoDriver';
 import EventHandlerBase from '../events/EventHandlerBase';
-import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { GitProjectModel, OwnerUpdatedEventModel } from '../models';
 import LogManager from '../core/LogManager';
 import { calcAccountId, toRepoDriverId } from '../utils/accountIdUtils';
@@ -13,7 +10,7 @@ import { ProjectVerificationStatus } from '../models/GitProjectModel';
 import { dbConnection } from '../db/database';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
-  public readonly eventSignature = 'OwnerUpdated(uint256,address)' as const;
+  public readonly eventSignatures = ['OwnerUpdated(uint256,address)' as const];
 
   protected async _handle(
     request: EventHandlerRequest<'OwnerUpdated(uint256,address)'>,
@@ -28,7 +25,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
     const repoDriverId = toRepoDriverId(accountId);
 
     LogManager.logRequestInfo(
-      `📥 ${this.name} is processing the following ${this.eventSignature}:
+      `📥 ${this.name} is processing the following ${request.event.eventSignature}:
       \r\t - owner:       ${owner}
       \r\t - accountId:   ${repoDriverId}
       \r\t - logIndex:    ${logIndex}
@@ -127,22 +124,18 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
     });
   }
 
-  protected readonly onReceive: TypedListener<
-    TypedContractEvent<
-      OwnerUpdatedEvent.InputTuple,
-      OwnerUpdatedEvent.OutputTuple,
-      OwnerUpdatedEvent.OutputObject
-    >
-  > = async (_accountId, _owner, eventLog) => {
-    await saveEventProcessingJob(
-      (eventLog as KnownAny).log,
-      this.eventSignature,
-    );
-  };
+  override async afterHandle(context: {
+    args: [accountId: bigint, owner: string];
+    blockTimestamp: Date;
+  }): Promise<void> {
+    const { args, blockTimestamp } = context;
+    const [accountId, owner] = args;
 
-  override async afterHandle(accountId: bigint, owner: string): Promise<void> {
     const ownerAccountId = await calcAccountId(owner);
 
-    super.afterHandle(...[accountId, ownerAccountId]);
+    super.afterHandle({
+      args: [accountId, ownerAccountId],
+      blockTimestamp,
+    });
   }
 }

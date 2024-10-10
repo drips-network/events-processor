@@ -1,23 +1,17 @@
 import EventHandlerBase from '../../events/EventHandlerBase';
 import LogManager from '../../core/LogManager';
-import type {
-  TypedContractEvent,
-  TypedListener,
-} from '../../../contracts/common';
-import type { KnownAny } from '../../core/types';
 import { toAccountId } from '../../utils/accountIdUtils';
 import type EventHandlerRequest from '../../events/EventHandlerRequest';
 import { SplitsSetEventModel } from '../../models';
-import saveEventProcessingJob from '../../queue/saveEventProcessingJob';
 import { dbConnection } from '../../db/database';
-import type { SplitsSetEvent } from '../../../contracts/Drips';
+import type { SplitsSetEvent } from '../../../contracts/CURRENT_NETWORK/Drips';
 import setIsValidFlag from './setIsValidFlag';
 
 export default class SplitsSetEventHandler extends EventHandlerBase<'SplitsSet(uint256,bytes32)'> {
-  public eventSignature = 'SplitsSet(uint256,bytes32)' as const;
+  public eventSignatures = ['SplitsSet(uint256,bytes32)' as const];
 
   protected async _handle(
-    request: EventHandlerRequest<typeof this.eventSignature>,
+    request: EventHandlerRequest<'SplitsSet(uint256,bytes32)'>,
   ): Promise<void> {
     const {
       id: requestId,
@@ -28,7 +22,7 @@ export default class SplitsSetEventHandler extends EventHandlerBase<'SplitsSet(u
     const accountId = toAccountId(rawAccountId);
 
     LogManager.logRequestInfo(
-      `📥 ${this.name} is processing the following ${this.eventSignature}:
+      `📥 ${this.name} is processing the following ${request.event.eventSignature}:
       \r\t - accountId:     ${accountId}
       \r\t - receiversHash: ${rawReceiversHash}
       \r\t - logIndex:      ${logIndex}
@@ -79,17 +73,4 @@ export default class SplitsSetEventHandler extends EventHandlerBase<'SplitsSet(u
       throw error;
     }
   }
-
-  protected onReceive: TypedListener<
-    TypedContractEvent<
-      SplitsSetEvent.InputTuple,
-      SplitsSetEvent.OutputTuple,
-      SplitsSetEvent.OutputObject
-    >
-  > = async (_accId, _receiversHash, eventLog) => {
-    await saveEventProcessingJob(
-      (eventLog as KnownAny).log,
-      this.eventSignature,
-    );
-  };
 }

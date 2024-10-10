@@ -6,7 +6,7 @@ import EventHandlerRequest from '../events/EventHandlerRequest';
 import logger from '../core/logger';
 
 export default async function initJobProcessingQueue() {
-  eventProcessingQueue.process(5, async (job) => {
+  eventProcessingQueue.process(100, async (job) => {
     const handler = getEventHandler(job.data.eventSignature);
 
     const {
@@ -44,9 +44,10 @@ export default async function initJobProcessingQueue() {
     await handler.executeHandle(handleContext as KnownAny);
 
     try {
-      await handler.afterHandle(
-        ...handleContext.event.args.concat(accountIdsToInvalidate),
-      );
+      await handler.afterHandle({
+        args: handleContext.event.args.concat(accountIdsToInvalidate),
+        blockTimestamp: handleContext.event.blockTimestamp,
+      });
     } catch (error: any) {
       logger.error(`❌ ${handler.name} 'afterHandle' error: ${error.message}.`);
     }

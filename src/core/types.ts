@@ -1,5 +1,4 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
-import type { AddressLike } from 'ethers';
 import type { Model, Sequelize } from 'sequelize';
 import type {
   nftDriverAccountMetadataParser,
@@ -52,9 +51,11 @@ export type Forge = ValuesOf<typeof FORGES_MAP>;
 export type DripsContract = (typeof DRIPS_CONTRACTS)[number];
 
 export type ChainConfig = {
-  [K in DripsContract]: {
-    address: AddressLike;
-    block: number;
+  block: number;
+  contracts: {
+    [K in DripsContract]: {
+      address: string;
+    };
   };
 };
 

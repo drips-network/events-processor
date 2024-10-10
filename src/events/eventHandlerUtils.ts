@@ -1,27 +1,42 @@
 import type { KnownAny } from '../core/types';
+import type EventHandlerBase from './EventHandlerBase';
 import type { EventHandlerConstructor, EventSignature } from './types';
 
 const REGISTERED_EVENT_HANDLERS: Partial<{
-  [T in EventSignature]: EventHandlerConstructor<T>;
+  [T in EventSignature]: EventHandlerBase<T>;
 }> = {};
 
 export function registerEventHandler<T extends EventSignature>(
-  eventSignature: T,
-  handler: EventHandlerConstructor<T>,
+  eventSignatures: T[] | T,
+  Handler: EventHandlerConstructor<T>,
 ) {
-  REGISTERED_EVENT_HANDLERS[eventSignature] = handler as KnownAny;
+  const eventSignaturesArray = Array.isArray(eventSignatures)
+    ? eventSignatures
+    : [eventSignatures];
+
+  for (const eventSignature of eventSignaturesArray) {
+    REGISTERED_EVENT_HANDLERS[eventSignature] = new Handler() as KnownAny;
+  }
+}
+
+export function getHandlers() {
+  return REGISTERED_EVENT_HANDLERS;
 }
 
 export function getEventHandler(eventSignature: EventSignature) {
-  const HandlerConstructor = REGISTERED_EVENT_HANDLERS[eventSignature];
+  const handler = REGISTERED_EVENT_HANDLERS[eventSignature];
 
-  if (!HandlerConstructor) {
+  if (!handler) {
     throw new Error(`No handler found for filter ${eventSignature}.`);
   }
 
-  return new HandlerConstructor();
+  return handler;
 }
 
 export function getRegisteredEvents(): EventSignature[] {
   return Object.keys(REGISTERED_EVENT_HANDLERS) as EventSignature[];
+}
+
+export function isRegisteredEvent(i: string): i is EventSignature {
+  return getRegisteredEvents().includes(i as EventSignature);
 }

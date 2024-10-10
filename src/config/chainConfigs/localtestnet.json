@@ -1,23 +1,21 @@
 {
   "network": "goerli",
-  "immutableSplitsDriver": {
-    "address": "0xEC8493BdbBbBe22a6F54573cFeE23ac8Ab90dF77",
-    "block": 1
-  },
-  "repoDriver": {
-    "address": "0xb9C8e18E82687a564Ac4D26E22D28a4C95057CE9",
-    "block": 1
-  },
-  "drips": {
-    "address": "0xa0523b86472561f0859d84C094cc04e6c4B33169",
-    "block": 1
-  },
-  "nftDriver": {
-    "address": "0xc95eb214845d5693abc750692161CB008796ae5C",
-    "block": 1
-  },
-  "addressDriver": {
-    "address": "0xcc137285FD4D8914Dae08629086309B89aA6FDef",
-    "block": 1
+  "block": 1,
+  "contracts": {
+    "immutableSplitsDriver": {
+      "address": "0xEC8493BdbBbBe22a6F54573cFeE23ac8Ab90dF77"
+    },
+    "repoDriver": {
+      "address": "0xb9C8e18E82687a564Ac4D26E22D28a4C95057CE9"
+    },
+    "drips": {
+      "address": "0xa0523b86472561f0859d84C094cc04e6c4B33169"
+    },
+    "nftDriver": {
+      "address": "0xc95eb214845d5693abc750692161CB008796ae5C"
+    },
+    "addressDriver": {
+      "address": "0xcc137285FD4D8914Dae08629086309B89aA6FDef"
+    }
   }
 }

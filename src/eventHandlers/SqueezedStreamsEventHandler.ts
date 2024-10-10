@@ -1,19 +1,17 @@
 import EventHandlerBase from '../events/EventHandlerBase';
 import LogManager from '../core/LogManager';
-import type { TypedContractEvent, TypedListener } from '../../contracts/common';
-import type { KnownAny } from '../core/types';
 import { toAccountId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
-import saveEventProcessingJob from '../queue/saveEventProcessingJob';
 import { dbConnection } from '../db/database';
-import type { SqueezedStreamsEvent } from '../../contracts/Drips';
+import type { SqueezedStreamsEvent } from '../../contracts/CURRENT_NETWORK/Drips';
 import { toAddress } from '../utils/ethereumAddressUtils';
 import { toBigIntString } from '../utils/bigintUtils';
 import SqueezedStreamsEventModel from '../models/SqueezedStreamsEventModel';
 
 export default class SqueezedStreamsEventHandler extends EventHandlerBase<'SqueezedStreams(uint256,address,uint256,uint128,bytes32[])'> {
-  public eventSignature =
-    'SqueezedStreams(uint256,address,uint256,uint128,bytes32[])' as const;
+  public eventSignatures = [
+    'SqueezedStreams(uint256,address,uint256,uint128,bytes32[])' as const,
+  ];
 
   protected async _handle(
     request: EventHandlerRequest<'SqueezedStreams(uint256,address,uint256,uint128,bytes32[])'>,
@@ -39,7 +37,7 @@ export default class SqueezedStreamsEventHandler extends EventHandlerBase<'Squee
       SqueezedStreamsEventModel.toStreamHistoryHashes(rawStreamsHistoryHashes);
 
     LogManager.logRequestInfo(
-      `📥 ${this.name} is processing the following ${this.eventSignature}:
+      `📥 ${this.name} is processing the following ${request.event.eventSignature}:
       \r\t - accountId:            ${accountId}
       \r\t - erc20:                ${erc20}
       \r\t - senderId:             ${senderId}
@@ -83,24 +81,4 @@ export default class SqueezedStreamsEventHandler extends EventHandlerBase<'Squee
       logManager.logAllInfo();
     });
   }
-
-  protected onReceive: TypedListener<
-    TypedContractEvent<
-      SqueezedStreamsEvent.InputTuple,
-      SqueezedStreamsEvent.OutputTuple,
-      SqueezedStreamsEvent.OutputObject
-    >
-  > = async (
-    _accountId,
-    _erc20,
-    _senderId,
-    _amt,
-    _streamsHistoryHashes,
-    eventLog,
-  ) => {
-    await saveEventProcessingJob(
-      (eventLog as KnownAny).log,
-      this.eventSignature,
-    );
-  };
 }
