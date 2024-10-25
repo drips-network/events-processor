@@ -33,6 +33,7 @@ export default async function createDbEntriesForProjectDependency(
     },
     defaults: {
       url,
+      isVisible: true, // During creation, the project is visible by default. Account metadata will set the final visibility.
       isValid: true, // There are no receivers yet, so the project is valid.
       id: fundeeProjectId,
       name: `${ownerName}/${repoName}`,

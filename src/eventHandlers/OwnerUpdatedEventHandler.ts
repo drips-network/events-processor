@@ -72,6 +72,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           id: repoDriverId,
         },
         defaults: {
+          isVisible: true, // During creation, the project is visible by default. Account metadata will set the final visibility.
           id: repoDriverId,
           isValid: true, // There are no receivers yet, so the project is valid.
           ownerAddress: owner,

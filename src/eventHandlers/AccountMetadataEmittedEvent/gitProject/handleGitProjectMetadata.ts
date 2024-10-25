@@ -106,6 +106,7 @@ async function updateGitProjectMetadata(
   project.url = source.url;
   project.description = description ?? null;
   project.verificationStatus = calculateProjectStatus(project);
+  project.isVisible = 'isVisible' in metadata ? metadata.isVisible : true; // Projects without `isVisible` field (V4 and below) are considered visible by default.
 
   if ('avatar' in metadata) {
     // Metadata V4
