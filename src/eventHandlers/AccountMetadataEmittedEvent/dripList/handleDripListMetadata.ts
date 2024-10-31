@@ -28,6 +28,7 @@ import unreachableError from '../../../utils/unreachableError';
 import validateSplitsReceivers from '../splitsValidator';
 import getUserAddress from '../../../utils/getAccountAddress';
 import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
+import appSettings from '../../../config/appSettings';
 
 export default async function handleDripListMetadata(
   logManager: LogManager,
@@ -35,6 +36,7 @@ export default async function handleDripListMetadata(
   transaction: Transaction,
   ipfsHash: IpfsHash,
   blockTimestamp: Date,
+  blockNumber: number,
 ) {
   const dripList = await DripListModel.findByPk(dripListId, {
     transaction,
@@ -80,7 +82,13 @@ export default async function handleDripListMetadata(
 
   await validateDripListMetadata(dripList, metadata);
 
-  await updateDripListMetadata(dripList, logManager, transaction, metadata);
+  await updateDripListMetadata(
+    dripList,
+    logManager,
+    transaction,
+    metadata,
+    blockNumber,
+  );
 
   await createDbEntriesForDripListSplits(
     dripListId,
@@ -96,6 +104,7 @@ async function updateDripListMetadata(
   logManager: LogManager,
   transaction: Transaction,
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
+  blockNumber: number,
 ): Promise<void> {
   dripList.isValid = true;
   dripList.name = metadata.name ?? null;
@@ -105,6 +114,15 @@ async function updateDripListMetadata(
     'latestVotingRoundId' in metadata
       ? (metadata.latestVotingRoundId as UUID) || null
       : null;
+
+  if (
+    blockNumber > appSettings.visibilityThresholdBlockNumber &&
+    'isVisible' in metadata
+  ) {
+    dripList.isVisible = metadata.isVisible;
+  } else {
+    dripList.isVisible = true;
+  }
 
   logManager.appendUpdateLog(dripList, DripListModel, dripList.id);
 

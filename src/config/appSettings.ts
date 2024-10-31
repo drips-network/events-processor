@@ -1,13 +1,14 @@
 import dotenv from 'dotenv';
+import dotenvExpand from 'dotenv-expand';
 
-dotenv.config();
+dotenvExpand.expand(dotenv.config());
 
 function missingEnvVar(name: string): never {
   throw new Error(`Missing ${name} in .env file.`);
 }
 
 const appSettings = {
-  network: process.env.NETWORK || missingEnvVar('NETWORK is not set.'),
+  network: process.env.NETWORK || missingEnvVar('NETWORK.'),
   primaryRpcUrl:
     process.env.PRIMARY_RPC_URL || missingEnvVar('PRIMARY_RPC_URL is not set.'),
   fallbackRpcUrl: process.env.FALLBACK_RPC_URL,
@@ -25,6 +26,8 @@ const appSettings = {
   shouldStartMonitoringUI:
     (process.env.SHOULD_START_MONITORING_UI as unknown as string) === 'true',
   cacheInvalidationEndpoint: process.env.CACHE_INVALIDATION_ENDPOINT,
+  visibilityThresholdBlockNumber:
+    Number(process.env.VISIBILITY_THRESHOLD_BLOCK_NUMBER) || 0,
 } as const;
 
 export default appSettings;

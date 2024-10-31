@@ -123,6 +123,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
           transaction,
           ipfsHash,
           blockTimestamp,
+          blockNumber,
         );
       } else {
         logManager.appendLog(
@@ -153,10 +154,6 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
   }
 
   private _isEmittedByTheDripsApp(key: string): boolean {
-    if (key === DRIPS_APP_USER_METADATA_KEY) {
-      return true;
-    }
-
-    return false;
+    return key === DRIPS_APP_USER_METADATA_KEY;
   }
 }

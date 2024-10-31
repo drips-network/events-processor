@@ -17,6 +17,8 @@ declare global {
       POSTGRES_CONNECTION_STRING: string;
       SHOULD_START_MONITORING_UI: boolean;
       SHOULD_PROCESS_PAST_EVENTS: boolean;
+      CACHE_INVALIDATION_ENDPOINT: string;
+      VISIBILITY_THRESHOLD_BLOCK_NUMBER: number;
     }
   }
 }
