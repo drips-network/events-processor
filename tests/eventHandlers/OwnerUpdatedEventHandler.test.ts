@@ -116,6 +116,7 @@ describe('OwnerUpdatedEventHandler', () => {
         defaults: {
           id: toRepoDriverId(accountId),
           isValid: true,
+          isVisible: true,
           ownerAddress: owner,
           claimedAt: blockTimestamp,
           ownerAccountId: await calcAccountId(owner),

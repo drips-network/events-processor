@@ -121,6 +121,7 @@ describe('OwnerUpdateRequestedEventHandler', () => {
         defaults: {
           id: toRepoDriverId(accountId),
           isValid: true,
+          isVisible: true,
           name: toReadable(name),
           forge: toForge(forge),
           url: toUrl(toForge(forge), toReadable(name)),

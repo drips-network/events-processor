@@ -197,6 +197,7 @@ describe('AccountMetadataEmittedHandler', () => {
         mockDbTransaction,
         toIpfsHash(request.event.args[2]),
         request.event.blockTimestamp,
+        1,
       );
     });
   });

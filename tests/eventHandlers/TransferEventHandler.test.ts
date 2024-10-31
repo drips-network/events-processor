@@ -138,6 +138,7 @@ describe('TransferEventHandler', () => {
           id: toNftDriverId(tokenId),
           creator: to,
           isValid: true,
+          isVisible: false,
           ownerAddress: to,
           ownerAccountId: 'ownerAccountId',
           previousOwnerAddress: from,
