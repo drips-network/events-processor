@@ -88,6 +88,7 @@ export default async function handleDripListMetadata(
     transaction,
     metadata,
     blockNumber,
+    ipfsHash,
   );
 
   await createDbEntriesForDripListSplits(
@@ -105,6 +106,7 @@ async function updateDripListMetadata(
   transaction: Transaction,
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
   blockNumber: number,
+  metaIpfsHash: IpfsHash,
 ): Promise<void> {
   dripList.isValid = true;
   dripList.name = metadata.name ?? null;
@@ -114,6 +116,7 @@ async function updateDripListMetadata(
     'latestVotingRoundId' in metadata
       ? (metadata.latestVotingRoundId as UUID) || null
       : null;
+  dripList.lastProcessedIpfsHash = metaIpfsHash;
 
   if (
     blockNumber > appSettings.visibilityThresholdBlockNumber &&

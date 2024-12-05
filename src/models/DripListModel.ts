@@ -23,6 +23,7 @@ export default class DripListModel extends Model<
   public declare previousOwnerAddress: AddressLike;
   public declare latestVotingRoundId: UUID | null;
   public declare isVisible: boolean;
+  public declare lastProcessedIpfsHash: string | null;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
@@ -66,6 +67,10 @@ export default class DripListModel extends Model<
         isVisible: {
           type: DataTypes.BOOLEAN,
           allowNull: false,
+        },
+        lastProcessedIpfsHash: {
+          type: DataTypes.TEXT,
+          allowNull: true,
         },
       },
       {

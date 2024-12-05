@@ -83,7 +83,13 @@ export default async function handleGitProjectMetadata(
 
   await validateProjectMetadata(project, metadata);
 
-  await updateGitProjectMetadata(project, logManager, transaction, metadata);
+  await updateGitProjectMetadata(
+    project,
+    logManager,
+    transaction,
+    metadata,
+    ipfsHash,
+  );
 
   await createDbEntriesForProjectSplits(
     projectId,
@@ -99,6 +105,7 @@ async function updateGitProjectMetadata(
   logManager: LogManager,
   transaction: Transaction,
   metadata: AnyVersion<typeof repoDriverAccountMetadataParser>,
+  metadataIpfsHash: IpfsHash,
 ): Promise<void> {
   const { color, source, description } = metadata;
 
@@ -107,6 +114,7 @@ async function updateGitProjectMetadata(
   project.description = description ?? null;
   project.verificationStatus = calculateProjectStatus(project);
   project.isVisible = 'isVisible' in metadata ? metadata.isVisible : true; // Projects without `isVisible` field (V4 and below) are considered visible by default.
+  project.lastProcessedIpfsHash = metadataIpfsHash;
 
   if ('avatar' in metadata) {
     // Metadata V4
