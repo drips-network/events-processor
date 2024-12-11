@@ -2,7 +2,7 @@ import EventHandlerBase from '../events/EventHandlerBase';
 import LogManager from '../core/LogManager';
 import { toAccountId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
-import { GivenEventModel, TransferEventModel } from '../models';
+import { GivenEventModel } from '../models';
 import { dbConnection } from '../db/database';
 import type { GivenEvent } from '../../contracts/CURRENT_NETWORK/Drips';
 import { toAddress } from '../utils/ethereumAddressUtils';
@@ -61,7 +61,7 @@ export default class GivenEventHandler extends EventHandlerBase<'Given(uint256,u
       });
 
       logManager.appendFindOrCreateLog(
-        TransferEventModel,
+        GivenEventModel,
         isEventCreated,
         `${givenEvent.transactionHash}-${givenEvent.logIndex}`,
       );

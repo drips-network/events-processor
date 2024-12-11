@@ -2,7 +2,7 @@ import EventHandlerBase from '../events/EventHandlerBase';
 import LogManager from '../core/LogManager';
 import { toAccountId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
-import { SplitEventModel, TransferEventModel } from '../models';
+import { SplitEventModel } from '../models';
 import { dbConnection } from '../db/database';
 import type { SplitEvent } from '../../contracts/CURRENT_NETWORK/Drips';
 import { toAddress } from '../utils/ethereumAddressUtils';
@@ -61,7 +61,7 @@ export default class SplitEventHandler extends EventHandlerBase<'Split(uint256,u
       });
 
       logManager.appendFindOrCreateLog(
-        TransferEventModel,
+        SplitEventModel,
         isEventCreated,
         `${givenEvent.transactionHash}-${givenEvent.logIndex}`,
       );
