@@ -103,7 +103,7 @@ export default class FailoverJsonRpcProvider extends JsonRpcProvider {
 
         if (!response.ok) {
           throw new Error(
-            `HTTP request failed with status ${response.statusCode}.`,
+            `HTTP request failed: ${JSON.stringify(response, null, 2)}.`,
           );
         }
 
@@ -121,18 +121,16 @@ export default class FailoverJsonRpcProvider extends JsonRpcProvider {
         }
 
         return resp;
-      } catch (error) {
+      } catch (error: any) {
         const duration = Date.now() - startTime;
-        const normalizedError =
-          error instanceof Error ? error : new Error('Unknown error');
 
-        this._logger?.warn(
-          `RPC endpoint '${endpointUrl}' failed: ${normalizedError.message}`,
+        this._logger?.error(
+          `RPC endpoint '${endpointUrl}' failed: ${JSON.stringify(error)}`,
         );
 
         errors.push({
           rpcEndpoint: endpointUrl,
-          error: normalizedError,
+          error,
         });
 
         // Log endpoint switch if there's a next endpoint to try.
