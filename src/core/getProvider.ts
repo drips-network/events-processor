@@ -1,6 +1,7 @@
 import { FetchRequest } from 'ethers';
 import appSettings from '../config/appSettings';
-import { FailoverJsonRpcProvider } from './FailoverProvider';
+import FailoverJsonRpcProvider from './FailoverJsonRpcProvider';
+import logger from './logger';
 
 let providerInstance: FailoverJsonRpcProvider;
 
@@ -33,9 +34,16 @@ export default function getProvider(): FailoverJsonRpcProvider {
       rpcEndpoints.push(fallbackEndpoint);
     }
 
-    providerInstance = new FailoverJsonRpcProvider(rpcEndpoints, undefined, {
-      pollingInterval,
-    });
+    providerInstance = new FailoverJsonRpcProvider(
+      rpcEndpoints,
+      undefined,
+      {
+        pollingInterval,
+      },
+      {
+        logger,
+      },
+    );
   }
 
   return providerInstance;
