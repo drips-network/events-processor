@@ -8,6 +8,7 @@ export const SUPPORTED_NETWORKS = [
   'optimism_sepolia',
   'polygon_amoy',
   'filecoin',
+  'metis',
 ] as const;
 
 export const FORGES_MAP = {
