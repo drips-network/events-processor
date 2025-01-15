@@ -1,0 +1,21 @@
+{
+  "network": "mainnet",
+  "block": 19461229,
+  "contracts": {
+    "drips": {
+      "address": "0x6dc0d80E170B0f3AeB5b7354e5deE674F02202d7"
+    },
+    "repoDriver": {
+      "address": "0x2dA9a9322BC5FFE1DEE59Ae90f2E4656Cb552BB0"
+    },
+    "addressDriver": {
+      "address": "0x749c34e4028c89c8308c78860C659E5909204d4a"
+    },
+    "nftDriver": {
+      "address": "0xb112E3909901BC7D1Bf81f5384a76e75364C7e67"
+    },
+    "immutableSplitsDriver": {
+      "address": "0x968B267f7775279eC255FB5E2A5108DaB6967Fdd"
+    }
+  }
+}
