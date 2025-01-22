@@ -62,18 +62,15 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
     const accountIds = [] as AccountId[];
 
     for (const arg of args) {
-      if (isAddress(arg)) {
-        return;
-      }
-
-      try {
-        const accountId = toAccountId(arg);
-
-        if (!accountIds.includes(accountId)) {
-          accountIds.push(accountId);
+      if (!isAddress(arg)) {
+        try {
+          const accountId = toAccountId(arg);
+          if (!accountIds.includes(accountId)) {
+            accountIds.push(accountId);
+          }
+        } catch (error: any) {
+          /* empty */
         }
-      } catch (error: any) {
-        /* empty */
       }
     }
 
