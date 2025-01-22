@@ -50,8 +50,8 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
   }): Promise<void> {
     const { args, blockTimestamp } = context;
 
-    // If the block is older than 1 minute, we don't invalidate the cache to avoid unnecessary requests while indexing.
-    if (new Date(blockTimestamp).getTime() < Date.now() - 60000) {
+    // If the block is older than 15 minutes, we don't invalidate the cache to avoid unnecessary requests while indexing.
+    if (new Date(blockTimestamp).getTime() < Date.now() - 15 * 60000) {
       return;
     }
 
