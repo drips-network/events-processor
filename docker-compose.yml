@@ -10,8 +10,6 @@ services:
         - SKIP_BUILD=true
     entrypoint: 'npm run dev'
     environment:
-      - PINATA_SDK_KEY=${PINATA_SDK_KEY}
-      - PINATA_SDK_SECRET=${PINATA_SDK_SECRET}
       - IPFS_GATEWAY_URL=${IPFS_GATEWAY_URL}
       - SHOULD_PROCESS_PAST_EVENTS=${SHOULD_PROCESS_PAST_EVENTS}
       - PRIMARY_RPC_URL=${PRIMARY_RPC_URL}
