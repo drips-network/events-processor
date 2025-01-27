@@ -4,7 +4,7 @@ services:
   event-processor:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dockerhub
       args:
         - NETWORK=${NETWORK}
         - SKIP_BUILD=true
