@@ -1,0 +1,6 @@
+.husky/
+.vscode/
+contracts/
+dist/
+logs/
+node_modules/
