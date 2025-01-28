@@ -40,24 +40,13 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Mainnet Docker image
+      - name: Build and push Local Testnet Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.dockerhub
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}-mainnet
+          tags: ${{ steps.meta.outputs.tags }}-localtestnet
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/arm64
-          build-args: NETWORK=mainnet
-
-      - name: Build and push Sepolia Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile.dockerhub
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}-sepolia
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/arm64
-          build-args: NETWORK=sepolia
+          build-args: NETWORK=localtestnet
