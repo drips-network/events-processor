@@ -3,19 +3,19 @@
   "block": 1,
   "contracts": {
     "immutableSplitsDriver": {
-      "address": "0xEC8493BdbBbBe22a6F54573cFeE23ac8Ab90dF77"
+      "address": "0x2e064155455d2BfD7f3641db774F9f4771B6c281"
     },
     "repoDriver": {
-      "address": "0xb9C8e18E82687a564Ac4D26E22D28a4C95057CE9"
+      "address": "0x273Ef3B20D92a9C8F8941b0cbBCA4B0259e807Ee"
     },
     "drips": {
-      "address": "0xa0523b86472561f0859d84C094cc04e6c4B33169"
+      "address": "0xC776EFe2B6EaA34AF16Bc01e98081775E51C7103"
     },
     "nftDriver": {
-      "address": "0xc95eb214845d5693abc750692161CB008796ae5C"
+      "address": "0xF8AB9D746443898666693F1a56d88272980A2E4c"
     },
     "addressDriver": {
-      "address": "0xcc137285FD4D8914Dae08629086309B89aA6FDef"
+      "address": "0xbb5799E5558406F892073850bb2BdCaE1303B5d0"
     }
   }
 }
