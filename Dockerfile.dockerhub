@@ -14,4 +14,4 @@ ARG SKIP_BUILD=false
 
 RUN if [ "$SKIP_BUILD" = "false" ]; then npm run build; fi
 
-CMD ["npm", "start"]
+CMD ["npm", "run" ,"start"]
