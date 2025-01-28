@@ -1,5 +1,5 @@
 {
-  "network": "goerli",
+  "network": "localtestnet",
   "block": 1,
   "contracts": {
     "immutableSplitsDriver": {
