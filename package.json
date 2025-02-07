@@ -11,7 +11,7 @@
     "test": "jest --detectOpenHandles --config=jest.config.ts",
     "test:coverage": "jest --coverage",
     "build": "npm run build:contracts && tsc",
-    "build:contracts": "./scripts/build-contracts.sh && ./scripts/codegen-any-chain-types.sh",
+    "build:contracts": "./scripts/build-contracts.sh && ts-node ./scripts/codegen-any-chain-types.ts",
     "postbuild": "rm -rf ./dist/src/config/chainConfigs && cp -r ./src/config/chainConfigs ./dist/src/config/chainConfigs",
     "dev": "npx nodemon",
     "start": "node dist/src/index.js",
