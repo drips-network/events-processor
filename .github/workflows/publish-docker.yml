@@ -48,5 +48,5 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}-localtestnet
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/arm64
+          platforms: linux/arm64,linux/amd64
           build-args: NETWORK=localtestnet
