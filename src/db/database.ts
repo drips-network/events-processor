@@ -9,7 +9,7 @@ import {
   RepoDriverSplitReceiverModel,
 } from '../models';
 import appSettings from '../config/appSettings';
-import unreachableError from '../utils/unreachableError';
+import { runMigrations } from './runMigrations';
 
 const { postgresConnectionString } = appSettings;
 
@@ -23,11 +23,10 @@ export async function connectToDb(): Promise<void> {
   logger.info('Initializing database...');
 
   await authenticate();
+  await runMigrations(dbConnection);
   registerModels();
   await initializeEntities();
   defineAssociations();
-
-  await dbConnection.sync();
 
   logger.info('Database initialized.');
 }
@@ -37,13 +36,6 @@ async function authenticate(): Promise<void> {
     await dbConnection.authenticate();
 
     logger.info('Connection has been established successfully.');
-
-    const schema = `"${(
-      appSettings.network ||
-      unreachableError('Missing network in app settings.')
-    ).replace(/"/g, '""')}"`;
-
-    await dbConnection.query(`CREATE SCHEMA IF NOT EXISTS ${schema};`);
 
     await dbConnection.authenticate();
   } catch (error: any) {
