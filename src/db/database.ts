@@ -20,9 +20,7 @@ export const dbConnection = new Sequelize(`${postgresConnectionString}`, {
 });
 
 export async function connectToDb(): Promise<void> {
-  logger.info('Initializing database...');
-
-  await authenticate();
+  await dbConnection.authenticate();
 
   if (appSettings.nodeEnv === 'development') {
     await runMigrations(dbConnection);
@@ -32,22 +30,7 @@ export async function connectToDb(): Promise<void> {
   await initializeEntities();
   defineAssociations();
 
-  logger.info('Database initialized.');
-}
-
-async function authenticate(): Promise<void> {
-  try {
-    await dbConnection.authenticate();
-
-    logger.info('Connection has been established successfully.');
-
-    await dbConnection.authenticate();
-  } catch (error: any) {
-    logger.error(
-      `Unable to connect to the database: ${error} in ${error.stack}`,
-    );
-    throw error;
-  }
+  logger.info('Connected to the database.');
 }
 
 async function initializeEntities(): Promise<void> {
