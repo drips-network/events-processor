@@ -23,7 +23,11 @@ export async function connectToDb(): Promise<void> {
   logger.info('Initializing database...');
 
   await authenticate();
-  await runMigrations(dbConnection);
+
+  if (appSettings.nodeEnv === 'development') {
+    await runMigrations(dbConnection);
+  }
+
   registerModels();
   await initializeEntities();
   defineAssociations();

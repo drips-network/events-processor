@@ -13,10 +13,10 @@ import {
   SplitsSetEventModel,
   StreamsSetEventModel,
   StreamReceiverSeenEventModel,
+  _LastIndexedBlockModel,
+  SplitEventModel,
+  SqueezedStreamsEventModel,
 } from '../models';
-import _LastIndexedBlockModel from '../models/_LastIndexedBlockModel';
-import SplitEventModel from '../models/SplitEventModel';
-import SqueezedStreamsEventModel from '../models/SqueezedStreamsEventModel';
 
 const REGISTERED_MODELS: ModelStaticMembers[] = [];
 

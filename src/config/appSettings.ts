@@ -28,6 +28,7 @@ const appSettings = {
   cacheInvalidationEndpoint: process.env.CACHE_INVALIDATION_ENDPOINT,
   visibilityThresholdBlockNumber:
     Number(process.env.VISIBILITY_THRESHOLD_BLOCK_NUMBER) || 0,
+  nodeEnv: process.env.NODE_ENV || 'development',
 } as const;
 
 export default appSettings;

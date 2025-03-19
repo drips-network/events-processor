@@ -41,6 +41,7 @@ import { Drips as ${chainName}Drips } from './${chainName}/';
 import { NftDriver as ${chainName}NftDriver } from './${chainName}/';
 import { RepoDriver as ${chainName}RepoDriver } from './${chainName}/';
 import { AddressDriver as ${chainName}AddressDriver } from './${chainName}/';
+import { ImmutableSplitsDriver as ${chainName}ImmutableSplitsDriver } from './${chainName}/';
 import { TypedContractEvent as ${chainName}TypedContractEvent } from './${chainName}/common';
 import { TypedLogDescription as ${chainName}TypedLogDescription } from './${chainName}/common';`;
   }
@@ -54,11 +55,13 @@ export type AnyChainDrips = ${chainNames.map((name) => `${name}Drips`).join(' | 
 export type AnyChainNftDriver = ${chainNames.map((name) => `${name}NftDriver`).join(' | ')};
 export type AnyChainRepoDriver = ${chainNames.map((name) => `${name}RepoDriver`).join(' | ')};
 export type AnyChainAddressDriver = ${chainNames.map((name) => `${name}AddressDriver`).join(' | ')};
+export type AnyChainImmutableSplitsDriver = ${chainNames.map((name) => `${name}ImmutableSplitsDriver`).join(' | ')};
 
 export type AnyChainDripsFilters = ${chainNames.map((name) => `${name}Drips['filters']`).join(' & ')};
 export type AnyChainNftDriverFilters = ${chainNames.map((name) => `${name}NftDriver['filters']`).join(' & ')};
 export type AnyChainRepoDriverFilters = ${chainNames.map((name) => `${name}RepoDriver['filters']`).join(' & ')};
 export type AnyChainAddressDriverFilters = ${chainNames.map((name) => `${name}AddressDriver['filters']`).join(' & ')};
+export type AnyChainImmutableSplitsDriverFilters = ${chainNames.map((name) => `${name}ImmutableSplitsDriver['filters']`).join(' & ')};
 
 export type AnyChainTypedContractEvent = ${chainNames.map((name) => `${name}TypedContractEvent`).join(' | ')};
 export type AnyChainTypedLogDescription<TC extends AnyChainTypedContractEvent> = ${chainNames.map((name) => `${name}TypedLogDescription<TC>`).join(' | ')};`;
@@ -70,7 +73,7 @@ function generateContractGetters() {
   return `
 import type { Provider } from 'ethers';
 
-import { Drips__factory, NftDriver__factory, RepoDriver__factory, AddressDriver__factory } from './${process.env.NETWORK}';
+import { Drips__factory, NftDriver__factory, RepoDriver__factory, AddressDriver__factory, ImmutableSplitsDriver__factory } from './${process.env.NETWORK}';
 
 export const getDripsContract: (contractAddress: string, provider: Provider) => AnyChainDrips = (contractAddress, provider) => Drips__factory.connect(
     contractAddress,
@@ -90,6 +93,11 @@ export const getRepoDriverContract: (contractAddress: string, provider: Provider
 export const getAddressDriverContract: (contractAddress: string, provider: Provider) => AnyChainAddressDriver = (contractAddress, provider) => AddressDriver__factory.connect(
     contractAddress,
     provider
+);
+
+export const getImmutableSplitsDriverContract: (contractAddress: string, provider: Provider) => AnyChainImmutableSplitsDriver = (contractAddress, provider) => ImmutableSplitsDriver__factory.connect(
+  contractAddress,
+  provider
 );`;
 }
 

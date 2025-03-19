@@ -26,7 +26,7 @@ export async function runMigrations(sequelize: Sequelize): Promise<void> {
     logger.info(`Applied migrations: ${appliedNames}`);
   } else {
     logger.info(
-      'No migrations were applied. The database is already up-to-date.',
+      'No migrations were applied. The database is already up-to-date. If you expected migrations to be applied, ensure that you run "npm run build" before starting the server.',
     );
   }
 }
