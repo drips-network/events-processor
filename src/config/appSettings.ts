@@ -46,10 +46,14 @@ function loadAppSettings(): AppSettings {
   } catch (error) {
     if (error instanceof ZodError) {
       const details = error.errors
-        .map((err) => `${err.path.join('.')}: ${err.message}`)
+        .map((err) => {
+          const path = err.path.join('.');
+          const { message } = err;
+          return `- ${path ? `'${path}': ` : ''}${message}`;
+        })
         .join('\n');
 
-      throw new Error(`Invalid configuration:\n${details}`);
+      throw new Error(`Invalid configuration:\n\n${details}\n`);
     }
 
     throw error;
@@ -57,5 +61,5 @@ function loadAppSettings(): AppSettings {
 }
 
 // Singleton app settings instance
-const config = loadAppSettings();
-export default config;
+const appSettings = loadAppSettings();
+export default appSettings;

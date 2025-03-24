@@ -6,48 +6,43 @@ import {
   DripListModel,
   DripListSplitReceiverModel,
   GitProjectModel,
+  EcosystemModel,
   RepoDriverSplitReceiverModel,
+  SubListModel,
 } from '../models';
 import appSettings from '../config/appSettings';
-import { runMigrations } from './runMigrations';
 
-const { postgresConnectionString } = appSettings;
-
-export const dbConnection = new Sequelize(`${postgresConnectionString}`, {
-  dialect: 'postgres',
-  logging: false,
-  timezone: 'UTC',
-});
+export const dbConnection = new Sequelize(
+  appSettings.postgresConnectionString,
+  {
+    dialect: 'postgres',
+    logging: false,
+    timezone: 'UTC',
+  },
+);
 
 export async function connectToDb(): Promise<void> {
-  await dbConnection.authenticate();
+  try {
+    await dbConnection.authenticate();
 
-  if (appSettings.nodeEnv === 'development') {
-    await runMigrations(dbConnection);
+    registerModels();
+    await initializeEntities();
+    defineAssociations();
+
+    logger.info('Connected to the database.');
+  } catch (error) {
+    logger.error('Failed to connect to the database.', error);
+
+    throw error;
   }
-
-  registerModels();
-  await initializeEntities();
-  defineAssociations();
-
-  logger.info('Connected to the database.');
 }
 
 async function initializeEntities(): Promise<void> {
-  try {
-    logger.info('Initializing database schema...');
+  logger.info('Initializing database schema...');
 
-    const promises = getRegisteredModels().map(async (Model) => {
-      Model.initialize(dbConnection);
-    });
+  getRegisteredModels().map((Model) => Model.initialize(dbConnection));
 
-    await Promise.all(promises);
-
-    logger.info('Database schema initialized.');
-  } catch (error: any) {
-    logger.error(`Unable to initialize the database schema: ${error}.`);
-    throw error;
-  }
+  logger.info('Database schema initialized.');
 }
 
 function defineAssociations() {
@@ -105,6 +100,14 @@ function defineAssociations() {
   });
   DripListSplitReceiverModel.belongsTo(DripListModel, {
     foreignKey: 'funderDripListId',
+  });
+
+  // One-to-Many: An Ecosystem can have multiple SubLists.
+  EcosystemModel.hasMany(SubListModel, {
+    foreignKey: 'ecosystemId',
+  });
+  SubListModel.belongsTo(EcosystemModel, {
+    foreignKey: 'ecosystemId',
   });
 
   // One-to-One: A DripListSplitReceiverModel represents/is a drip list.

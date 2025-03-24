@@ -20,11 +20,16 @@ export type AddressDriverId = string & {
 
 export type NftDriverId = string & { __brand: 'NftDriverId' };
 export type DripListId = NftDriverId;
-
 export type RepoDriverId = string & { __brand: 'RepoDriverId' };
 export type ProjectId = RepoDriverId;
-
-export type AccountId = AddressDriverId | NftDriverId | RepoDriverId;
+export type ImmutableSplitsDriverId = string & {
+  __brand: 'ImmutableSplitsDriverId';
+};
+export type AccountId =
+  | AddressDriverId
+  | NftDriverId
+  | RepoDriverId
+  | ImmutableSplitsDriverId;
 
 export type Address = string & { __brand: 'Address' };
 

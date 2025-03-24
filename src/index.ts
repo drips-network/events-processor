@@ -1,5 +1,4 @@
 import logger from './core/logger';
-
 import appSettings from './config/appSettings';
 import initJobProcessingQueue from './queue/initJobProcessingQueue';
 import startQueueMonitoringUI from './queue/startQueueMonitoringUI';
@@ -38,7 +37,6 @@ async function init() {
   }
 
   logger.info('Starting the application...');
-  logger.info(`App Settings: ${JSON.stringify(appSettings, null, 2)}`);
 
   await connectToDb();
   await initJobProcessingQueue();

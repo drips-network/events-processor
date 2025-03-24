@@ -2,7 +2,8 @@ import { DataTypes, literal, type QueryInterface } from 'sequelize';
 import { COMMON_EVENT_INIT_ATTRIBUTES, FORGES_MAP } from '../../core/constants';
 import { ProjectVerificationStatus } from '../../models/GitProjectModel';
 import getSchema from '../../utils/getSchema';
-import type { DbSchema } from '../../core/types';
+import { DependencyType, type DbSchema } from '../../core/types';
+import { AddressDriverSplitReceiverType } from '../../models/AddressDriverSplitReceiverModel';
 
 export async function up({ context: sequelize }: any): Promise<void> {
   const schema = getSchema();
@@ -405,7 +406,7 @@ async function createRepoDriverSplitReceiversTable(
         allowNull: true,
       },
       type: {
-        type: DataTypes.ENUM('DependencyType'),
+        type: DataTypes.ENUM(...Object.values(DependencyType)),
         allowNull: false,
       },
       blockTimestamp: {
@@ -620,7 +621,7 @@ async function createDripListSplitReceiversTable(
         allowNull: true,
       },
       type: {
-        type: DataTypes.ENUM('DependencyType'),
+        type: DataTypes.ENUM(...Object.values(DependencyType)),
         allowNull: false,
       },
       blockTimestamp: {
@@ -784,7 +785,7 @@ async function createAddressDriverSplitReceiversTable(
         allowNull: true,
       },
       type: {
-        type: DataTypes.ENUM('AddressDriverSplitReceiverType'),
+        type: DataTypes.ENUM(...Object.values(AddressDriverSplitReceiverType)),
         allowNull: false,
       },
       blockTimestamp: {
@@ -1020,9 +1021,9 @@ async function createTableIfNotExists(
   }
 }
 
-export async function down(queryInterface: QueryInterface): Promise<void> {
+export async function down({ context: sequelize }: any): Promise<void> {
   const schema = getSchema();
-  await queryInterface.sequelize.query(
-    `DROP SCHEMA IF EXISTS "${schema}" CASCADE`,
-  );
+  const queryInterface = sequelize.getQueryInterface();
+
+  await queryInterface.query.dropSchema(schema);
 }

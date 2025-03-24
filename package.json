@@ -13,11 +13,14 @@
     "build": "npm run build:contracts && tsc",
     "build:contracts": "./scripts/build-contracts.sh && ts-node ./scripts/codegen-any-chain-types.ts",
     "postbuild": "rm -rf ./dist/src/config/chainConfigs && cp -r ./src/config/chainConfigs ./dist/src/config/chainConfigs",
+    "check": "tsc --noEmit",
     "dev": "npx nodemon",
     "start": "node dist/src/index.js",
-    "check": "tsc --noEmit",
     "sequelize": "ts-node --transpile-only node_modules/sequelize-cli/lib/sequelize",
-    "make:migration": "npm run sequelize migration:generate -- --migrations-path src/db/migrations"
+    "db:run-migrations": "node dist/scripts/run-migrations.js",
+    "db:create-migration": "npm run sequelize migration:generate -- --migrations-path src/db/migrations",
+    "dev:db:revert-migration": "npm run sequelize -- db:migrate:undo --migrations-path src/db/migrations --config dist/src/config/sequelizeConfig.js",
+    "dev:db:log-pending-migrations": "npm run sequelize -- db:migrate:status --migrations-path src/db/migrations --config dist/src/config/sequelizeConfig.js"
   },
   "keywords": [],
   "author": "",

@@ -29,7 +29,8 @@ export const appSettingsSchema = z.object({
   shouldStartMonitoringUI: z.boolean().optional().default(false),
   cacheInvalidationEndpoint: z.string(),
   visibilityThresholdBlockNumber: z.number().optional().default(0),
-  nodeEnv: z.enum(['development', 'production', 'test']).default('development'),
+  nodeEnv: z.literal('production'), // https://nodejs.org/en/learn/getting-started/nodejs-the-difference-between-development-and-production#why-is-node_env-considered-an-antipattern
 });
 
+export type LoggingConfig = z.infer<typeof loggingConfigSchema>;
 export type AppSettings = z.infer<typeof appSettingsSchema>;

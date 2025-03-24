@@ -2,6 +2,7 @@ import type { AddressLike } from 'ethers';
 import type {
   AccountId,
   AddressDriverId,
+  ImmutableSplitsDriverId,
   NftDriverId,
   RepoDriverId,
 } from '../core/types';
@@ -34,7 +35,8 @@ export function toAccountId(id: bigint): AccountId {
   if (
     isRepoDriverId(accountIdAsString) ||
     isNftDriverId(accountIdAsString) ||
-    isAddressDriverId(accountIdAsString)
+    isAddressDriverId(accountIdAsString) ||
+    isImmutableSplitsDriverId(accountIdAsString)
   ) {
     return accountIdAsString as AccountId;
   }
@@ -103,6 +105,31 @@ export function assertRepoDiverAccountId(
   if (!isRepoDriverId(id)) {
     throw new Error(`String ${id} is not a valid 'RepoDriverId'.`);
   }
+}
+
+// ImmutableSplitsDriver
+export function isImmutableSplitsDriverId(
+  id: string,
+): id is ImmutableSplitsDriverId {
+  const isNaN = Number.isNaN(Number(id));
+  const immutableSplitsDriverId =
+    getContractNameFromAccountId(id) === 'immutableSplitsDriver';
+
+  if (isNaN || !immutableSplitsDriverId) {
+    return false;
+  }
+
+  return true;
+}
+
+export function toImmutableSplitsDriverId(id: bigint): ImmutableSplitsDriverId {
+  const immutableSplitsDriverId = id.toString();
+
+  if (!isImmutableSplitsDriverId(immutableSplitsDriverId)) {
+    throw new Error(`Invalid 'ImmutableSplitsDriver' account ID: ${id}.`);
+  }
+
+  return immutableSplitsDriverId as ImmutableSplitsDriverId;
 }
 
 export async function calcAccountId(owner: AddressLike): Promise<AccountId> {

@@ -16,6 +16,9 @@ import {
   _LastIndexedBlockModel,
   SplitEventModel,
   SqueezedStreamsEventModel,
+  SubListModel,
+  CreatedSplitsEventModel,
+  EcosystemModel,
 } from '../models';
 
 const REGISTERED_MODELS: ModelStaticMembers[] = [];
@@ -31,14 +34,17 @@ export function getRegisteredModels(): ModelStaticMembers[] {
 export function registerModels(): void {
   registerModel(_LastIndexedBlockModel);
 
+  registerModel(SubListModel);
   registerModel(DripListModel);
   registerModel(GivenEventModel);
   registerModel(SplitEventModel);
   registerModel(GitProjectModel);
+  registerModel(EcosystemModel);
   registerModel(TransferEventModel);
-  registerModel(StreamsSetEventModel);
   registerModel(SplitsSetEventModel);
+  registerModel(StreamsSetEventModel);
   registerModel(OwnerUpdatedEventModel);
+  registerModel(CreatedSplitsEventModel);
   registerModel(SqueezedStreamsEventModel);
   registerModel(DripListSplitReceiverModel);
   registerModel(StreamReceiverSeenEventModel);
