@@ -10,6 +10,7 @@ import { repoDriverAccountMetadataSchemaV4 } from './repo-driver/v4';
 import { nftDriverAccountMetadataSchemaV4 } from './nft-driver/v4';
 import { repoDriverAccountMetadataSchemaV5 } from './repo-driver/v5';
 import { nftDriverAccountMetadataSchemaV5 } from './nft-driver/v5';
+import { subListMetadataSchemaV1 } from './sub-list/v1';
 
 export const nftDriverAccountMetadataParser = createVersionedParser([
   nftDriverAccountMetadataSchemaV5.parse,
@@ -29,4 +30,8 @@ export const repoDriverAccountMetadataParser = createVersionedParser([
   repoDriverAccountMetadataSchemaV3.parse,
   repoDriverAccountMetadataSchemaV2.parse,
   repoDriverAccountMetadataSchemaV1.parse,
+]);
+
+export const immutableSplitsDriverMetadataParser = createVersionedParser([
+  subListMetadataSchemaV1.parse,
 ]);
