@@ -19,9 +19,7 @@ export type AddressDriverId = string & {
 };
 
 export type NftDriverId = string & { __brand: 'NftDriverId' };
-export type DripListId = NftDriverId;
 export type RepoDriverId = string & { __brand: 'RepoDriverId' };
-export type ProjectId = RepoDriverId;
 export type ImmutableSplitsDriverId = string & {
   __brand: 'ImmutableSplitsDriverId';
 };
@@ -79,7 +77,7 @@ export type Dependency = ArrayElement<
 
 export type DependencyOfProjectType = {
   type: 'repoDriver';
-  accountId: ProjectId;
+  accountId: RepoDriverId;
   source: {
     forge: 'github';
     repoName: string;

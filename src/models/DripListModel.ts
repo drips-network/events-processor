@@ -6,14 +6,14 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import type { UUID } from 'crypto';
-import type { AccountId, DripListId } from '../core/types';
+import type { AccountId, NftDriverId } from '../core/types';
 import getSchema from '../utils/getSchema';
 
 export default class DripListModel extends Model<
   InferAttributes<DripListModel>,
   InferCreationAttributes<DripListModel>
 > {
-  public declare id: DripListId; // The `tokenId` from `TransferEvent` event.
+  public declare id: NftDriverId; // The `tokenId` from `TransferEvent` event.
   public declare isValid: boolean;
   public declare name: string | null;
   public declare creator: AddressLike;

@@ -7,7 +7,7 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
 import { DependencyType } from '../core/types';
-import type { DripListId, ProjectId } from '../core/types';
+import type { NftDriverId, RepoDriverId } from '../core/types';
 import DripListModel from './DripListModel';
 import GitProjectModel from './GitProjectModel';
 
@@ -16,9 +16,9 @@ export default class DripListSplitReceiverModel extends Model<
   InferCreationAttributes<DripListSplitReceiverModel>
 > {
   public declare id: CreationOptional<number>; // Primary key
-  public declare fundeeDripListId: DripListId; // Foreign key
-  public declare funderProjectId: ProjectId | null; // Foreign key
-  public declare funderDripListId: DripListId | null; // Foreign key
+  public declare fundeeDripListId: NftDriverId; // Foreign key
+  public declare funderProjectId: RepoDriverId | null; // Foreign key
+  public declare funderDripListId: NftDriverId | null; // Foreign key
 
   public declare weight: number;
   public declare type: DependencyType;

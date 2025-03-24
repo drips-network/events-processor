@@ -1,10 +1,10 @@
 import type { Transaction } from 'sequelize';
-import {
-  DependencyType,
-  type DependencyOfProjectType,
-  type DripListId,
-  type ProjectId,
+import type {
+  DependencyOfProjectType,
+  NftDriverId,
+  RepoDriverId,
 } from '../../core/types';
+import { DependencyType } from '../../core/types';
 import GitProjectModel, {
   ProjectVerificationStatus,
 } from '../../models/GitProjectModel';
@@ -14,7 +14,7 @@ import RepoDriverSplitReceiverModel from '../../models/RepoDriverSplitReceiverMo
 import { isNftDriverId, isRepoDriverId } from '../../utils/accountIdUtils';
 
 export default async function createDbEntriesForProjectDependency(
-  funderAccountId: ProjectId | DripListId,
+  funderAccountId: RepoDriverId | NftDriverId,
   projectDependency: DependencyOfProjectType,
   transaction: Transaction,
   blockTimestamp: Date,

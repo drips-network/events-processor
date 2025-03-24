@@ -2,11 +2,8 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { UUID } from 'crypto';
-import {
-  DependencyType,
-  type DripListId,
-  type IpfsHash,
-} from '../../../core/types';
+import type { IpfsHash, NftDriverId } from '../../../core/types';
+import { DependencyType } from '../../../core/types';
 import getNftDriverMetadata from '../../../utils/metadataUtils';
 import validateDripListMetadata from './validateDripListMetadata';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
@@ -32,7 +29,7 @@ import appSettings from '../../../config/appSettings';
 
 export default async function handleDripListMetadata(
   logManager: LogManager,
-  dripListId: DripListId,
+  dripListId: NftDriverId,
   transaction: Transaction,
   ipfsHash: IpfsHash,
   blockTimestamp: Date,
@@ -133,7 +130,7 @@ async function updateDripListMetadata(
 }
 
 async function createDbEntriesForDripListSplits(
-  funderDripListId: DripListId,
+  funderDripListId: NftDriverId,
   splits: AnyVersion<typeof nftDriverAccountMetadataParser>['projects'],
   logManager: LogManager,
   transaction: Transaction,
