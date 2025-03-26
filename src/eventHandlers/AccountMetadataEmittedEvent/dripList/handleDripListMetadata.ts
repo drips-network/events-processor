@@ -2,16 +2,18 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { UUID } from 'crypto';
+import { toBigInt } from 'ethers';
 import type { IpfsHash, NftDriverId } from '../../../core/types';
 import { DependencyType } from '../../../core/types';
-import getNftDriverMetadata from '../../../utils/metadataUtils';
-import validateDripListMetadata from './validateDripListMetadata';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import LogManager from '../../../core/LogManager';
 import {
   isAddressDriverId,
   isNftDriverId,
   isRepoDriverId,
+  toAddressDriverId,
+  toImmutableSplitsDriverId,
+  toNftDriverId,
 } from '../../../utils/accountIdUtils';
 import { assertDependencyOfProjectType } from '../../../utils/assert';
 import createDbEntriesForProjectDependency from '../createDbEntriesForProjectDependency';
@@ -20,6 +22,7 @@ import {
   DripListModel,
   RepoDriverSplitReceiverModel,
   DripListSplitReceiverModel,
+  SubListSplitReceiverModel,
 } from '../../../models';
 import unreachableError from '../../../utils/unreachableError';
 import validateSplitsReceivers from '../splitsValidator';
@@ -27,29 +30,62 @@ import getUserAddress from '../../../utils/getAccountAddress';
 import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
 import appSettings from '../../../config/appSettings';
 
-export default async function handleDripListMetadata(
-  logManager: LogManager,
-  dripListId: NftDriverId,
-  transaction: Transaction,
-  ipfsHash: IpfsHash,
-  blockTimestamp: Date,
-  blockNumber: number,
-) {
-  const dripList = await DripListModel.findByPk(dripListId, {
-    transaction,
-    lock: true,
-  });
+type Params = {
+  ipfsHash: IpfsHash;
+  blockNumber: number;
+  blockTimestamp: Date;
+  logManager: LogManager;
+  dripListId: NftDriverId;
+  transaction: Transaction;
+  metadata: AnyVersion<typeof nftDriverAccountMetadataParser>;
+};
 
-  if (!dripList) {
-    throw new Error(
-      `Failed to update metadata for Drip List with ID ${dripListId}: Drip List not found.
-      \r Possible reasons:
-      \r\t - The event that should have created the Drip List was not processed yet.
-      \r\t - The metadata were manually emitted for a Drip List that does not exist in the app.`,
+export default async function handleDripListMetadata({
+  ipfsHash,
+  metadata,
+  logManager,
+  dripListId,
+  blockNumber,
+  transaction,
+  blockTimestamp,
+}: Params) {
+  if (dripListId !== metadata.describes.accountId) {
+    unreachableError(
+      `Account ID mismatch with: got ${metadata.describes.accountId}, expected ${dripListId}`,
     );
   }
 
-  const metadata = await getNftDriverMetadata(ipfsHash);
+  if ('type' in metadata.describes && metadata.describes.type !== 'dripList') {
+    unreachableError(
+      `Metadata type mismatch with: got ${metadata.describes.type}, expected a Drip List`,
+    );
+  }
+
+  // This must be the only place a Drip List is created.
+  const dripList = await DripListModel.create(
+    {
+      id: dripListId,
+      isValid: false,
+      name: metadata.name ?? null,
+      description:
+        'description' in metadata ? metadata.description || null : null,
+      latestVotingRoundId:
+        'latestVotingRoundId' in metadata
+          ? (metadata.latestVotingRoundId as UUID) || null
+          : null,
+      lastProcessedIpfsHash: ipfsHash,
+      isVisible:
+        blockNumber > appSettings.visibilityThresholdBlockNumber &&
+        'isVisible' in metadata
+          ? metadata.isVisible
+          : true,
+    },
+    { transaction },
+  );
+
+  logManager
+    .appendFindOrCreateLog(DripListModel, true, dripList.id)
+    .logAllInfo();
 
   const [areSplitsValid, onChainSplitsHash, calculatedSplitsHash] =
     await validateSplitsReceivers(
@@ -77,121 +113,155 @@ export default async function handleDripListMetadata(
     return;
   }
 
-  await validateDripListMetadata(dripList, metadata);
-
-  await updateDripListMetadata(
-    dripList,
-    logManager,
-    transaction,
+  await createDbEntriesForDripListSplits({
     metadata,
-    blockNumber,
-    ipfsHash,
-  );
-
-  await createDbEntriesForDripListSplits(
-    dripListId,
-    metadata.projects,
     logManager,
     transaction,
     blockTimestamp,
-  );
+    funderDripListId: dripListId,
+  });
 }
 
-async function updateDripListMetadata(
-  dripList: DripListModel,
-  logManager: LogManager,
-  transaction: Transaction,
-  metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
-  blockNumber: number,
-  metaIpfsHash: IpfsHash,
-): Promise<void> {
-  dripList.isValid = true;
-  dripList.name = metadata.name ?? null;
-  dripList.description =
-    'description' in metadata ? metadata.description || null : null;
-  dripList.latestVotingRoundId =
-    'latestVotingRoundId' in metadata
-      ? (metadata.latestVotingRoundId as UUID) || null
-      : null;
-  dripList.lastProcessedIpfsHash = metaIpfsHash;
-
-  if (
-    blockNumber > appSettings.visibilityThresholdBlockNumber &&
-    'isVisible' in metadata
-  ) {
-    dripList.isVisible = metadata.isVisible;
-  } else {
-    dripList.isVisible = true;
-  }
-
-  logManager.appendUpdateLog(dripList, DripListModel, dripList.id);
-
-  await dripList.save({ transaction });
-}
-
-async function createDbEntriesForDripListSplits(
-  funderDripListId: NftDriverId,
-  splits: AnyVersion<typeof nftDriverAccountMetadataParser>['projects'],
-  logManager: LogManager,
-  transaction: Transaction,
-  blockTimestamp: Date,
-) {
+async function createDbEntriesForDripListSplits({
+  metadata,
+  logManager,
+  transaction,
+  blockTimestamp,
+  funderDripListId,
+}: {
+  funderDripListId: NftDriverId;
+  metadata: AnyVersion<typeof nftDriverAccountMetadataParser>;
+  logManager: LogManager;
+  transaction: Transaction;
+  blockTimestamp: Date;
+}) {
   await clearCurrentProjectSplits(funderDripListId, transaction);
 
-  const splitsPromises = splits.map((split) => {
-    if (isRepoDriverId(split.accountId)) {
-      assertDependencyOfProjectType(split);
+  if (metadata.projects) {
+    // Legacy metadata version.
+    const splits = metadata.projects;
+    const splitsPromises = splits.map((split) => {
+      if (isRepoDriverId(split.accountId)) {
+        assertDependencyOfProjectType(split);
 
-      return createDbEntriesForProjectDependency(
-        funderDripListId,
-        split,
-        transaction,
-        blockTimestamp,
+        return createDbEntriesForProjectDependency(
+          funderDripListId,
+          split,
+          transaction,
+          blockTimestamp,
+        );
+      }
+
+      if (isNftDriverId(split.accountId)) {
+        return DripListSplitReceiverModel.create(
+          {
+            funderDripListId,
+            fundeeDripListId: split.accountId,
+            weight: split.weight,
+            type: DependencyType.DripListDependency,
+            blockTimestamp,
+          },
+          { transaction },
+        );
+      }
+
+      if (isAddressDriverId(split.accountId)) {
+        return AddressDriverSplitReceiverModel.create(
+          {
+            funderDripListId,
+            weight: split.weight,
+            fundeeAccountId: split.accountId,
+            fundeeAccountAddress: getUserAddress(split.accountId),
+            type: AddressDriverSplitReceiverType.DripListDependency,
+            blockTimestamp,
+          },
+          { transaction },
+        );
+      }
+
+      return unreachableError(
+        `Split with account ID ${split.accountId} is not an Address, Drip List, or a Git Project.`,
       );
-    }
+    });
 
-    if (isNftDriverId(split.accountId)) {
-      return DripListSplitReceiverModel.create(
+    const result = await Promise.all([...splitsPromises]);
+
+    logManager.appendLog(
+      `Updated ${LogManager.nameOfType(
+        DripListModel,
+      )} with ID ${funderDripListId} splits: ${result
+        .map((p) => JSON.stringify(p))
+        .join(`, `)}
+      `,
+    );
+  } else if ('recipients' in metadata) {
+    // Current metadata version.
+    const splits = metadata.recipients;
+
+    const splitsPromises = splits.map((split) => {
+      if (split.type === 'repoDriver') {
+        assertDependencyOfProjectType(split);
+
+        return createDbEntriesForProjectDependency(
+          funderDripListId,
+          split,
+          transaction,
+          blockTimestamp,
+        );
+      }
+      if (split.type === 'dripList') {
+        return DripListSplitReceiverModel.create(
+          {
+            funderDripListId,
+            fundeeDripListId: toNftDriverId(toBigInt(split.accountId)),
+            weight: split.weight,
+            type: DependencyType.DripListDependency,
+            blockTimestamp,
+          },
+          { transaction },
+        );
+      }
+      if (split.type === 'address') {
+        return AddressDriverSplitReceiverModel.create(
+          {
+            funderDripListId,
+            weight: split.weight,
+            fundeeAccountId: toAddressDriverId(split.accountId),
+            fundeeAccountAddress: getUserAddress(split.accountId),
+            type: AddressDriverSplitReceiverType.DripListDependency,
+            blockTimestamp,
+          },
+          { transaction },
+        );
+      }
+
+      return SubListSplitReceiverModel.create(
         {
           funderDripListId,
-          fundeeDripListId: split.accountId,
           weight: split.weight,
+          fundeeImmutableSplitsId: toImmutableSplitsDriverId(split.accountId),
           type: DependencyType.DripListDependency,
           blockTimestamp,
         },
         { transaction },
       );
-    }
+    });
 
-    if (isAddressDriverId(split.accountId)) {
-      return AddressDriverSplitReceiverModel.create(
-        {
-          funderDripListId,
-          weight: split.weight,
-          fundeeAccountId: split.accountId,
-          fundeeAccountAddress: getUserAddress(split.accountId),
-          type: AddressDriverSplitReceiverType.DripListDependency,
-          blockTimestamp,
-        },
-        { transaction },
-      );
-    }
+    const result = await Promise.all([...splitsPromises]);
 
-    return unreachableError(
-      `Split with account ID ${split.accountId} is not an Address, Drip List, or a Git Project.`,
+    logManager.appendLog(
+      `Updated ${LogManager.nameOfType(
+        DripListModel,
+      )} with ID ${funderDripListId} splits: ${result
+        .map((p) => JSON.stringify(p))
+        .join(`, `)}
+      `,
     );
-  });
-
-  const result = await Promise.all([...splitsPromises]);
-
-  logManager.appendLog(
-    `Updated ${LogManager.nameOfType(
-      DripListModel,
-    )} with ID ${funderDripListId} splits: ${result
-      .map((p) => JSON.stringify(p))
-      .join(`, `)}
-    `,
-  );
+  } else {
+    unreachableError(
+      `Metadata does not contain 'projects' or 'recipients' field.`,
+    );
+  }
 }
 
 async function clearCurrentProjectSplits(
@@ -211,6 +281,12 @@ async function clearCurrentProjectSplits(
     transaction,
   });
   await DripListSplitReceiverModel.destroy({
+    where: {
+      funderDripListId,
+    },
+    transaction,
+  });
+  await SubListSplitReceiverModel.destroy({
     where: {
       funderDripListId,
     },

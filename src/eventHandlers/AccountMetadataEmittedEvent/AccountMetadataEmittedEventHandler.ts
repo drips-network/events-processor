@@ -6,17 +6,20 @@ import { DRIPS_APP_USER_METADATA_KEY } from '../../core/constants';
 import handleGitProjectMetadata from './gitProject/handleGitProjectMetadata';
 import LogManager from '../../core/LogManager';
 import {
+  isImmutableSplitsDriverId,
   isNftDriverId,
   isRepoDriverId,
   toAccountId,
 } from '../../utils/accountIdUtils';
 import { isLatestEvent } from '../../utils/eventUtils';
-import { toIpfsHash } from '../../utils/metadataUtils';
+import getNftDriverMetadata, { toIpfsHash } from '../../utils/metadataUtils';
 import handleDripListMetadata from './dripList/handleDripListMetadata';
 import type EventHandlerRequest from '../../events/EventHandlerRequest';
 import { AccountMetadataEmittedEventModel } from '../../models';
 import { dbConnection } from '../../db/database';
 import { getCurrentSplitsByAccountId } from '../../utils/getCurrentSplits';
+import handleEcosystemMetadata from './handleEcosystemMetadata';
+import handleSubListMetadata from './handleSubListMetadata';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignatures = [
@@ -115,19 +118,42 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
           blockTimestamp,
         );
       }
-      // The metadata are related to a Drip List.
+      // The metadata are related to either a Drip List or an Ecosystem.
       else if (isNftDriverId(typedAccountId)) {
-        await handleDripListMetadata(
-          logManager,
-          typedAccountId,
-          transaction,
-          ipfsHash,
-          blockTimestamp,
-          blockNumber,
-        );
+        const metadata = await getNftDriverMetadata(ipfsHash);
+
+        if (metadata.isDripList) {
+          // Legacy metadata version.
+          await handleDripListMetadata({
+            ipfsHash,
+            metadata,
+            logManager,
+            transaction,
+            blockNumber,
+            blockTimestamp,
+            dripListId: typedAccountId,
+          });
+        } else if ('type' in metadata) {
+          if (metadata.type === 'dripList') {
+            // Current metadata version.
+            await handleDripListMetadata({
+              ipfsHash,
+              metadata,
+              logManager,
+              transaction,
+              blockNumber,
+              blockTimestamp,
+              dripListId: typedAccountId,
+            });
+          } else {
+            await handleEcosystemMetadata();
+          }
+        }
+      } else if (isImmutableSplitsDriverId(typedAccountId)) {
+        await handleSubListMetadata();
       } else {
         logManager.appendLog(
-          `Skipping metadata processing because the account with ID ${typedAccountId} is not a Project or a Drip List.`,
+          `Skipping metadata processing because the account with ID ${typedAccountId} is not a Project, Drip List, or Ecosystem.`,
         );
       }
 

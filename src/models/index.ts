@@ -11,6 +11,7 @@ export { default as _LastIndexedBlockModel } from './_LastIndexedBlockModel';
 export { default as OwnerUpdatedEventModel } from './OwnerUpdatedEventModel';
 export { default as CreatedSplitsEventModel } from './CreatedSplitsEventModel';
 export { default as SqueezedStreamsEventModel } from './SqueezedStreamsEventModel';
+export { default as SubListSplitReceiverModel } from './SubListSplitReceiverModel';
 export { default as DripListSplitReceiverModel } from './DripListSplitReceiverModel';
 export { default as RepoDriverSplitReceiverModel } from './RepoDriverSplitReceiverModel';
 export { default as StreamReceiverSeenEventModel } from './StreamReceiverSeenEventModel';

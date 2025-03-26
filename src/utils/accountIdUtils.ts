@@ -71,6 +71,14 @@ export function isAddressDriverId(
   return true;
 }
 
+export function toAddressDriverId(id: string): AddressDriverId {
+  if (!isAddressDriverId(id)) {
+    throw new Error(`Invalid 'AddressDriver' account ID: ${id}.`);
+  }
+
+  return id as AddressDriverId;
+}
+
 export function assertAddressDiverId(
   id: string,
 ): asserts id is AddressDriverId {
@@ -94,14 +102,16 @@ export function isImmutableSplitsDriverId(
   return true;
 }
 
-export function toImmutableSplitsDriverId(id: bigint): ImmutableSplitsDriverId {
-  const immutableSplitsDriverId = id.toString();
+export function toImmutableSplitsDriverId(
+  id: string | bigint,
+): ImmutableSplitsDriverId {
+  const stringId = typeof id === 'bigint' ? id.toString() : id;
 
-  if (!isImmutableSplitsDriverId(immutableSplitsDriverId)) {
-    throw new Error(`Invalid 'ImmutableSplitsDriver' account ID: ${id}.`);
+  if (!isImmutableSplitsDriverId(stringId)) {
+    throw new Error(`Invalid 'ImmutableSplitsDriver' account ID: ${stringId}.`);
   }
 
-  return immutableSplitsDriverId as ImmutableSplitsDriverId;
+  return stringId as ImmutableSplitsDriverId;
 }
 
 export async function calcAccountId(owner: AddressLike): Promise<AccountId> {

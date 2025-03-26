@@ -4,8 +4,7 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { TransferEventHandler } from '../../src/eventHandlers';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
-import { calcAccountId, toNftDriverId } from '../../src/utils/accountIdUtils';
-import { isLatestEvent } from '../../src/utils/eventUtils';
+import { toNftDriverId } from '../../src/utils/accountIdUtils';
 import LogManager from '../../src/core/LogManager';
 import TransferEventModel from '../../src/models/TransferEventModel';
 import DripListModel from '../../src/models/DripListModel';
@@ -61,7 +60,7 @@ describe('TransferEventHandler', () => {
         true,
       ]);
 
-      DripListModel.findOrCreate = jest
+      DripListModel.findOne = jest
         .fn()
         .mockResolvedValue([{ save: jest.fn() }, true]);
 
@@ -97,96 +96,6 @@ describe('TransferEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
-    });
-
-    test('should create a new DripListModel when the token is representing a Drip List', async () => {
-      // Arrange
-      TransferEventModel.findOrCreate = jest.fn().mockResolvedValue([
-        {
-          transactionHash: 'TransferEventTransactionHash',
-          logIndex: 1,
-        },
-        true,
-      ]);
-
-      (calcAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
-
-      DripListModel.findOrCreate = jest
-        .fn()
-        .mockResolvedValue([{ save: jest.fn() }, true]);
-
-      LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
-
-      // Act
-      await handler['_handle'](mockRequest);
-
-      // Assert
-      const {
-        event: {
-          args: [from, to, tokenId],
-        },
-      } = mockRequest;
-
-      expect(DripListModel.findOrCreate).toHaveBeenCalledWith({
-        transaction: mockDbTransaction,
-        lock: true,
-        where: {
-          id: toNftDriverId(tokenId),
-        },
-        defaults: {
-          id: toNftDriverId(tokenId),
-          creator: to,
-          isValid: true,
-          isVisible: false,
-          ownerAddress: to,
-          ownerAccountId: 'ownerAccountId',
-          previousOwnerAddress: from,
-        },
-      });
-    });
-
-    test('should update the DripListModel when the incoming event is the latest', async () => {
-      // Arrange
-      TransferEventModel.findOrCreate = jest.fn().mockResolvedValue([
-        {
-          transactionHash: 'TransferEventTransactionHash',
-          logIndex: 1,
-        },
-        true,
-      ]);
-
-      (calcAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
-
-      const mockDripList = {
-        ownerAddress: '',
-        previousOwnerAddress: '',
-        ownerAccountId: '',
-        save: jest.fn(),
-      };
-      DripListModel.findOrCreate = jest
-        .fn()
-        .mockResolvedValue([mockDripList, false]);
-
-      (isLatestEvent as jest.Mock).mockResolvedValue(true);
-
-      LogManager.prototype.appendIsLatestEventLog = jest.fn().mockReturnThis();
-
-      // Act
-      await handler['_handle'](mockRequest);
-
-      // Assert
-      const {
-        event: {
-          args: [from, to],
-        },
-      } = mockRequest;
-
-      expect(mockDripList.ownerAddress).toBe(to);
-      expect(mockDripList.previousOwnerAddress).toBe(from);
-      expect(mockDripList.ownerAccountId).toBe('ownerAccountId');
-      expect(mockDripList.save).toHaveBeenCalledWith({
-        transaction: mockDbTransaction,
       });
     });
   });

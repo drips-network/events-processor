@@ -178,7 +178,7 @@ describe('AccountMetadataEmittedHandler', () => {
           args: [
             42090747530143187925772296541596488845753594998762284015257144913834n,
             DRIPS_APP_USER_METADATA_KEY,
-            '0x516d65444e625169575257666333395844754d354d69796337725755465156666b706d5a7675723965757767584a',
+            '0x516d647379466476796f35484b554d4158795478737163786d795a6f3233556e31764e52786b3331707176587571',
           ],
           logIndex: 1,
           blockNumber: 1,
@@ -191,14 +191,15 @@ describe('AccountMetadataEmittedHandler', () => {
       await new AccountMetadataEmittedEventHandler()['_handle'](request);
 
       // Assert
-      expect(handleDripListMetadata.default).toHaveBeenCalledWith(
-        expect.anything(),
-        toAccountId(request.event.args[0]),
-        mockDbTransaction,
-        toIpfsHash(request.event.args[2]),
-        request.event.blockTimestamp,
-        1,
-      );
+      expect(handleDripListMetadata.default).toHaveBeenCalledWith({
+        logManager: expect.anything(),
+        dripListId: toAccountId(request.event.args[0]),
+        transaction: mockDbTransaction,
+        ipfsHash: toIpfsHash(request.event.args[2]),
+        blockTimestamp: request.event.blockTimestamp,
+        blockNumber: 1,
+        metadata: expect.anything(),
+      });
     });
   });
 });

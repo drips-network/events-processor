@@ -9,6 +9,7 @@ import {
   EcosystemModel,
   RepoDriverSplitReceiverModel,
   SubListModel,
+  SubListSplitReceiverModel,
 } from '../models';
 import appSettings from '../config/appSettings';
 
@@ -102,6 +103,14 @@ function defineAssociations() {
     foreignKey: 'funderDripListId',
   });
 
+  // One-to-Many: A drip list can fund multiple sub list splits.
+  DripListModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'funderDripListId',
+  });
+  SubListSplitReceiverModel.belongsTo(DripListModel, {
+    foreignKey: 'funderDripListId',
+  });
+
   // One-to-Many: An Ecosystem can have multiple SubLists.
   EcosystemModel.hasMany(SubListModel, {
     foreignKey: 'ecosystemId',
@@ -110,11 +119,35 @@ function defineAssociations() {
     foreignKey: 'ecosystemId',
   });
 
+  // One-to-Many: An Ecosystem can fund multiple sub list splits.
+  EcosystemModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'funderEcosystemId',
+  });
+  SubListSplitReceiverModel.belongsTo(EcosystemModel, {
+    foreignKey: 'funderEcosystemId',
+  });
+
+  // One-to-Many: An Ecosystem can fund multiple project splits.
+  EcosystemModel.hasMany(GitProjectModel, {
+    foreignKey: 'funderEcosystemId',
+  });
+  GitProjectModel.belongsTo(EcosystemModel, {
+    foreignKey: 'funderEcosystemId',
+  });
+
   // One-to-One: A DripListSplitReceiverModel represents/is a drip list.
   DripListModel.hasOne(DripListSplitReceiverModel, {
     foreignKey: 'fundeeDripListId',
   });
   DripListSplitReceiverModel.belongsTo(DripListModel, {
     foreignKey: 'fundeeDripListId',
+  });
+
+  // One-to-One: A SubListSplitReceiverModel represents/is a sub list.
+  SubListModel.hasOne(SubListSplitReceiverModel, {
+    foreignKey: 'fundeeImmutableSplitsId',
+  });
+  SubListSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'fundeeImmutableSplitsId',
   });
 }

@@ -64,34 +64,16 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
 
       const { visibilityThresholdBlockNumber } = appSettings;
 
-      // This must be the only place a Drip List is created.
-      const [dripList, isDripListCreated] = await DripListModel.findOrCreate({
+      const dripList = await DripListModel.findOne({
         transaction,
         lock: true,
         where: {
           id,
         },
-        defaults: {
-          id,
-          creator: to, // TODO: https://github.com/drips-network/events-processor/issues/14
-          isValid: true, // There are no receivers yet, so the drip list is valid.
-          ownerAddress: to,
-          ownerAccountId: await calcAccountId(to),
-          previousOwnerAddress: from,
-
-          isVisible:
-            blockNumber > visibilityThresholdBlockNumber
-              ? from === ZeroAddress // If it's a mint, then the Drip List will be visible. If it's a real transfer, then it's not.
-              : true, // If the block number is less than the visibility threshold, then the Drip List is visible by default.
-        },
       });
 
-      if (isDripListCreated) {
-        logManager
-          .appendFindOrCreateLog(DripListModel, isDripListCreated, dripList.id)
-          .logAllInfo();
-
-        return;
+      if (!dripList) {
+        throw new Error(`Drip List with tokenId ${id} does not exist.`);
       }
 
       // Here, the Drip List already exists.
@@ -117,9 +99,12 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
       dripList.ownerAddress = to;
       dripList.previousOwnerAddress = from;
       dripList.ownerAccountId = await calcAccountId(to);
-
-      // This is real transfer. The Drip List should not be visible unless the block number is less than the visibility threshold.
-      dripList.isVisible = blockNumber < visibilityThresholdBlockNumber;
+      dripList.creator = to; // TODO: https://github.com/drips-network/events-processor/issues/14
+      dripList.isVisible =
+        blockNumber > visibilityThresholdBlockNumber
+          ? from === ZeroAddress // If it's a mint, then the Drip List will be visible. If it's a real transfer, then it's not.
+          : true; // If the block number is less than the visibility threshold, then the Drip List is visible by default.
+      dripList.isValid = false; // The Drip List is not valid until the metadata is processed.
 
       logManager
         .appendIsLatestEventLog()

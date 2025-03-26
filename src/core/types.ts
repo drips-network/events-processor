@@ -90,6 +90,7 @@ export type DependencyOfProjectType = {
 export enum DependencyType {
   ProjectDependency = 'ProjectDependency',
   DripListDependency = 'DripListDependency',
+  EcosystemDependency = 'EcosystemDependency',
 }
 
 export type StreamHistoryHashes = string & {

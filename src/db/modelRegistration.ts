@@ -19,6 +19,7 @@ import {
   SubListModel,
   CreatedSplitsEventModel,
   EcosystemModel,
+  SubListSplitReceiverModel,
 } from '../models';
 
 const REGISTERED_MODELS: ModelStaticMembers[] = [];
@@ -46,6 +47,7 @@ export function registerModels(): void {
   registerModel(OwnerUpdatedEventModel);
   registerModel(CreatedSplitsEventModel);
   registerModel(SqueezedStreamsEventModel);
+  registerModel(SubListSplitReceiverModel);
   registerModel(DripListSplitReceiverModel);
   registerModel(StreamReceiverSeenEventModel);
   registerModel(RepoDriverSplitReceiverModel);

@@ -6,14 +6,14 @@ import {
 import { dripListSplitReceiverSchema } from '../nft-driver/v2';
 
 export const subListSplitReceiverSchema = z.object({
-  type: z.literal('sub-list'),
+  type: z.literal('subList'),
   weight: z.number(),
   accountId: z.string(),
 });
 
 export const subListMetadataSchemaV1 = z.object({
   driver: z.literal('immutable-splits'),
-  type: z.literal('sub-list'),
+  type: z.literal('subList'),
   recipients: z.array(
     z.union([
       addressDriverSplitReceiverSchema,

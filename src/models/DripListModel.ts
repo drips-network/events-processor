@@ -16,13 +16,13 @@ export default class DripListModel extends Model<
   public declare id: NftDriverId; // The `tokenId` from `TransferEvent` event.
   public declare isValid: boolean;
   public declare name: string | null;
-  public declare creator: AddressLike;
+  public declare creator: AddressLike | null;
   public declare description: string | null;
-  public declare ownerAddress: AddressLike;
-  public declare ownerAccountId: AccountId;
-  public declare previousOwnerAddress: AddressLike;
+  public declare ownerAddress: AddressLike | null;
+  public declare ownerAccountId: AccountId | null;
+  public declare previousOwnerAddress: AddressLike | null;
   public declare latestVotingRoundId: UUID | null;
-  public declare isVisible: boolean;
+  public declare isVisible: boolean | null;
   public declare lastProcessedIpfsHash: string | null;
 
   public static initialize(sequelize: Sequelize): void {
@@ -38,11 +38,11 @@ export default class DripListModel extends Model<
         },
         ownerAddress: {
           type: DataTypes.STRING,
-          allowNull: false,
+          allowNull: true,
         },
         ownerAccountId: {
           type: DataTypes.STRING,
-          allowNull: false,
+          allowNull: true,
         },
         name: {
           type: DataTypes.STRING,
@@ -58,15 +58,15 @@ export default class DripListModel extends Model<
         },
         creator: {
           type: DataTypes.STRING,
-          allowNull: false,
+          allowNull: true,
         },
         previousOwnerAddress: {
           type: DataTypes.STRING,
-          allowNull: false,
+          allowNull: true,
         },
         isVisible: {
           type: DataTypes.BOOLEAN,
-          allowNull: false,
+          allowNull: true,
         },
         lastProcessedIpfsHash: {
           type: DataTypes.TEXT,
