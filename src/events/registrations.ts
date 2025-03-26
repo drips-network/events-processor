@@ -9,6 +9,7 @@ import {
   StreamReceiverSeenEventHandler,
   StreamsSetEventHandler,
   SqueezedStreamsEventHandler,
+  CreatedSplitsEventHandler,
 } from '../eventHandlers';
 import { registerEventHandler } from './eventHandlerUtils';
 
@@ -59,5 +60,9 @@ export function registerEventHandlers(): void {
   registerEventHandler<'SqueezedStreams(uint256,address,uint256,uint128,bytes32[])'>(
     'SqueezedStreams(uint256,address,uint256,uint128,bytes32[])',
     SqueezedStreamsEventHandler,
+  );
+  registerEventHandler<'CreatedSplits(uint256,bytes32)'>(
+    'CreatedSplits(uint256,bytes32)',
+    CreatedSplitsEventHandler,
   );
 }

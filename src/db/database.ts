@@ -6,69 +6,44 @@ import {
   DripListModel,
   DripListSplitReceiverModel,
   GitProjectModel,
+  EcosystemModel,
   RepoDriverSplitReceiverModel,
+  SubListModel,
+  SubListSplitReceiverModel,
 } from '../models';
 import appSettings from '../config/appSettings';
-import unreachableError from '../utils/unreachableError';
 
-const { postgresConnectionString } = appSettings;
-
-export const dbConnection = new Sequelize(`${postgresConnectionString}`, {
-  dialect: 'postgres',
-  logging: false,
-  timezone: 'UTC',
-});
+export const dbConnection = new Sequelize(
+  appSettings.postgresConnectionString,
+  {
+    dialect: 'postgres',
+    logging: false,
+    timezone: 'UTC',
+  },
+);
 
 export async function connectToDb(): Promise<void> {
-  logger.info('Initializing database...');
-
-  await authenticate();
-  registerModels();
-  await initializeEntities();
-  defineAssociations();
-
-  await dbConnection.sync();
-
-  logger.info('Database initialized.');
-}
-
-async function authenticate(): Promise<void> {
   try {
     await dbConnection.authenticate();
 
-    logger.info('Connection has been established successfully.');
+    registerModels();
+    await initializeEntities();
+    defineAssociations();
 
-    const schema = `"${(
-      appSettings.network ||
-      unreachableError('Missing network in app settings.')
-    ).replace(/"/g, '""')}"`;
+    logger.info('Connected to the database.');
+  } catch (error) {
+    logger.error('Failed to connect to the database.', error);
 
-    await dbConnection.query(`CREATE SCHEMA IF NOT EXISTS ${schema};`);
-
-    await dbConnection.authenticate();
-  } catch (error: any) {
-    logger.error(
-      `Unable to connect to the database: ${error} in ${error.stack}`,
-    );
     throw error;
   }
 }
 
 async function initializeEntities(): Promise<void> {
-  try {
-    logger.info('Initializing database schema...');
+  logger.info('Initializing database schema...');
 
-    const promises = getRegisteredModels().map(async (Model) => {
-      Model.initialize(dbConnection);
-    });
+  getRegisteredModels().map((Model) => Model.initialize(dbConnection));
 
-    await Promise.all(promises);
-
-    logger.info('Database schema initialized.');
-  } catch (error: any) {
-    logger.error(`Unable to initialize the database schema: ${error}.`);
-    throw error;
-  }
+  logger.info('Database schema initialized.');
 }
 
 function defineAssociations() {
@@ -128,11 +103,51 @@ function defineAssociations() {
     foreignKey: 'funderDripListId',
   });
 
+  // One-to-Many: A drip list can fund multiple sub list splits.
+  DripListModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'funderDripListId',
+  });
+  SubListSplitReceiverModel.belongsTo(DripListModel, {
+    foreignKey: 'funderDripListId',
+  });
+
+  // One-to-Many: An Ecosystem can have multiple SubLists.
+  EcosystemModel.hasMany(SubListModel, {
+    foreignKey: 'ecosystemId',
+  });
+  SubListModel.belongsTo(EcosystemModel, {
+    foreignKey: 'ecosystemId',
+  });
+
+  // One-to-Many: An Ecosystem can fund multiple sub list splits.
+  EcosystemModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'funderEcosystemId',
+  });
+  SubListSplitReceiverModel.belongsTo(EcosystemModel, {
+    foreignKey: 'funderEcosystemId',
+  });
+
+  // One-to-Many: An Ecosystem can fund multiple project splits.
+  EcosystemModel.hasMany(GitProjectModel, {
+    foreignKey: 'funderEcosystemId',
+  });
+  GitProjectModel.belongsTo(EcosystemModel, {
+    foreignKey: 'funderEcosystemId',
+  });
+
   // One-to-One: A DripListSplitReceiverModel represents/is a drip list.
   DripListModel.hasOne(DripListSplitReceiverModel, {
     foreignKey: 'fundeeDripListId',
   });
   DripListSplitReceiverModel.belongsTo(DripListModel, {
     foreignKey: 'fundeeDripListId',
+  });
+
+  // One-to-One: A SubListSplitReceiverModel represents/is a sub list.
+  SubListModel.hasOne(SubListSplitReceiverModel, {
+    foreignKey: 'fundeeImmutableSplitsId',
+  });
+  SubListSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'fundeeImmutableSplitsId',
   });
 }

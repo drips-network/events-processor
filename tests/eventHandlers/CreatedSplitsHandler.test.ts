@@ -1,45 +1,41 @@
 /* eslint-disable dot-notation */
 import { randomUUID } from 'crypto';
 import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
-import { TransferEventHandler } from '../../src/eventHandlers';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
-import { toNftDriverId } from '../../src/utils/accountIdUtils';
+import CreatedSplitsEventModel from '../../src/models/CreatedSplitsEventModel';
 import LogManager from '../../src/core/LogManager';
-import TransferEventModel from '../../src/models/TransferEventModel';
-import DripListModel from '../../src/models/DripListModel';
+import { toAccountId } from '../../src/utils/accountIdUtils';
+import { CreatedSplitsEventHandler } from '../../src/eventHandlers';
+import SubListModel from '../../src/models/SubListModel';
 
-jest.mock('../../src/models/TransferEventModel');
-jest.mock('../../src/models/DripListModel');
+jest.mock('../../src/models/CreatedSplitsEventModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
-jest.mock('../../src/utils/eventUtils');
-jest.mock('../../src/utils/accountIdUtils');
 jest.mock('../../src/core/LogManager');
 
-describe('TransferEventHandler', () => {
+describe('CreatedSplitsEventHandler', () => {
   let mockDbTransaction: {};
-  let handler: TransferEventHandler;
-  let mockRequest: EventHandlerRequest<'Transfer(address,address,uint256)'>;
+  let handler: CreatedSplitsEventHandler;
+  let mockRequest: EventHandlerRequest<'CreatedSplits(uint256,bytes32)'>;
 
   beforeAll(() => {
     jest.clearAllMocks();
 
-    handler = new TransferEventHandler();
+    handler = new CreatedSplitsEventHandler();
 
     mockRequest = {
       id: randomUUID(),
       event: {
         args: [
-          'from',
-          'to',
-          27499230360500278592906888216175021054496828202459358979161455437419n,
+          53919893334301279589334030174039261347274288845081144962207220498533n,
+          'receiversHash',
         ],
         logIndex: 1,
         blockNumber: 1,
         blockTimestamp: new Date(),
         transactionHash: 'requestTransactionHash',
-      } as EventData<'Transfer(address,address,uint256)'>,
+      } as EventData<'CreatedSplits(uint256,bytes32)'>,
     };
 
     mockDbTransaction = {};
@@ -50,19 +46,25 @@ describe('TransferEventHandler', () => {
   });
 
   describe('_handle', () => {
-    test('should create a new TransferEventModel', async () => {
+    test('should create a new CreatedSplitsEventModel', async () => {
       // Arrange
-      TransferEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      CreatedSplitsEventModel.findOrCreate = jest.fn().mockResolvedValue([
         {
-          transactionHash: 'TransferEventTransactionHash',
+          transactionHash: 'CreatedSplitsTransactionHash',
           logIndex: 1,
         },
         true,
       ]);
 
-      DripListModel.findOne = jest
+      const mockSubList = {
+        ownerAddress: '',
+        previousOwnerAddress: '',
+        ownerAccountId: '',
+        save: jest.fn(),
+      };
+      SubListModel.findOrCreate = jest
         .fn()
-        .mockResolvedValue([{ save: jest.fn() }, true]);
+        .mockResolvedValue([mockSubList, true]);
 
       LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
 
@@ -72,7 +74,7 @@ describe('TransferEventHandler', () => {
       // Assert
       const {
         event: {
-          args: [from, to, tokenId],
+          args: [rawAccountId, rawReceiversHash],
           logIndex,
           blockNumber,
           blockTimestamp,
@@ -80,7 +82,7 @@ describe('TransferEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(TransferEventModel.findOrCreate).toHaveBeenCalledWith({
+      expect(CreatedSplitsEventModel.findOrCreate).toHaveBeenCalledWith({
         lock: true,
         transaction: mockDbTransaction,
         where: {
@@ -88,9 +90,8 @@ describe('TransferEventHandler', () => {
           transactionHash,
         },
         defaults: {
-          tokenId: toNftDriverId(tokenId),
-          to,
-          from,
+          accountId: toAccountId(rawAccountId),
+          receiversHash: rawReceiversHash,
           logIndex,
           blockNumber,
           blockTimestamp,

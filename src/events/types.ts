@@ -2,6 +2,7 @@ import type EventHandlerBase from './EventHandlerBase';
 import type { ValuesOf } from '../core/types';
 import type {
   AnyChainDripsFilters,
+  AnyChainImmutableSplitsDriverFilters,
   AnyChainNftDriverFilters,
   AnyChainRepoDriverFilters,
   AnyChainTypedLogDescription,
@@ -10,11 +11,14 @@ import type {
 // flat object type with all keys and values from the above
 type AllFilters = AnyChainDripsFilters &
   AnyChainNftDriverFilters &
-  AnyChainRepoDriverFilters;
+  AnyChainRepoDriverFilters &
+  AnyChainImmutableSplitsDriverFilters;
 
 export type DripsContractEvent = ValuesOf<AnyChainDripsFilters>;
 export type NftDriverContractEvent = ValuesOf<AnyChainNftDriverFilters>;
 export type RepoDriverContractEvent = ValuesOf<AnyChainRepoDriverFilters>;
+export type ImmutableSplitsDriverContractEvent =
+  ValuesOf<AnyChainImmutableSplitsDriverFilters>;
 
 type OnlySignatures<T> = T extends `${infer Prefix}(${infer Suffix})`
   ? `${Prefix}(${Suffix})`

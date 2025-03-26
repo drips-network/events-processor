@@ -10,11 +10,8 @@ import {
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
 import LogManager from '../../../core/LogManager';
 import { calculateProjectStatus } from '../../../utils/gitProjectUtils';
-import {
-  DependencyType,
-  type IpfsHash,
-  type ProjectId,
-} from '../../../core/types';
+import type { IpfsHash, RepoDriverId } from '../../../core/types';
+import { DependencyType } from '../../../core/types';
 import {
   assertAddressDiverId,
   isAddressDriverId,
@@ -32,7 +29,7 @@ import getUserAddress from '../../../utils/getAccountAddress';
 
 export default async function handleGitProjectMetadata(
   logManager: LogManager,
-  projectId: ProjectId,
+  projectId: RepoDriverId,
   transaction: Transaction,
   ipfsHash: IpfsHash,
   blockTimestamp: Date,
@@ -138,7 +135,7 @@ async function updateGitProjectMetadata(
 }
 
 async function createDbEntriesForProjectSplits(
-  funderProjectId: ProjectId,
+  funderProjectId: RepoDriverId,
   splits: AnyVersion<typeof repoDriverAccountMetadataParser>['splits'],
   logManager: LogManager,
   transaction: Transaction,

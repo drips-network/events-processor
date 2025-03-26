@@ -6,7 +6,7 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
-import type { AccountId, Forge, ProjectId } from '../core/types';
+import type { AccountId, Forge, RepoDriverId } from '../core/types';
 import { FORGES_MAP } from '../core/constants';
 
 export enum ProjectVerificationStatus {
@@ -22,7 +22,7 @@ export default class GitProjectModel extends Model<
   InferAttributes<GitProjectModel>,
   InferCreationAttributes<GitProjectModel>
 > {
-  public declare id: ProjectId; // The `accountId` from `OwnerUpdatedRequested` event.
+  public declare id: RepoDriverId; // The `accountId` from `OwnerUpdatedRequested` event.
   public declare isValid: boolean;
   public declare name: string | null;
   public declare forge: Forge | null;

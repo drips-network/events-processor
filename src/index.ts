@@ -1,5 +1,4 @@
 import logger from './core/logger';
-
 import appSettings from './config/appSettings';
 import initJobProcessingQueue from './queue/initJobProcessingQueue';
 import startQueueMonitoringUI from './queue/startQueueMonitoringUI';
@@ -20,7 +19,7 @@ import './events/types';
 import networkConstant from '../contracts/CURRENT_NETWORK/network-constant';
 
 process.on('uncaughtException', (error: Error) => {
-  logger.error(`Uncaught Exception: ${error.message}`);
+  logger.error(`Uncaught Exception: ${error.message}. Stack: ${error.stack}`);
 
   // Railway will restart the process if it exits with a non-zero exit code.
   process.exit(1);
@@ -38,7 +37,6 @@ async function init() {
   }
 
   logger.info('Starting the application...');
-  logger.info(`App Settings: ${JSON.stringify(appSettings, null, 2)}`);
 
   await connectToDb();
   await initJobProcessingQueue();

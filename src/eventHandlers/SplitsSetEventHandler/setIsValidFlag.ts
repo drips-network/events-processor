@@ -1,4 +1,4 @@
-import type { DripListId, RepoDriverId } from '../../core/types';
+import type { NftDriverId, RepoDriverId } from '../../core/types';
 import type { SplitsSetEventModel } from '../../models';
 import {
   AddressDriverSplitReceiverModel,
@@ -169,7 +169,7 @@ async function getProjectDbReceivers(accountId: RepoDriverId) {
   return [...addressReceivers, ...projectReceivers, ...dripListReceivers];
 }
 
-async function getDripListDbReceivers(accountId: DripListId) {
+async function getDripListDbReceivers(accountId: NftDriverId) {
   const addressReceivers: SplitsReceiverStruct[] =
     await AddressDriverSplitReceiverModel.findAll({
       lock: true,

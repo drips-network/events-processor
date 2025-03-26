@@ -9,20 +9,20 @@ import type { UUID } from 'crypto';
 import type { AccountId, NftDriverId } from '../core/types';
 import getSchema from '../utils/getSchema';
 
-export default class DripListModel extends Model<
-  InferAttributes<DripListModel>,
-  InferCreationAttributes<DripListModel>
+export default class EcosystemModel extends Model<
+  InferAttributes<EcosystemModel>,
+  InferCreationAttributes<EcosystemModel>
 > {
-  public declare id: NftDriverId; // The `tokenId` from `TransferEvent` event.
+  public declare id: NftDriverId;
   public declare isValid: boolean;
   public declare name: string | null;
-  public declare creator: AddressLike | null;
+  public declare creator: AddressLike;
   public declare description: string | null;
-  public declare ownerAddress: AddressLike | null;
-  public declare ownerAccountId: AccountId | null;
-  public declare previousOwnerAddress: AddressLike | null;
+  public declare ownerAddress: AddressLike;
+  public declare ownerAccountId: AccountId;
+  public declare previousOwnerAddress: AddressLike;
   public declare latestVotingRoundId: UUID | null;
-  public declare isVisible: boolean | null;
+  public declare isVisible: boolean;
   public declare lastProcessedIpfsHash: string | null;
 
   public static initialize(sequelize: Sequelize): void {
@@ -38,11 +38,11 @@ export default class DripListModel extends Model<
         },
         ownerAddress: {
           type: DataTypes.STRING,
-          allowNull: true,
+          allowNull: false,
         },
         ownerAccountId: {
           type: DataTypes.STRING,
-          allowNull: true,
+          allowNull: false,
         },
         name: {
           type: DataTypes.STRING,
@@ -58,15 +58,15 @@ export default class DripListModel extends Model<
         },
         creator: {
           type: DataTypes.STRING,
-          allowNull: true,
+          allowNull: false,
         },
         previousOwnerAddress: {
           type: DataTypes.STRING,
-          allowNull: true,
+          allowNull: false,
         },
         isVisible: {
           type: DataTypes.BOOLEAN,
-          allowNull: true,
+          allowNull: false,
         },
         lastProcessedIpfsHash: {
           type: DataTypes.TEXT,
@@ -76,11 +76,11 @@ export default class DripListModel extends Model<
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'DripLists',
+        tableName: 'Ecosystems',
         indexes: [
           {
             fields: ['ownerAddress'],
-            name: `IX_DripLists_ownerAddress`,
+            name: `IX_Ecosystems_ownerAddress`,
             where: {
               isValid: true,
             },

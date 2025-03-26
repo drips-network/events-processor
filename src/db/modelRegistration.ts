@@ -13,10 +13,14 @@ import {
   SplitsSetEventModel,
   StreamsSetEventModel,
   StreamReceiverSeenEventModel,
+  _LastIndexedBlockModel,
+  SplitEventModel,
+  SqueezedStreamsEventModel,
+  SubListModel,
+  CreatedSplitsEventModel,
+  EcosystemModel,
+  SubListSplitReceiverModel,
 } from '../models';
-import _LastIndexedBlockModel from '../models/_LastIndexedBlockModel';
-import SplitEventModel from '../models/SplitEventModel';
-import SqueezedStreamsEventModel from '../models/SqueezedStreamsEventModel';
 
 const REGISTERED_MODELS: ModelStaticMembers[] = [];
 
@@ -31,15 +35,19 @@ export function getRegisteredModels(): ModelStaticMembers[] {
 export function registerModels(): void {
   registerModel(_LastIndexedBlockModel);
 
+  registerModel(SubListModel);
   registerModel(DripListModel);
   registerModel(GivenEventModel);
   registerModel(SplitEventModel);
   registerModel(GitProjectModel);
+  registerModel(EcosystemModel);
   registerModel(TransferEventModel);
-  registerModel(StreamsSetEventModel);
   registerModel(SplitsSetEventModel);
+  registerModel(StreamsSetEventModel);
   registerModel(OwnerUpdatedEventModel);
+  registerModel(CreatedSplitsEventModel);
   registerModel(SqueezedStreamsEventModel);
+  registerModel(SubListSplitReceiverModel);
   registerModel(DripListSplitReceiverModel);
   registerModel(StreamReceiverSeenEventModel);
   registerModel(RepoDriverSplitReceiverModel);

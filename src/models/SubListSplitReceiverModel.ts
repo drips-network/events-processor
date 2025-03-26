@@ -7,18 +7,31 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
 import { DependencyType } from '../core/types';
-import type { NftDriverId, RepoDriverId } from '../core/types';
+import type {
+  ImmutableSplitsDriverId,
+  NftDriverId,
+  RepoDriverId,
+} from '../core/types';
 import DripListModel from './DripListModel';
 import GitProjectModel from './GitProjectModel';
+import SubListModel from './SubListModel';
+import EcosystemModel from './EcosystemModel';
 
-export default class DripListSplitReceiverModel extends Model<
-  InferAttributes<DripListSplitReceiverModel>,
-  InferCreationAttributes<DripListSplitReceiverModel>
+export enum SubListSplitReceiverType {
+  ProjectMaintainer = 'ProjectMaintainer',
+  ProjectDependency = 'ProjectDependency',
+  DripListDependency = 'DripListDependency',
+}
+
+export default class SubListSplitReceiverModel extends Model<
+  InferAttributes<SubListSplitReceiverModel>,
+  InferCreationAttributes<SubListSplitReceiverModel>
 > {
   public declare id: CreationOptional<number>; // Primary key
-  public declare fundeeDripListId: NftDriverId; // Foreign key
+  public declare fundeeImmutableSplitsId: ImmutableSplitsDriverId; // Foreign key
   public declare funderProjectId: RepoDriverId | null; // Foreign key
   public declare funderDripListId: NftDriverId | null; // Foreign key
+  public declare funderEcosystemId: NftDriverId | null; // Foreign key
 
   public declare weight: number;
   public declare type: DependencyType;
@@ -32,11 +45,11 @@ export default class DripListSplitReceiverModel extends Model<
           autoIncrement: true,
           primaryKey: true,
         },
-        fundeeDripListId: {
+        fundeeImmutableSplitsId: {
           // Foreign key
           type: DataTypes.STRING,
           references: {
-            model: DripListModel,
+            model: SubListModel,
             key: 'id',
           },
           allowNull: false,
@@ -59,6 +72,15 @@ export default class DripListSplitReceiverModel extends Model<
           },
           allowNull: true,
         },
+        funderEcosystemId: {
+          // Foreign key
+          type: DataTypes.STRING,
+          references: {
+            model: EcosystemModel,
+            key: 'id',
+          },
+          allowNull: true,
+        },
         weight: {
           type: DataTypes.INTEGER,
           allowNull: true,
@@ -75,16 +97,16 @@ export default class DripListSplitReceiverModel extends Model<
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'DripListSplitReceivers',
+        tableName: 'SubListSplitReceivers',
         indexes: [
           {
-            fields: ['fundeeDripListId'],
-            name: `IX_DripListSplitReceivers_fundeeDripListId`,
+            fields: ['fundeeImmutableSplitsId'],
+            name: `IX_SubListSplitReceivers_fundeeImmutableSplitsId`,
             unique: false,
           },
           {
             fields: ['funderProjectId'],
-            name: `IX_DripListSplitReceivers_funderProjectId`,
+            name: `IX_SubListSplitReceivers_funderProjectId`,
             where: {
               type: DependencyType.ProjectDependency,
             },
@@ -92,9 +114,17 @@ export default class DripListSplitReceiverModel extends Model<
           },
           {
             fields: ['funderDripListId'],
-            name: `IX_DripListSplitReceivers_funderDripListId`,
+            name: `IX_SubListSplitReceivers_funderDripListId`,
             where: {
               type: DependencyType.DripListDependency,
+            },
+            unique: false,
+          },
+          {
+            fields: ['funderEcosystemId'],
+            name: `IX_SubListSplitReceivers_funderEcosystemId`,
+            where: {
+              type: DependencyType.EcosystemDependency,
             },
             unique: false,
           },
