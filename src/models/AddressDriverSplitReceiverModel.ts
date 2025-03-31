@@ -10,11 +10,13 @@ import getSchema from '../utils/getSchema';
 import GitProjectModel from './GitProjectModel';
 import type { AddressDriverId, NftDriverId, RepoDriverId } from '../core/types';
 import DripListModel from './DripListModel';
+import EcosystemModel from './EcosystemModel';
 
 export enum AddressDriverSplitReceiverType {
   ProjectMaintainer = 'ProjectMaintainer',
   ProjectDependency = 'ProjectDependency',
   DripListDependency = 'DripListDependency',
+  EcosystemDependency = 'EcosystemDependency',
 }
 
 export default class AddressDriverSplitReceiverModel extends Model<
@@ -24,6 +26,7 @@ export default class AddressDriverSplitReceiverModel extends Model<
   public declare id: CreationOptional<number>; // Primary key
   public declare funderProjectId: RepoDriverId | null; // Foreign key
   public declare funderDripListId: NftDriverId | null; // Foreign key
+  public declare funderEcosystemId: NftDriverId | null; // Foreign key
 
   public declare weight: number;
   public declare type: AddressDriverSplitReceiverType;
@@ -65,6 +68,15 @@ export default class AddressDriverSplitReceiverModel extends Model<
           },
           allowNull: true,
         },
+        funderEcosystemId: {
+          // Foreign key
+          type: DataTypes.STRING,
+          references: {
+            model: EcosystemModel,
+            key: 'id',
+          },
+          allowNull: true,
+        },
         weight: {
           type: DataTypes.INTEGER,
           allowNull: true,
@@ -95,6 +107,14 @@ export default class AddressDriverSplitReceiverModel extends Model<
             name: `IX_AddressDriverSplitReceivers_funderDripListId`,
             where: {
               type: AddressDriverSplitReceiverType.DripListDependency,
+            },
+            unique: false,
+          },
+          {
+            fields: ['funderEcosystemId'],
+            name: `IX_AddressDriverSplitReceivers_funderEcosystemId`,
+            where: {
+              type: AddressDriverSplitReceiverType.EcosystemDependency,
             },
             unique: false,
           },

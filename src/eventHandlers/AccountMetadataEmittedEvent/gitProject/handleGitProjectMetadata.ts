@@ -166,7 +166,10 @@ async function createDbEntriesForProjectSplits(
       assertDependencyOfProjectType(dependency);
 
       return createDbEntriesForProjectDependency(
-        funderProjectId,
+        {
+          type: 'project',
+          accountId: funderProjectId,
+        },
         dependency,
         transaction,
         blockTimestamp,

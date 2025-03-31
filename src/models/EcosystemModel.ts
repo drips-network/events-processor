@@ -5,7 +5,6 @@ import type {
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
-import type { UUID } from 'crypto';
 import type { AccountId, NftDriverId } from '../core/types';
 import getSchema from '../utils/getSchema';
 
@@ -16,12 +15,11 @@ export default class EcosystemModel extends Model<
   public declare id: NftDriverId;
   public declare isValid: boolean;
   public declare name: string | null;
-  public declare creator: AddressLike;
+  public declare creator: AddressLike | null;
   public declare description: string | null;
-  public declare ownerAddress: AddressLike;
-  public declare ownerAccountId: AccountId;
-  public declare previousOwnerAddress: AddressLike;
-  public declare latestVotingRoundId: UUID | null;
+  public declare ownerAddress: AddressLike | null;
+  public declare ownerAccountId: AccountId | null;
+  public declare previousOwnerAddress: AddressLike | null;
   public declare isVisible: boolean;
   public declare lastProcessedIpfsHash: string | null;
 
@@ -38,18 +36,14 @@ export default class EcosystemModel extends Model<
         },
         ownerAddress: {
           type: DataTypes.STRING,
-          allowNull: false,
+          allowNull: true,
         },
         ownerAccountId: {
           type: DataTypes.STRING,
-          allowNull: false,
+          allowNull: true,
         },
         name: {
           type: DataTypes.STRING,
-          allowNull: true,
-        },
-        latestVotingRoundId: {
-          type: DataTypes.UUID,
           allowNull: true,
         },
         description: {
@@ -58,15 +52,15 @@ export default class EcosystemModel extends Model<
         },
         creator: {
           type: DataTypes.STRING,
-          allowNull: false,
+          allowNull: true,
         },
         previousOwnerAddress: {
           type: DataTypes.STRING,
-          allowNull: false,
+          allowNull: true,
         },
         isVisible: {
           type: DataTypes.BOOLEAN,
-          allowNull: false,
+          allowNull: true,
         },
         lastProcessedIpfsHash: {
           type: DataTypes.TEXT,

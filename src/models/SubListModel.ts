@@ -15,9 +15,7 @@ export default class SubListModel extends Model<
   public declare id: ImmutableSplitsDriverId;
 
   // Populated from `AccountMetadataEmitted` event:
-  public declare name: string | null;
-  public declare description: string | null;
-  public declare ecosystemId: NftDriverId | null;
+  public declare parentAccountId: NftDriverId | null;
   public declare lastProcessedIpfsHash: string | null;
 
   public static initialize(sequelize: Sequelize): void {
@@ -27,7 +25,7 @@ export default class SubListModel extends Model<
           type: DataTypes.STRING,
           primaryKey: true,
         },
-        ecosystemId: {
+        parentAccountId: {
           // Foreign key
           type: DataTypes.STRING,
           allowNull: true,
@@ -35,14 +33,6 @@ export default class SubListModel extends Model<
             model: 'Ecosystems',
             key: 'id',
           },
-        },
-        name: {
-          type: DataTypes.STRING,
-          allowNull: true,
-        },
-        description: {
-          type: DataTypes.TEXT,
-          allowNull: true,
         },
         lastProcessedIpfsHash: {
           type: DataTypes.TEXT,
@@ -55,8 +45,8 @@ export default class SubListModel extends Model<
         tableName: 'SubLists',
         indexes: [
           {
-            fields: ['ecosystemId'],
-            name: `IX_SubLists_ecosystemId`,
+            fields: ['parentAccountId'],
+            name: `IX_SubLists_parentAccountId`,
             unique: false,
           },
         ],

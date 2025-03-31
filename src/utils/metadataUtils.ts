@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { IpfsHash } from '../core/types';
 import {
+  immutableSplitsDriverMetadataParser,
   nftDriverAccountMetadataParser,
   repoDriverAccountMetadataParser,
 } from '../metadata/schemas';
@@ -32,11 +33,20 @@ async function getIpfsFile(hash: IpfsHash): Promise<Response> {
   return fetch(`${appSettings.ipfsGatewayUrl}/ipfs/${hash}`);
 }
 
-export default async function getNftDriverMetadata(
+export async function getNftDriverMetadata(
   ipfsHash: IpfsHash,
 ): Promise<AnyVersion<typeof nftDriverAccountMetadataParser>> {
   const ipfsFile = await (await getIpfsFile(ipfsHash)).json();
   const metadata = nftDriverAccountMetadataParser.parseAny(ipfsFile);
+
+  return metadata;
+}
+
+export async function getImmutableSpitsDriverMetadata(
+  ipfsHash: IpfsHash,
+): Promise<AnyVersion<typeof immutableSplitsDriverMetadataParser>> {
+  const ipfsFile = await (await getIpfsFile(ipfsHash)).json();
+  const metadata = immutableSplitsDriverMetadataParser.parseAny(ipfsFile);
 
   return metadata;
 }

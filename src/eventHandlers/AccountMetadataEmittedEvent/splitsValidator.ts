@@ -1,9 +1,13 @@
 import type { SplitsReceiverStruct } from '../../../contracts/CURRENT_NETWORK/Drips';
-import type { RepoDriverId, NftDriverId } from '../../core/types';
+import type {
+  RepoDriverId,
+  NftDriverId,
+  ImmutableSplitsDriverId,
+} from '../../core/types';
 import { dripsContract } from '../../core/contractClients';
 
 export default async function validateSplitsReceivers(
-  accountId: RepoDriverId | NftDriverId,
+  accountId: RepoDriverId | NftDriverId | ImmutableSplitsDriverId,
   splits: SplitsReceiverStruct[],
 ): Promise<
   [

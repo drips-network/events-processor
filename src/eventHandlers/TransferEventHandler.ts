@@ -4,7 +4,7 @@ import EventHandlerBase from '../events/EventHandlerBase';
 import LogManager from '../core/LogManager';
 import { calcAccountId, toNftDriverId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
-import { DripListModel, TransferEventModel } from '../models';
+import { DripListModel, EcosystemModel, TransferEventModel } from '../models';
 import { dbConnection } from '../db/database';
 import { isLatestEvent } from '../utils/eventUtils';
 import appSettings from '../config/appSettings';
@@ -41,10 +41,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         await TransferEventModel.findOrCreate({
           lock: true,
           transaction,
-          where: {
-            logIndex,
-            transactionHash,
-          },
+          where: { logIndex, transactionHash },
           defaults: {
             tokenId: id,
             to,
@@ -62,55 +59,48 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
       );
 
-      const { visibilityThresholdBlockNumber } = appSettings;
-
-      const dripList = await DripListModel.findOne({
+      const isLatest = await isLatestEvent(
+        transferEvent,
+        TransferEventModel,
+        { transactionHash, logIndex, tokenId },
         transaction,
-        lock: true,
-        where: {
-          id,
-        },
-      });
+      );
 
-      if (!dripList) {
-        throw new Error(`Drip List with tokenId ${id} does not exist.`);
-      }
-
-      // Here, the Drip List already exists.
-      // Only if the event is the latest (in the DB), we process its data.
-      // After all events are processed, the Drip List will be updated with the latest values.
-      if (
-        !(await isLatestEvent(
-          transferEvent,
-          TransferEventModel,
-          {
-            transactionHash,
-            logIndex,
-            tokenId,
-          },
-          transaction,
-        ))
-      ) {
+      if (!isLatest) {
         logManager.logAllInfo();
 
         return;
       }
 
-      dripList.ownerAddress = to;
-      dripList.previousOwnerAddress = from;
-      dripList.ownerAccountId = await calcAccountId(to);
-      dripList.creator = to; // TODO: https://github.com/drips-network/events-processor/issues/14
-      dripList.isVisible =
-        blockNumber > visibilityThresholdBlockNumber
-          ? from === ZeroAddress // If it's a mint, then the Drip List will be visible. If it's a real transfer, then it's not.
-          : true; // If the block number is less than the visibility threshold, then the Drip List is visible by default.
-      dripList.isValid = false; // The Drip List is not valid until the metadata is processed.
+      const [dripList, ecosystem] = await Promise.all([
+        DripListModel.findOne({ transaction, lock: true, where: { id } }),
+        EcosystemModel.findOne({ transaction, lock: true, where: { id } }),
+      ]);
+
+      if (!dripList && !ecosystem) {
+        throw new Error(
+          `Drip List or Ecosystem not found for tokenId '${tokenId}'. Maybe the 'AccountMetadataEmitted' event that should have created the entity was not processed yet?`,
+        );
+      }
+
+      const entity = (dripList ?? ecosystem)!;
+      const entityModel = dripList ? DripListModel : EcosystemModel;
+
+      entity.ownerAddress = to;
+      entity.previousOwnerAddress = from;
+      entity.ownerAccountId = await calcAccountId(to);
+      entity.creator = to; // TODO: https://github.com/drips-network/events-processor/issues/14
+      entity.isVisible =
+        blockNumber > appSettings.visibilityThresholdBlockNumber
+          ? from === ZeroAddress
+          : true;
+      entity.isValid = true;
 
       logManager
         .appendIsLatestEventLog()
-        .appendUpdateLog(dripList, DripListModel, dripList.id);
+        .appendUpdateLog(entity, entityModel, entity.id);
 
-      await dripList.save({ transaction });
+      await entity.save({ transaction });
 
       logManager.logAllInfo();
     });

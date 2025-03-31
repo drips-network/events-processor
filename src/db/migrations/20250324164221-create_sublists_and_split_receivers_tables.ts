@@ -1,4 +1,4 @@
-import { DataTypes, type QueryInterface } from 'sequelize';
+import { DataTypes, literal, type QueryInterface } from 'sequelize';
 import getSchema from '../../utils/getSchema';
 import { DependencyType, type DbSchema } from '../../core/types';
 import {} from '../../models';
@@ -33,7 +33,7 @@ async function createSubListsTable(
         type: DataTypes.STRING,
         primaryKey: true,
       },
-      ecosystemId: {
+      parentAccountId: {
         // Foreign key
         type: DataTypes.STRING,
         allowNull: true,
@@ -42,26 +42,28 @@ async function createSubListsTable(
           key: 'id',
         },
       },
-      name: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      description: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
       lastProcessedIpfsHash: {
         type: DataTypes.TEXT,
         allowNull: true,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: literal('NOW()'),
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: literal('NOW()'),
       },
     },
   );
 
   await queryInterface.addIndex(
     { tableName: 'SubLists', schema },
-    ['ecosystemId'],
+    ['parentAccountId'],
     {
-      name: 'IX_SubLists_ecosystemId',
+      name: 'IX_SubLists_parentAccountId',
       unique: false,
     },
   );
@@ -126,6 +128,16 @@ async function createSubListSplitReceiversTable(
       blockTimestamp: {
         type: DataTypes.DATE,
         allowNull: false,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: literal('NOW()'),
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: literal('NOW()'),
       },
     },
   );
@@ -200,4 +212,6 @@ export async function down({ context: sequelize }: any): Promise<void> {
     tableName: 'SubListSplitReceivers',
     schema,
   });
+
+  await queryInterface.dropTable({ tableName: 'SubLists', schema });
 }

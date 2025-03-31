@@ -128,10 +128,10 @@ function defineAssociations() {
   });
 
   // One-to-Many: An Ecosystem can fund multiple project splits.
-  EcosystemModel.hasMany(GitProjectModel, {
+  EcosystemModel.hasMany(RepoDriverSplitReceiverModel, {
     foreignKey: 'funderEcosystemId',
   });
-  GitProjectModel.belongsTo(EcosystemModel, {
+  RepoDriverSplitReceiverModel.belongsTo(EcosystemModel, {
     foreignKey: 'funderEcosystemId',
   });
 

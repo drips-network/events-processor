@@ -1,3 +1,4 @@
+import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { AccountMetadataEmittedEvent } from '../../../contracts/CURRENT_NETWORK/Drips';
 import type { AccountId } from '../../core/types';
 
@@ -12,7 +13,7 @@ import {
   toAccountId,
 } from '../../utils/accountIdUtils';
 import { isLatestEvent } from '../../utils/eventUtils';
-import getNftDriverMetadata, { toIpfsHash } from '../../utils/metadataUtils';
+import { getNftDriverMetadata, toIpfsHash } from '../../utils/metadataUtils';
 import handleDripListMetadata from './dripList/handleDripListMetadata';
 import type EventHandlerRequest from '../../events/EventHandlerRequest';
 import { AccountMetadataEmittedEventModel } from '../../models';
@@ -20,6 +21,7 @@ import { dbConnection } from '../../db/database';
 import { getCurrentSplitsByAccountId } from '../../utils/getCurrentSplits';
 import handleEcosystemMetadata from './handleEcosystemMetadata';
 import handleSubListMetadata from './handleSubListMetadata';
+import type { nftDriverAccountMetadataParser } from '../../metadata/schemas';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignatures = [
@@ -108,7 +110,8 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
 
       logManager.appendIsLatestEventLog();
 
-      // The metadata are related to a Project.
+      let handled = false;
+
       if (isRepoDriverId(typedAccountId)) {
         await handleGitProjectMetadata(
           logManager,
@@ -117,13 +120,14 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
           ipfsHash,
           blockTimestamp,
         );
+
+        handled = true;
       }
-      // The metadata are related to either a Drip List or an Ecosystem.
-      else if (isNftDriverId(typedAccountId)) {
+
+      if (isNftDriverId(typedAccountId)) {
         const metadata = await getNftDriverMetadata(ipfsHash);
 
-        if (metadata.isDripList) {
-          // Legacy metadata version.
+        if (this._isDripListMetadata(metadata)) {
           await handleDripListMetadata({
             ipfsHash,
             metadata,
@@ -133,25 +137,38 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
             blockTimestamp,
             dripListId: typedAccountId,
           });
-        } else if ('type' in metadata) {
-          if (metadata.type === 'dripList') {
-            // Current metadata version.
-            await handleDripListMetadata({
-              ipfsHash,
-              metadata,
-              logManager,
-              transaction,
-              blockNumber,
-              blockTimestamp,
-              dripListId: typedAccountId,
-            });
-          } else {
-            await handleEcosystemMetadata();
-          }
+
+          handled = true;
         }
-      } else if (isImmutableSplitsDriverId(typedAccountId)) {
-        await handleSubListMetadata();
-      } else {
+
+        if (this._isEcosystemMetadata(metadata)) {
+          await handleEcosystemMetadata({
+            ipfsHash,
+            metadata,
+            logManager,
+            transaction,
+            blockNumber,
+            blockTimestamp,
+            ecosystemId: typedAccountId,
+          });
+
+          handled = true;
+        }
+      }
+
+      if (isImmutableSplitsDriverId(typedAccountId)) {
+        await handleSubListMetadata({
+          ipfsHash,
+          logManager,
+          transaction,
+          blockTimestamp,
+          subListId: typedAccountId,
+        });
+
+        handled = true;
+      }
+
+      if (!handled) {
         logManager.appendLog(
           `Skipping metadata processing because the account with ID ${typedAccountId} is not a Project, Drip List, or Ecosystem.`,
         );
@@ -181,5 +198,20 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
 
   private _isEmittedByTheDripsApp(key: string): boolean {
     return key === DRIPS_APP_USER_METADATA_KEY;
+  }
+
+  private _isDripListMetadata(
+    metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
+  ): boolean {
+    return (
+      metadata.isDripList ||
+      ('type' in metadata ? metadata.type === 'dripList' : false)
+    );
+  }
+
+  private _isEcosystemMetadata(
+    metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
+  ): boolean {
+    return 'type' in metadata && metadata.type === 'ecosystem';
   }
 }

@@ -17,13 +17,6 @@ export async function up({ context: sequelize }: any): Promise<void> {
   await createTableIfNotExists(
     queryInterface,
     schema,
-    'SubLists',
-    createSubListsTable,
-  );
-
-  await createTableIfNotExists(
-    queryInterface,
-    schema,
     'CreatedSplitsEvents',
     createCreatedSplitsEventsTable,
   );
@@ -86,10 +79,6 @@ async function createEcosystemsTable(
         type: DataTypes.STRING,
         allowNull: true,
       },
-      latestVotingRoundId: {
-        type: DataTypes.UUID,
-        allowNull: true,
-      },
       description: {
         type: DataTypes.TEXT,
         allowNull: true,
@@ -133,61 +122,6 @@ async function createEcosystemsTable(
   );
 }
 
-async function createSubListsTable(
-  queryInterface: QueryInterface,
-  schema: DbSchema,
-) {
-  await queryInterface.createTable(
-    { tableName: 'SubLists', schema },
-    {
-      id: {
-        type: DataTypes.STRING,
-        primaryKey: true,
-      },
-      ecosystemId: {
-        // Foreign key
-        type: DataTypes.STRING,
-        allowNull: true,
-        references: {
-          model: 'Ecosystems',
-          key: 'id',
-        },
-      },
-      name: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      description: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      lastProcessedIpfsHash: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: literal('NOW()'),
-      },
-      updatedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: literal('NOW()'),
-      },
-    },
-  );
-
-  await queryInterface.addIndex(
-    { tableName: 'SubLists', schema },
-    ['ecosystemId'],
-    {
-      name: 'IX_SubLists_ecosystemId',
-      unique: false,
-    },
-  );
-}
-
 async function createTableIfNotExists(
   queryInterface: QueryInterface,
   schema: DbSchema,
@@ -210,5 +144,4 @@ export async function down({ context: sequelize }: any): Promise<void> {
 
   await queryInterface.dropTable({ tableName: 'CreatedSplitsEvents', schema });
   await queryInterface.dropTable({ tableName: 'Ecosystems', schema });
-  await queryInterface.dropTable({ tableName: 'SubLists', schema });
 }

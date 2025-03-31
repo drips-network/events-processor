@@ -1,9 +1,4 @@
-import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Model, Sequelize } from 'sequelize';
-import type {
-  nftDriverAccountMetadataParser,
-  repoDriverAccountMetadataParser,
-} from '../metadata/schemas';
 import type {
   DRIPS_CONTRACTS,
   FORGES_MAP,
@@ -66,14 +61,6 @@ export type ModelStaticMembers = {
   new (): Model;
   initialize(sequelize: Sequelize): void;
 };
-
-type ArrayElement<ArrayType extends readonly unknown[]> =
-  ArrayType extends readonly (infer ElementType)[] ? ElementType : never;
-
-export type Dependency = ArrayElement<
-  | AnyVersion<typeof repoDriverAccountMetadataParser>['splits']['dependencies']
-  | AnyVersion<typeof nftDriverAccountMetadataParser>['projects']
->;
 
 export type DependencyOfProjectType = {
   type: 'repoDriver';

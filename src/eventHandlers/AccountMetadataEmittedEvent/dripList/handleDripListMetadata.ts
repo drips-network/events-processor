@@ -55,9 +55,9 @@ export default async function handleDripListMetadata({
     );
   }
 
-  if ('type' in metadata.describes && metadata.describes.type !== 'dripList') {
+  if ('type' in metadata && metadata.type !== 'dripList') {
     unreachableError(
-      `Metadata type mismatch with: got ${metadata.describes.type}, expected a Drip List`,
+      `Metadata type mismatch with: got '${metadata.type}', expected 'dripList`,
     );
   }
 
@@ -65,7 +65,7 @@ export default async function handleDripListMetadata({
   const dripList = await DripListModel.create(
     {
       id: dripListId,
-      isValid: false,
+      isValid: false, // Until the related `TransferEvent` is processed.
       name: metadata.name ?? null,
       description:
         'description' in metadata ? metadata.description || null : null,
@@ -87,10 +87,17 @@ export default async function handleDripListMetadata({
     .appendFindOrCreateLog(DripListModel, true, dripList.id)
     .logAllInfo();
 
+  if (metadata.projects && 'recipients' in metadata && metadata.recipients) {
+    unreachableError(
+      `Metadata contains both 'projects' and 'recipients' fields. This is not allowed.`,
+    );
+  }
+  const splits = metadata.projects ?? metadata.recipients;
+
   const [areSplitsValid, onChainSplitsHash, calculatedSplitsHash] =
     await validateSplitsReceivers(
       dripList.id,
-      metadata.projects.map((s) => ({
+      splits.map((s) => ({
         weight: s.weight,
         accountId: s.accountId,
       })),
@@ -145,7 +152,10 @@ async function createDbEntriesForDripListSplits({
         assertDependencyOfProjectType(split);
 
         return createDbEntriesForProjectDependency(
-          funderDripListId,
+          {
+            type: 'dripList',
+            accountId: funderDripListId,
+          },
           split,
           transaction,
           blockTimestamp,
@@ -203,7 +213,10 @@ async function createDbEntriesForDripListSplits({
         assertDependencyOfProjectType(split);
 
         return createDbEntriesForProjectDependency(
-          funderDripListId,
+          {
+            type: 'dripList',
+            accountId: funderDripListId,
+          },
           split,
           transaction,
           blockTimestamp,

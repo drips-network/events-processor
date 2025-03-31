@@ -11,10 +11,12 @@ import GitProjectModel, {
 import { FORGES_MAP } from '../../core/constants';
 import unreachableError from '../../utils/unreachableError';
 import RepoDriverSplitReceiverModel from '../../models/RepoDriverSplitReceiverModel';
-import { isNftDriverId, isRepoDriverId } from '../../utils/accountIdUtils';
 
 export default async function createDbEntriesForProjectDependency(
-  funderAccountId: RepoDriverId | NftDriverId,
+  funder:
+    | { type: 'project'; accountId: RepoDriverId }
+    | { type: 'dripList'; accountId: NftDriverId }
+    | { type: 'ecosystem'; accountId: NftDriverId },
   projectDependency: DependencyOfProjectType,
   transaction: Transaction,
   blockTimestamp: Date,
@@ -45,15 +47,23 @@ export default async function createDbEntriesForProjectDependency(
     },
   });
 
+  let type: DependencyType;
+  if (funder.type === 'project') {
+    type = DependencyType.ProjectDependency;
+  } else if (funder.type === 'dripList') {
+    type = DependencyType.DripListDependency;
+  } else {
+    type = DependencyType.EcosystemDependency;
+  }
+
   return RepoDriverSplitReceiverModel.create(
     {
       weight,
       fundeeProjectId,
-      type: isNftDriverId(funderAccountId)
-        ? DependencyType.DripListDependency
-        : DependencyType.ProjectDependency,
-      funderDripListId: isNftDriverId(funderAccountId) ? funderAccountId : null,
-      funderProjectId: isRepoDriverId(funderAccountId) ? funderAccountId : null,
+      type,
+      funderDripListId: funder.type === 'dripList' ? funder.accountId : null,
+      funderProjectId: funder.type === 'project' ? funder.accountId : null,
+      funderEcosystemId: funder.type === 'ecosystem' ? funder.accountId : null,
       blockTimestamp,
     },
     { transaction },

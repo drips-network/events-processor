@@ -45,8 +45,8 @@ export function isNftDriverId(id: string): id is NftDriverId {
   return true;
 }
 
-export function toNftDriverId(id: bigint): NftDriverId {
-  const nftDriverId = id.toString();
+export function toNftDriverId(id: bigint | string): NftDriverId {
+  const nftDriverId = typeof id === 'bigint' ? id.toString() : id;
 
   if (!isNftDriverId(nftDriverId)) {
     throw new Error(`Invalid 'NftDriver' account ID: ${id}.`);
