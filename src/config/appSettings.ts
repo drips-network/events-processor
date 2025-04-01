@@ -22,11 +22,11 @@ const appSettings = {
     : 1,
   ipfsGatewayUrl:
     process.env.IPFS_GATEWAY_URL || 'https://drips.mypinata.cloud',
-  queueUiPort: process.env.MONITORING_UI_PORT || 3000,
+  monitoringUiPort: process.env.MONITORING_UI_PORT || 3000,
   redisConnectionString: process.env.REDIS_CONNECTION_STRING,
   postgresConnectionString: process.env.POSTGRES_CONNECTION_STRING,
   shouldStartMonitoringUI:
-    (process.env.SHOULD_START_MONITORING_UI as unknown as string) === 'true',
+    (process.env.SHOULD_START_MONITORING_UI as unknown as string) !== 'false',
   cacheInvalidationEndpoint: process.env.CACHE_INVALIDATION_ENDPOINT,
   visibilityThresholdBlockNumber:
     Number(process.env.VISIBILITY_THRESHOLD_BLOCK_NUMBER) || 0,
