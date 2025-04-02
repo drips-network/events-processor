@@ -28,7 +28,7 @@ function loadAppSettings(): AppSettings {
       ? parseInt(process.env.CONFIRMATIONS, 10)
       : undefined,
     ipfsGatewayUrl: process.env.IPFS_GATEWAY_URL,
-    queueUiPort: process.env.MONITORING_UI_PORT,
+    monitoringUiPort: process.env.MONITORING_UI_PORT,
     redisConnectionString: process.env.REDIS_CONNECTION_STRING,
     postgresConnectionString: process.env.POSTGRES_CONNECTION_STRING,
     shouldStartMonitoringUI:

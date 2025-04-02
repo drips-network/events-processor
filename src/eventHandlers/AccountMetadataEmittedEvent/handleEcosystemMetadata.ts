@@ -1,5 +1,4 @@
 import type { AnyVersion, LatestVersion } from '@efstajas/versioned-parser';
-import type { UUID } from 'crypto';
 import type { Transaction } from 'sequelize';
 import appSettings from '../../config/appSettings';
 import LogManager from '../../core/LogManager';
@@ -61,10 +60,6 @@ export default async function handleEcosystemMetadata({
       name: metadata.name ?? null,
       description:
         'description' in metadata ? metadata.description || null : null,
-      latestVotingRoundId:
-        'latestVotingRoundId' in metadata
-          ? (metadata.latestVotingRoundId as UUID) || null
-          : null,
       lastProcessedIpfsHash: ipfsHash,
       isVisible:
         blockNumber > appSettings.visibilityThresholdBlockNumber &&

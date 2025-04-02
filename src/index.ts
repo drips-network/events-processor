@@ -1,7 +1,8 @@
+import express from 'express';
 import logger from './core/logger';
 import appSettings from './config/appSettings';
 import initJobProcessingQueue from './queue/initJobProcessingQueue';
-import startQueueMonitoringUI from './queue/startQueueMonitoringUI';
+import { arenaConfig } from './queue/queueMonitoring';
 import { connectToDb } from './db/database';
 import { registerEventHandlers } from './events/registrations';
 import poll from './events/poll';
@@ -17,6 +18,7 @@ import { toAddress } from './utils/ethereumAddressUtils';
 import loadChainConfig from './config/loadChainConfig';
 import './events/types';
 import networkConstant from '../contracts/CURRENT_NETWORK/network-constant';
+import { healthEndpoint } from './health';
 
 process.on('uncaughtException', (error: Error) => {
   logger.error(`Uncaught Exception: ${error.message}. Stack: ${error.stack}`);
@@ -69,7 +71,16 @@ async function init() {
     startBlock,
   );
 
+  const app = express();
+
   if (appSettings.shouldStartMonitoringUI) {
-    startQueueMonitoringUI();
+    app.use('/arena', arenaConfig);
+    app.use('/health', healthEndpoint);
   }
+
+  app.listen(appSettings.queueUiPort, () => {
+    logger.info(
+      `Monitoring available on port ${appSettings.queueUiPort}. Routes: /health, /arena`,
+    );
+  });
 }
