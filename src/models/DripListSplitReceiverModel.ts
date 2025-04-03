@@ -7,10 +7,15 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
 import { DependencyType } from '../core/types';
-import type { NftDriverId, RepoDriverId } from '../core/types';
+import type {
+  ImmutableSplitsDriverId,
+  NftDriverId,
+  RepoDriverId,
+} from '../core/types';
 import DripListModel from './DripListModel';
 import GitProjectModel from './GitProjectModel';
 import EcosystemModel from './EcosystemModel';
+import SubListModel from './SubListModel';
 
 export default class DripListSplitReceiverModel extends Model<
   InferAttributes<DripListSplitReceiverModel>,
@@ -21,6 +26,7 @@ export default class DripListSplitReceiverModel extends Model<
   public declare funderProjectId: RepoDriverId | null; // Foreign key
   public declare funderDripListId: NftDriverId | null; // Foreign key
   public declare funderEcosystemId: NftDriverId | null; // Foreign key
+  public declare funderSubListId: ImmutableSplitsDriverId | null; // Foreign key
 
   public declare weight: number;
   public declare type: DependencyType;
@@ -66,6 +72,15 @@ export default class DripListSplitReceiverModel extends Model<
           type: DataTypes.STRING,
           references: {
             model: EcosystemModel,
+            key: 'id',
+          },
+          allowNull: true,
+        },
+        funderSubListId: {
+          // Foreign key
+          type: DataTypes.STRING,
+          references: {
+            model: SubListModel,
             key: 'id',
           },
           allowNull: true,

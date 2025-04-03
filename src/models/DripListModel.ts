@@ -13,7 +13,7 @@ export default class DripListModel extends Model<
   InferAttributes<DripListModel>,
   InferCreationAttributes<DripListModel>
 > {
-  public declare id: NftDriverId; // The `tokenId` from `TransferEvent` event.
+  public declare id: NftDriverId;
   public declare isValid: boolean;
   public declare name: string | null;
   public declare creator: AddressLike | null;

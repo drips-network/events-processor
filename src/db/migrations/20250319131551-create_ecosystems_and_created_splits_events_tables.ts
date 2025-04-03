@@ -83,6 +83,10 @@ async function createEcosystemsTable(
         type: DataTypes.TEXT,
         allowNull: true,
       },
+      latestVotingRoundId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
       creator: {
         type: DataTypes.STRING,
         allowNull: false,

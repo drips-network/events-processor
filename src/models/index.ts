@@ -9,7 +9,6 @@ export { default as SplitsSetEventModel } from './SplitsSetEventModel';
 export { default as StreamsSetEventModel } from './StreamsSetEventModel';
 export { default as _LastIndexedBlockModel } from './_LastIndexedBlockModel';
 export { default as OwnerUpdatedEventModel } from './OwnerUpdatedEventModel';
-export { default as CreatedSplitsEventModel } from './CreatedSplitsEventModel';
 export { default as SqueezedStreamsEventModel } from './SqueezedStreamsEventModel';
 export { default as SubListSplitReceiverModel } from './SubListSplitReceiverModel';
 export { default as DripListSplitReceiverModel } from './DripListSplitReceiverModel';

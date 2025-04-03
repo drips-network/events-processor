@@ -8,9 +8,15 @@ import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
 import GitProjectModel from './GitProjectModel';
-import type { AddressDriverId, NftDriverId, RepoDriverId } from '../core/types';
+import type {
+  AddressDriverId,
+  ImmutableSplitsDriverId,
+  NftDriverId,
+  RepoDriverId,
+} from '../core/types';
 import DripListModel from './DripListModel';
 import EcosystemModel from './EcosystemModel';
+import SubListModel from './SubListModel';
 
 export enum AddressDriverSplitReceiverType {
   ProjectMaintainer = 'ProjectMaintainer',
@@ -24,14 +30,15 @@ export default class AddressDriverSplitReceiverModel extends Model<
   InferCreationAttributes<AddressDriverSplitReceiverModel>
 > {
   public declare id: CreationOptional<number>; // Primary key
+  public declare fundeeAccountId: AddressDriverId;
+  public declare fundeeAccountAddress: AddressLike;
   public declare funderProjectId: RepoDriverId | null; // Foreign key
   public declare funderDripListId: NftDriverId | null; // Foreign key
   public declare funderEcosystemId: NftDriverId | null; // Foreign key
+  public declare funderSubListId: ImmutableSplitsDriverId | null; // Foreign key
 
   public declare weight: number;
   public declare type: AddressDriverSplitReceiverType;
-  public declare fundeeAccountId: AddressDriverId;
-  public declare fundeeAccountAddress: AddressLike;
   public declare blockTimestamp: Date;
 
   public static initialize(sequelize: Sequelize): void {
@@ -73,6 +80,15 @@ export default class AddressDriverSplitReceiverModel extends Model<
           type: DataTypes.STRING,
           references: {
             model: EcosystemModel,
+            key: 'id',
+          },
+          allowNull: true,
+        },
+        funderSubListId: {
+          // Foreign key
+          type: DataTypes.STRING,
+          references: {
+            model: SubListModel,
             key: 'id',
           },
           allowNull: true,

@@ -14,7 +14,7 @@ import type { SplitsReceiverStruct } from '../../../contracts/CURRENT_NETWORK/Dr
 import unreachableError from '../../utils/unreachableError';
 import { dripsContract } from '../../core/contractClients';
 import type LogManager from '../../core/LogManager';
-import { formatSplitReceivers } from '../AccountMetadataEmittedEvent/splitsValidator';
+import { formatSplitReceivers } from '../../utils/formatSplitReceivers';
 
 export default async function setIsValidFlag(
   splitsSetEvent: SplitsSetEventModel,
@@ -120,7 +120,7 @@ export default async function setIsValidFlag(
         \r\t - 'SetSplits' event splits hash:            ${receiversHash}
         \r\t - DB (populated from metadata) splits hash: ${storedInDbFromMetaReceiversHash}
         \r Possible reasons:
-        \r\t - The 'AccountMetadataEmitted' event that should have created the Drip List splits was not processed yet.
+        \r\t - The 'AccountMetadataEmitted' event that should have created the splits was not processed yet.
         \r\t - The 'SetSplits' event (was manually emitted?) had splits that do not match what's already stored in the DB (from metadata).`,
       );
     } else if (entity.isValid === false) {
@@ -251,7 +251,7 @@ async function getEcosystemDbReceivers(accountId: NftDriverId) {
       },
     }).then((receivers) =>
       receivers.map((receiver) => ({
-        accountId: receiver.fundeeImmutableSplitsId ?? unreachableError(),
+        accountId: receiver.fundeeSubListId ?? unreachableError(),
         weight: receiver.weight,
       })),
     );

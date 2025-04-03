@@ -28,7 +28,11 @@ export async function connectToDb(): Promise<void> {
 
     registerModels();
     await initializeEntities();
-    defineAssociations();
+
+    defineProjectAssociations();
+    defineDripListAssociations();
+    defineEcosystemsAssociations();
+    defineSubListAssociations();
 
     logger.info('Connected to the database.');
   } catch (error) {
@@ -46,8 +50,8 @@ async function initializeEntities(): Promise<void> {
   logger.info('Database schema initialized.');
 }
 
-function defineAssociations() {
-  // One-to-Many: A project can fund multiple address splits.
+function defineProjectAssociations() {
+  // One-to-Many: A project can fund multiple addresses.
   GitProjectModel.hasMany(AddressDriverSplitReceiverModel, {
     foreignKey: 'funderProjectId',
   });
@@ -55,7 +59,7 @@ function defineAssociations() {
     foreignKey: 'funderProjectId',
   });
 
-  // One-to-Many: A project can fund multiple project splits.
+  // One-to-Many: A project can fund multiple projects.
   GitProjectModel.hasMany(RepoDriverSplitReceiverModel, {
     foreignKey: 'funderProjectId',
   });
@@ -63,7 +67,7 @@ function defineAssociations() {
     foreignKey: 'funderProjectId',
   });
 
-  // One-to-Many: A project can fund multiple drip list splits.
+  // One-to-Many: A project can fund multiple Drip Lists.
   GitProjectModel.hasMany(DripListSplitReceiverModel, {
     foreignKey: 'funderProjectId',
   });
@@ -71,15 +75,25 @@ function defineAssociations() {
     foreignKey: 'funderProjectId',
   });
 
-  // One-to-One: A RepoDriverSplitReceiver represents/is a project.
+  // One-to-Many: A project can fund multiple Sub Lists.
+  GitProjectModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'funderSubListId',
+  });
+  SubListSplitReceiverModel.belongsTo(GitProjectModel, {
+    foreignKey: 'funderSubListId',
+  });
+
+  // One-to-One: A project receiver represents/is a project.
   GitProjectModel.hasOne(RepoDriverSplitReceiverModel, {
     foreignKey: 'fundeeProjectId',
   });
   RepoDriverSplitReceiverModel.belongsTo(GitProjectModel, {
     foreignKey: 'fundeeProjectId',
   });
+}
 
-  // One-to-Many: A drip list can fund multiple address splits.
+function defineDripListAssociations() {
+  // One-to-Many: A Drip List can fund multiple addresses.
   DripListModel.hasMany(AddressDriverSplitReceiverModel, {
     foreignKey: 'funderDripListId',
   });
@@ -87,7 +101,7 @@ function defineAssociations() {
     foreignKey: 'funderDripListId',
   });
 
-  // One-to-Many: A drip list can fund multiple project splits.
+  // One-to-Many: A Drip List can fund multiple projects.
   DripListModel.hasMany(RepoDriverSplitReceiverModel, {
     foreignKey: 'funderDripListId',
   });
@@ -95,7 +109,7 @@ function defineAssociations() {
     foreignKey: 'funderDripListId',
   });
 
-  // One-to-Many: A drip list can fund multiple drip list splits.
+  // One-to-Many: A Drip List can fund multiple Drip Lists.
   DripListModel.hasMany(DripListSplitReceiverModel, {
     foreignKey: 'funderDripListId',
   });
@@ -103,7 +117,7 @@ function defineAssociations() {
     foreignKey: 'funderDripListId',
   });
 
-  // One-to-Many: A drip list can fund multiple sub list splits.
+  // One-to-Many: A Drip List can fund multiple Sub Lists.
   DripListModel.hasMany(SubListSplitReceiverModel, {
     foreignKey: 'funderDripListId',
   });
@@ -111,23 +125,25 @@ function defineAssociations() {
     foreignKey: 'funderDripListId',
   });
 
-  // One-to-Many: An Ecosystem can have multiple SubLists.
-  EcosystemModel.hasMany(SubListModel, {
-    foreignKey: 'ecosystemId',
+  // One-to-One: A Drip List receiver represents/is a Drip List.
+  DripListModel.hasOne(DripListSplitReceiverModel, {
+    foreignKey: 'fundeeDripListId',
   });
-  SubListModel.belongsTo(EcosystemModel, {
-    foreignKey: 'ecosystemId',
+  DripListSplitReceiverModel.belongsTo(DripListModel, {
+    foreignKey: 'fundeeDripListId',
   });
+}
 
-  // One-to-Many: An Ecosystem can fund multiple sub list splits.
-  EcosystemModel.hasMany(SubListSplitReceiverModel, {
+function defineEcosystemsAssociations() {
+  // One-to-Many: An Ecosystem can fund multiple addresses.
+  EcosystemModel.hasMany(AddressDriverSplitReceiverModel, {
     foreignKey: 'funderEcosystemId',
   });
-  SubListSplitReceiverModel.belongsTo(EcosystemModel, {
+  AddressDriverSplitReceiverModel.belongsTo(EcosystemModel, {
     foreignKey: 'funderEcosystemId',
   });
 
-  // One-to-Many: An Ecosystem can fund multiple project splits.
+  // One-to-Many: An Ecosystem can fund multiple projects.
   EcosystemModel.hasMany(RepoDriverSplitReceiverModel, {
     foreignKey: 'funderEcosystemId',
   });
@@ -135,19 +151,171 @@ function defineAssociations() {
     foreignKey: 'funderEcosystemId',
   });
 
-  // One-to-One: A DripListSplitReceiverModel represents/is a drip list.
-  DripListModel.hasOne(DripListSplitReceiverModel, {
-    foreignKey: 'fundeeDripListId',
+  // One-to-Many: An Ecosystem can fund multiple Drip Lists.
+  EcosystemModel.hasMany(DripListSplitReceiverModel, {
+    foreignKey: 'funderEcosystemId',
   });
-  DripListSplitReceiverModel.belongsTo(DripListModel, {
-    foreignKey: 'fundeeDripListId',
+  DripListSplitReceiverModel.belongsTo(EcosystemModel, {
+    foreignKey: 'funderEcosystemId',
   });
 
-  // One-to-One: A SubListSplitReceiverModel represents/is a sub list.
-  SubListModel.hasOne(SubListSplitReceiverModel, {
-    foreignKey: 'fundeeImmutableSplitsId',
+  // One-to-Many: An Ecosystem can fund multiple Sub Lists.
+  EcosystemModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'funderEcosystemId',
+  });
+  SubListSplitReceiverModel.belongsTo(EcosystemModel, {
+    foreignKey: 'funderEcosystemId',
+  });
+}
+
+function defineSubListAssociations() {
+  // One-to-Many: A parent Sub List can fund multiple addresses.
+  SubListModel.hasMany(AddressDriverSplitReceiverModel, {
+    foreignKey: 'parentSubListId',
+  });
+  AddressDriverSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'parentSubListId',
+  });
+
+  // One-to-Many: A parent Sub List can fund multiple projects.
+  SubListModel.hasMany(RepoDriverSplitReceiverModel, {
+    foreignKey: 'parentSubListId',
+  });
+  RepoDriverSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'parentSubListId',
+  });
+
+  // One-to-Many: A parent Sub List can fund multiple Drip Lists.
+  SubListModel.hasMany(DripListSplitReceiverModel, {
+    foreignKey: 'parentSubListId',
+  });
+  DripListSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'parentSubListId',
+  });
+
+  // One-to-Many: A parent Sub List can fund multiple Sub Lists.
+  SubListModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'parentSubListId',
   });
   SubListSplitReceiverModel.belongsTo(SubListModel, {
-    foreignKey: 'fundeeImmutableSplitsId',
+    foreignKey: 'parentSubListId',
+  });
+
+  // One-to-Many: A parent Drip List can fund multiple addresses.
+  SubListModel.hasMany(AddressDriverSplitReceiverModel, {
+    foreignKey: 'parentDripListId',
+  });
+  AddressDriverSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'parentDripListId',
+  });
+
+  // One-to-Many: A parent Drip List can fund multiple projects.
+  SubListModel.hasMany(RepoDriverSplitReceiverModel, {
+    foreignKey: 'parentDripListId',
+  });
+  RepoDriverSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'parentDripListId',
+  });
+
+  // One-to-Many: A parent Drip List can fund multiple Drip Lists.
+  SubListModel.hasMany(DripListSplitReceiverModel, {
+    foreignKey: 'parentDripListId',
+  });
+  DripListSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'parentDripListId',
+  });
+
+  // One-to-Many: A root Drip List can fund multiple addresses.
+  SubListModel.hasMany(AddressDriverSplitReceiverModel, {
+    foreignKey: 'rootDripListId',
+  });
+  AddressDriverSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'rootDripListId',
+  });
+
+  // One-to-Many: A root Drip List can fund multiple projects.
+  SubListModel.hasMany(RepoDriverSplitReceiverModel, {
+    foreignKey: 'rootDripListId',
+  });
+  RepoDriverSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'rootDripListId',
+  });
+
+  // One-to-Many: A root Drip List can fund multiple Drip Lists.
+  SubListModel.hasMany(DripListSplitReceiverModel, {
+    foreignKey: 'rootDripListId',
+  });
+  DripListSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'rootDripListId',
+  });
+
+  // One-to-Many: A parent Ecosystem can fund multiple addresses.
+  SubListModel.hasMany(AddressDriverSplitReceiverModel, {
+    foreignKey: 'parentEcosystemId',
+  });
+  AddressDriverSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'parentEcosystemId',
+  });
+
+  // One-to-Many: A parent Ecosystem can fund multiple projects.
+  SubListModel.hasMany(RepoDriverSplitReceiverModel, {
+    foreignKey: 'parentEcosystemId',
+  });
+  RepoDriverSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'parentEcosystemId',
+  });
+
+  // One-to-Many: A parent Ecosystem can fund multiple Drip Lists.
+  SubListModel.hasMany(DripListSplitReceiverModel, {
+    foreignKey: 'parentEcosystemId',
+  });
+  DripListSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'parentEcosystemId',
+  });
+  // One-to-Many: A parent Ecosystem can fund multiple Sub Lists.
+  SubListModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'parentEcosystemId',
+  });
+  SubListSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'parentEcosystemId',
+  });
+
+  // One-to-Many: A root Ecosystem can fund multiple addresses.
+  SubListModel.hasMany(AddressDriverSplitReceiverModel, {
+    foreignKey: 'rootEcosystemId',
+  });
+  AddressDriverSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'rootEcosystemId',
+  });
+
+  // One-to-Many: A root Ecosystem can fund multiple projects.
+  SubListModel.hasMany(RepoDriverSplitReceiverModel, {
+    foreignKey: 'rootEcosystemId',
+  });
+  RepoDriverSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'rootEcosystemId',
+  });
+
+  // One-to-Many: A root Ecosystem can fund multiple Drip Lists.
+  SubListModel.hasMany(DripListSplitReceiverModel, {
+    foreignKey: 'rootEcosystemId',
+  });
+  DripListSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'rootEcosystemId',
+  });
+  // One-to-Many: A root Ecosystem can fund multiple Sub Lists.
+  SubListModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'rootEcosystemId',
+  });
+  SubListSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'rootEcosystemId',
+  });
+
+  // One-to-Many: A parent Drip List can fund multiple Sub Lists.
+  SubListModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'parentSubListId',
+  });
+  SubListSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'parentSubListId',
   });
 }

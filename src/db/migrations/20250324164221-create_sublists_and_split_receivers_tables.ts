@@ -33,7 +33,43 @@ async function createSubListsTable(
         type: DataTypes.STRING,
         primaryKey: true,
       },
-      parentAccountId: {
+      parentDripListId: {
+        // Foreign key
+        type: DataTypes.STRING,
+        allowNull: true,
+        references: {
+          model: 'DripLists',
+          key: 'id',
+        },
+      },
+      parentEcosystemId: {
+        // Foreign key
+        type: DataTypes.STRING,
+        allowNull: true,
+        references: {
+          model: 'Ecosystems',
+          key: 'id',
+        },
+      },
+      parentSubListId: {
+        // Foreign key
+        type: DataTypes.STRING,
+        allowNull: true,
+        references: {
+          model: 'SubLists',
+          key: 'id',
+        },
+      },
+      rootDripListId: {
+        // Foreign key
+        type: DataTypes.STRING,
+        allowNull: true,
+        references: {
+          model: 'DripLists',
+          key: 'id',
+        },
+      },
+      rootEcosystemId: {
         // Foreign key
         type: DataTypes.STRING,
         allowNull: true,
@@ -61,9 +97,45 @@ async function createSubListsTable(
 
   await queryInterface.addIndex(
     { tableName: 'SubLists', schema },
-    ['parentAccountId'],
+    ['parentDripListId'],
     {
-      name: 'IX_SubLists_parentAccountId',
+      name: 'IX_SubLists_parentDripListId',
+      unique: false,
+    },
+  );
+
+  await queryInterface.addIndex(
+    { tableName: 'SubLists', schema },
+    ['parentEcosystemId'],
+    {
+      name: 'IX_SubLists_parentEcosystemId',
+      unique: false,
+    },
+  );
+
+  await queryInterface.addIndex(
+    { tableName: 'SubLists', schema },
+    ['parentSubListId'],
+    {
+      name: 'IX_SubLists_parentSubListId',
+      unique: false,
+    },
+  );
+
+  await queryInterface.addIndex(
+    { tableName: 'SubLists', schema },
+    ['rootDripListId'],
+    {
+      name: 'IX_SubLists_rootDripListId',
+      unique: false,
+    },
+  );
+
+  await queryInterface.addIndex(
+    { tableName: 'SubLists', schema },
+    ['rootEcosystemId'],
+    {
+      name: 'IX_SubLists_rootEcosystemId',
       unique: false,
     },
   );
@@ -81,7 +153,7 @@ async function createSubListSplitReceiversTable(
         autoIncrement: true,
         primaryKey: true,
       },
-      fundeeImmutableSplitsId: {
+      fundeeSubListId: {
         // Foreign key
         type: DataTypes.STRING,
         references: {
@@ -144,7 +216,7 @@ async function createSubListSplitReceiversTable(
 
   await queryInterface.addIndex(
     { tableName: 'SubListSplitReceivers', schema },
-    ['fundeeImmutableSplitsId'],
+    ['fundeeSubListId'],
     {
       name: 'IX_SubListSplitReceivers_fundeeImmutableSplitsId',
       unique: false,

@@ -8,9 +8,9 @@ import AccountMetadataEmittedEventModel from '../../src/models/AccountMetadataEm
 import { isLatestEvent } from '../../src/utils/eventUtils';
 import { toAccountId } from '../../src/utils/accountIdUtils';
 import { DRIPS_APP_USER_METADATA_KEY } from '../../src/core/constants';
-import * as handleGitProjectMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/gitProject/handleGitProjectMetadata';
+import * as handleGitProjectMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleProjectMetadata';
 import { toIpfsHash } from '../../src/utils/metadataUtils';
-import * as handleDripListMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/dripList/handleDripListMetadata';
+import * as handleDripListMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleDripListMetadata';
 
 jest.mock('../../src/models/AccountMetadataEmittedEventModel');
 jest.mock('../../src/db/database');

@@ -17,21 +17,16 @@ import GitProjectModel from './GitProjectModel';
 import SubListModel from './SubListModel';
 import EcosystemModel from './EcosystemModel';
 
-export enum SubListSplitReceiverType {
-  ProjectMaintainer = 'ProjectMaintainer',
-  ProjectDependency = 'ProjectDependency',
-  DripListDependency = 'DripListDependency',
-}
-
 export default class SubListSplitReceiverModel extends Model<
   InferAttributes<SubListSplitReceiverModel>,
   InferCreationAttributes<SubListSplitReceiverModel>
 > {
   public declare id: CreationOptional<number>; // Primary key
-  public declare fundeeImmutableSplitsId: ImmutableSplitsDriverId; // Foreign key
+  public declare fundeeSubListId: ImmutableSplitsDriverId; // Foreign key
   public declare funderProjectId: RepoDriverId | null; // Foreign key
   public declare funderDripListId: NftDriverId | null; // Foreign key
   public declare funderEcosystemId: NftDriverId | null; // Foreign key
+  public declare funderSubListId: ImmutableSplitsDriverId | null; // Foreign key
 
   public declare weight: number;
   public declare type: DependencyType;
@@ -45,7 +40,7 @@ export default class SubListSplitReceiverModel extends Model<
           autoIncrement: true,
           primaryKey: true,
         },
-        fundeeImmutableSplitsId: {
+        fundeeSubListId: {
           // Foreign key
           type: DataTypes.STRING,
           references: {
@@ -81,6 +76,15 @@ export default class SubListSplitReceiverModel extends Model<
           },
           allowNull: true,
         },
+        funderSubListId: {
+          // Foreign key
+          type: DataTypes.STRING,
+          references: {
+            model: EcosystemModel,
+            key: 'id',
+          },
+          allowNull: true,
+        },
         weight: {
           type: DataTypes.INTEGER,
           allowNull: true,
@@ -100,7 +104,7 @@ export default class SubListSplitReceiverModel extends Model<
         tableName: 'SubListSplitReceivers',
         indexes: [
           {
-            fields: ['fundeeImmutableSplitsId'],
+            fields: ['fundeeSubListId'],
             name: `IX_SubListSplitReceivers_fundeeImmutableSplitsId`,
             unique: false,
           },

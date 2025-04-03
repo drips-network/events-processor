@@ -23,7 +23,21 @@ export const subListMetadataSchemaV1 = z.object({
     ]),
   ),
   parent: z.object({
-    driver: z.literal('nft'),
     accountId: z.string(),
+    driver: z.union([z.literal('nft'), z.literal('immutable-splits')]),
+    type: z.union([
+      z.literal('drip-list'),
+      z.literal('ecosystem'),
+      z.literal('sub-list'),
+    ]),
+  }),
+  root: z.object({
+    accountId: z.string(),
+    driver: z.union([z.literal('nft'), z.literal('immutable-splits')]),
+    type: z.union([
+      z.literal('drip-list'),
+      z.literal('ecosystem'),
+      z.literal('sub-list'),
+    ]),
   }),
 });

@@ -22,8 +22,8 @@ export function isRepoDriverId(id: string): id is RepoDriverId {
   return true;
 }
 
-export function toRepoDriverId(id: bigint): RepoDriverId {
-  const repoDriverId = id.toString();
+export function toRepoDriverId(id: bigint | string): RepoDriverId {
+  const repoDriverId = typeof id === 'bigint' ? id.toString() : id;
 
   if (!isRepoDriverId(repoDriverId)) {
     throw new Error(`Invalid 'RepoDriver' account ID: ${id}.`);
@@ -121,8 +121,8 @@ export async function calcAccountId(owner: AddressLike): Promise<AccountId> {
 }
 
 // Account ID
-export function toAccountId(id: bigint): AccountId {
-  const accountIdAsString = id.toString();
+export function toAccountId(id: bigint | string): AccountId {
+  const accountIdAsString = typeof id === 'bigint' ? id.toString() : id;
 
   if (
     isRepoDriverId(accountIdAsString) ||
@@ -133,5 +133,5 @@ export function toAccountId(id: bigint): AccountId {
     return accountIdAsString as AccountId;
   }
 
-  throw new Error(`Invalid account ID: ${id}.`);
+  throw new Error(`Invalid account ID: ${accountIdAsString}.`);
 }

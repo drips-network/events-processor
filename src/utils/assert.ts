@@ -1,8 +1,6 @@
 import type { UUID } from 'crypto';
 import type { Transaction } from 'sequelize';
-import type { DependencyOfProjectType } from '../core/types';
 import type { EventSignature } from '../events/types';
-import { repoDriverSplitReceiverSchema } from '../metadata/schemas/repo-driver/v2';
 
 export function assertTransaction(
   transaction: Transaction | null | undefined,
@@ -28,18 +26,6 @@ export function assertEventSignature<T extends EventSignature>(
   if (eventSignature !== expectedEventSignature) {
     throw new Error(
       `Event signature ${eventSignature} does not match expected event signature ${expectedEventSignature}.`,
-    );
-  }
-}
-
-export function assertDependencyOfProjectType(
-  project: any,
-): asserts project is DependencyOfProjectType {
-  const result = repoDriverSplitReceiverSchema.safeParse(project);
-
-  if (!result.success) {
-    throw new Error(
-      `Invalid project dependency: ${JSON.stringify(result.error.format())}`,
     );
   }
 }

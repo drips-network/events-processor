@@ -17,7 +17,6 @@ import {
   SplitEventModel,
   SqueezedStreamsEventModel,
   SubListModel,
-  CreatedSplitsEventModel,
   EcosystemModel,
   SubListSplitReceiverModel,
 } from '../models';
@@ -45,7 +44,6 @@ export function registerModels(): void {
   registerModel(SplitsSetEventModel);
   registerModel(StreamsSetEventModel);
   registerModel(OwnerUpdatedEventModel);
-  registerModel(CreatedSplitsEventModel);
   registerModel(SqueezedStreamsEventModel);
   registerModel(SubListSplitReceiverModel);
   registerModel(DripListSplitReceiverModel);

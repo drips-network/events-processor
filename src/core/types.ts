@@ -62,18 +62,7 @@ export type ModelStaticMembers = {
   initialize(sequelize: Sequelize): void;
 };
 
-export type DependencyOfProjectType = {
-  type: 'repoDriver';
-  accountId: RepoDriverId;
-  source: {
-    forge: 'github';
-    repoName: string;
-    ownerName: string;
-    url: string;
-  };
-  weight: number;
-};
-
+// TODO: Remove this. There is no need to have this in the database.
 export enum DependencyType {
   ProjectDependency = 'ProjectDependency',
   DripListDependency = 'DripListDependency',

@@ -3,7 +3,6 @@ export { default as SplitEventHandler } from './SplitEventHandler';
 export { default as TransferEventHandler } from './TransferEventHandler';
 export { default as StreamsSetEventHandler } from './StreamsSetEventHandler';
 export { default as OwnerUpdatedEventHandler } from './OwnerUpdatedEventHandler';
-export { default as CreatedSplitsEventHandler } from './CreatedSplitsEventHandler';
 export { default as SqueezedStreamsEventHandler } from './SqueezedStreamsEventHandler';
 export { default as StreamReceiverSeenEventHandler } from './StreamReceiverSeenEventHandler';
 export { default as SplitsSetEventHandler } from './SplitsSetEventHandler/SplitsSetEventHandler';

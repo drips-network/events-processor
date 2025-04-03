@@ -1,5 +1,6 @@
 import express from 'express';
 import logger from './core/logger';
+
 import appSettings from './config/appSettings';
 import initJobProcessingQueue from './queue/initJobProcessingQueue';
 import { arenaConfig } from './queue/queueMonitoring';
@@ -21,7 +22,10 @@ import networkConstant from '../contracts/CURRENT_NETWORK/network-constant';
 import { healthEndpoint } from './health';
 
 process.on('uncaughtException', (error: Error) => {
-  logger.error(`Uncaught Exception: ${error.message}. Stack: ${error.stack}`);
+  logger.error('Uncaught Exception', {
+    message: error.message,
+    stack: error.stack,
+  });
 
   // Railway will restart the process if it exits with a non-zero exit code.
   process.exit(1);
@@ -39,6 +43,7 @@ async function init() {
   }
 
   logger.info('Starting the application...');
+  logger.info(`App Settings: ${JSON.stringify(appSettings, null, 2)}`);
 
   await connectToDb();
   await initJobProcessingQueue();
@@ -68,6 +73,7 @@ async function init() {
     ],
     getHandlers(),
     getProvider(),
+
     startBlock,
   );
 

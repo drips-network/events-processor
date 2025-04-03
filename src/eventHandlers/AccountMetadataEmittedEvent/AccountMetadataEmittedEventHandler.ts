@@ -4,7 +4,7 @@ import type { AccountId } from '../../core/types';
 
 import EventHandlerBase from '../../events/EventHandlerBase';
 import { DRIPS_APP_USER_METADATA_KEY } from '../../core/constants';
-import handleGitProjectMetadata from './gitProject/handleGitProjectMetadata';
+import handleProjectMetadata from './handlers/handleProjectMetadata';
 import LogManager from '../../core/LogManager';
 import {
   isImmutableSplitsDriverId,
@@ -12,15 +12,14 @@ import {
   isRepoDriverId,
   toAccountId,
 } from '../../utils/accountIdUtils';
-import { isLatestEvent } from '../../utils/eventUtils';
 import { getNftDriverMetadata, toIpfsHash } from '../../utils/metadataUtils';
-import handleDripListMetadata from './dripList/handleDripListMetadata';
+import handleDripListMetadata from './handlers/handleDripListMetadata';
 import type EventHandlerRequest from '../../events/EventHandlerRequest';
 import { AccountMetadataEmittedEventModel } from '../../models';
 import { dbConnection } from '../../db/database';
 import { getCurrentSplitsByAccountId } from '../../utils/getCurrentSplits';
-import handleEcosystemMetadata from './handleEcosystemMetadata';
-import handleSubListMetadata from './handleSubListMetadata';
+import handleEcosystemMetadata from './handlers/handleEcosystemMetadata';
+import handleSubListMetadata from './handlers/handleSubListMetadata';
 import type { nftDriverAccountMetadataParser } from '../../metadata/schemas';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
@@ -52,12 +51,14 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
     const ipfsHash = toIpfsHash(value);
 
     LogManager.logRequestInfo(
-      `📥 ${this.name} is processing the following ${request.event.eventSignature}:
-      \r\t - key:         ${key}
-      \r\t - value:       ${value} (ipfs hash: ${ipfsHash})
-      \r\t - accountId:   ${typedAccountId}
-      \r\t - logIndex:    ${logIndex}
-      \r\t - tx hash:     ${transactionHash}`,
+      [
+        `📥 ${this.name} is processing ${request.event.eventSignature}:`,
+        `  - key:        ${key}`,
+        `  - value:      ${value} (IPFS hash: ${ipfsHash})`,
+        `  - accountId:  ${accountId}`,
+        `  - logIndex:   ${logIndex}`,
+        `  - txHash:     ${transactionHash}`,
+      ].join('\n'),
       requestId,
     );
 
@@ -89,37 +90,21 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         `${accountMetadataEmittedEventModel.transactionHash}-${accountMetadataEmittedEventModel.logIndex}`,
       );
 
-      // Only if the event is the latest (in the DB), we process the metadata.
-
-      if (
-        !(await isLatestEvent(
-          accountMetadataEmittedEventModel,
-          AccountMetadataEmittedEventModel,
-          {
-            logIndex,
-            transactionHash,
-            accountId: typedAccountId,
-          },
-          transaction,
-        ))
-      ) {
-        logManager.logAllInfo();
-
-        return;
-      }
-
-      logManager.appendIsLatestEventLog();
-
       let handled = false;
 
       if (isRepoDriverId(typedAccountId)) {
-        await handleGitProjectMetadata(
-          logManager,
-          typedAccountId,
-          transaction,
+        await handleProjectMetadata({
           ipfsHash,
+          logManager,
+          transaction,
           blockTimestamp,
-        );
+          projectId: typedAccountId,
+          originEventDetails: {
+            logIndex,
+            transactionHash,
+            entity: accountMetadataEmittedEventModel,
+          },
+        });
 
         handled = true;
       }
@@ -136,6 +121,11 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
             blockNumber,
             blockTimestamp,
             dripListId: typedAccountId,
+            originEventDetails: {
+              logIndex,
+              transactionHash,
+              entity: accountMetadataEmittedEventModel,
+            },
           });
 
           handled = true;
@@ -150,6 +140,11 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
             blockNumber,
             blockTimestamp,
             ecosystemId: typedAccountId,
+            originEventDetails: {
+              logIndex,
+              transactionHash,
+              entity: accountMetadataEmittedEventModel,
+            },
           });
 
           handled = true;
@@ -163,6 +158,11 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
           transaction,
           blockTimestamp,
           subListId: typedAccountId,
+          originEventDetails: {
+            logIndex,
+            transactionHash,
+            entity: accountMetadataEmittedEventModel,
+          },
         });
 
         handled = true;

@@ -17,7 +17,7 @@ export const appSettingsSchema = z.object({
   logger: loggingConfigSchema,
   pollingInterval: z.number().positive().optional().default(5000),
   chunkSize: z.number().positive().optional().default(1000),
-  confirmations: z.number().positive().optional().default(1),
+  confirmations: z.number().optional().default(1),
   ipfsGatewayUrl: z
     .string()
     .url()

@@ -31,6 +31,31 @@ export async function up({ context: sequelize }: any): Promise<void> {
   );
 
   await queryInterface.addColumn(
+    { tableName: 'RepoDriverSplitReceivers', schema },
+    'funderSubListId',
+    {
+      type: DataTypes.STRING,
+      references: {
+        model: 'SubLists',
+        key: 'id',
+      },
+      allowNull: true,
+    },
+  );
+
+  await queryInterface.addIndex(
+    { tableName: 'RepoDriverSplitReceivers', schema },
+    ['funderSubListId'],
+    {
+      name: 'IX_RepoDriverSplitReceivers_funderSubListId',
+      where: {
+        type: 'EcosystemDependency',
+      },
+      unique: false,
+    },
+  );
+
+  await queryInterface.addColumn(
     { tableName: 'DripListSplitReceivers', schema },
     'funderEcosystemId',
     {
@@ -56,6 +81,31 @@ export async function up({ context: sequelize }: any): Promise<void> {
   );
 
   await queryInterface.addColumn(
+    { tableName: 'DripListSplitReceivers', schema },
+    'funderSubListId',
+    {
+      type: DataTypes.STRING,
+      references: {
+        model: 'SubLists',
+        key: 'id',
+      },
+      allowNull: true,
+    },
+  );
+
+  await queryInterface.addIndex(
+    { tableName: 'DripListSplitReceivers', schema },
+    ['funderSubListId'],
+    {
+      name: 'IX_DripListSplitReceivers_funderSubListId',
+      where: {
+        type: 'EcosystemDependency',
+      },
+      unique: false,
+    },
+  );
+
+  await queryInterface.addColumn(
     { tableName: 'AddressDriverSplitReceivers', schema },
     'funderEcosystemId',
     {
@@ -73,6 +123,31 @@ export async function up({ context: sequelize }: any): Promise<void> {
     ['funderEcosystemId'],
     {
       name: 'IX_AddressDriverSplitReceivers_funderEcosystemId',
+      where: {
+        type: 'EcosystemDependency',
+      },
+      unique: false,
+    },
+  );
+
+  await queryInterface.addColumn(
+    { tableName: 'AddressDriverSplitReceivers', schema },
+    'funderSubListId',
+    {
+      type: DataTypes.STRING,
+      references: {
+        model: 'SubLists',
+        key: 'id',
+      },
+      allowNull: true,
+    },
+  );
+
+  await queryInterface.addIndex(
+    { tableName: 'AddressDriverSplitReceivers', schema },
+    ['funderSubListId'],
+    {
+      name: 'IX_AddressDriverSplitReceivers_funderSubListId',
       where: {
         type: 'EcosystemDependency',
       },

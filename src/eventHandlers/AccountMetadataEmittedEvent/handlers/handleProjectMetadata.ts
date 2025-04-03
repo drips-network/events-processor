@@ -1,11 +1,11 @@
 /* eslint-disable no-param-reassign */
 import type { Transaction } from 'sequelize';
 import type { AnyVersion } from '@efstajas/versioned-parser';
+import type { z } from 'zod';
 import {
-  AddressDriverSplitReceiverModel,
+  AccountMetadataEmittedEventModel,
   DripListSplitReceiverModel,
   GitProjectModel,
-  RepoDriverSplitReceiverModel,
 } from '../../../models';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
 import LogManager from '../../../core/LogManager';
@@ -18,22 +18,61 @@ import {
   isNftDriverId,
   isRepoDriverId,
 } from '../../../utils/accountIdUtils';
-import { AddressDriverSplitReceiverType } from '../../../models/AddressDriverSplitReceiverModel';
-import { assertDependencyOfProjectType } from '../../../utils/assert';
-import createDbEntriesForProjectDependency from '../createDbEntriesForProjectDependency';
 import unreachableError from '../../../utils/unreachableError';
 import { getProjectMetadata } from '../../../utils/metadataUtils';
-import validateProjectMetadata from './validateProjectMetadata';
-import validateSplitsReceivers from '../splitsValidator';
-import getUserAddress from '../../../utils/getAccountAddress';
+import verifySplitsReceivers from '../verifySplitsReceivers';
+import { isLatestEvent } from '../../../utils/eventUtils';
+import { verifyProjectMetadata } from '../projectVerification';
+import {
+  createAddressReceiver,
+  createProjectAndProjectReceiver,
+  deleteExistingReceivers,
+} from '../receiversRepository';
+import type {
+  addressDriverSplitReceiverSchema,
+  repoDriverSplitReceiverSchema,
+} from '../../../metadata/schemas/repo-driver/v2';
 
-export default async function handleGitProjectMetadata(
-  logManager: LogManager,
-  projectId: RepoDriverId,
-  transaction: Transaction,
-  ipfsHash: IpfsHash,
-  blockTimestamp: Date,
-) {
+type Params = {
+  ipfsHash: IpfsHash;
+  blockTimestamp: Date;
+  logManager: LogManager;
+  projectId: RepoDriverId;
+  transaction: Transaction;
+  originEventDetails: {
+    entity: AccountMetadataEmittedEventModel;
+    logIndex: number;
+    transactionHash: string;
+  };
+};
+
+export default async function handleGitProjectMetadata({
+  ipfsHash,
+  logManager,
+  projectId,
+  transaction,
+  blockTimestamp,
+  originEventDetails: { entity, logIndex, transactionHash },
+}: Params) {
+  // Only process metadata if this is the latest event.
+  if (
+    !(await isLatestEvent(
+      entity,
+      AccountMetadataEmittedEventModel,
+      {
+        logIndex,
+        transactionHash,
+        accountId: projectId,
+      },
+      transaction,
+    ))
+  ) {
+    logManager.logAllInfo();
+
+    return;
+  }
+  logManager.appendIsLatestEventLog();
+
   const project = await GitProjectModel.findByPk(projectId, {
     transaction,
     lock: true,
@@ -41,17 +80,19 @@ export default async function handleGitProjectMetadata(
 
   if (!project) {
     throw new Error(
-      `Failed to update metadata for Project with ID ${projectId}: Project not found.
-      \r Possible reasons:
-      \r\t - The event that should have created the Project was not processed yet.
-      \r\t - The metadata were manually emitted for a Project that does not exist in the app.`,
+      [
+        `Failed to update metadata for Project ${projectId}: Project not found.`,
+        `Possible reasons:`,
+        `  - The event that should have created the Project hasn't been processed yet.`,
+        `  - Metadata was manually emitted for a Project that doesn't exist in the system.`,
+      ].join('\n'),
     );
   }
 
   const metadata = await getProjectMetadata(ipfsHash);
 
   const [areSplitsValid, onChainSplitsHash, calculatedSplitsHash] =
-    await validateSplitsReceivers(
+    await verifySplitsReceivers(
       project.id,
       metadata.splits.dependencies
         .concat(metadata.splits.maintainers as any)
@@ -61,26 +102,24 @@ export default async function handleGitProjectMetadata(
         })),
     );
 
-  // If we reach this point, it means that the processed `AccountMetadataEmitted` event is the latest in the DB.
-  // But we still need to check if the splits are the latest on-chain.
-  // There is no need to process the metadata if the splits are not the latest on-chain.
-
   if (!areSplitsValid) {
     logManager.appendLog(
-      `Skipping metadata update for Project with ID ${projectId} because the splits receivers hashes from the contract and the metadata do not match:
-      \r\t - On-chain splits receivers hash: ${onChainSplitsHash}
-      \r\t - Metadata splits receivers hash: ${calculatedSplitsHash}
-      \r Possible reasons:
-      \r\t - The metadata were the latest in the DB but not on-chain.
-      \r\t - The metadata were manually emitted with different splits than the latest on-chain.`,
+      [
+        `Skipping metadata update for Project ${projectId} due to mismatch in splits hash.`,
+        `  On-chain hash: ${onChainSplitsHash}`,
+        `  Metadata hash: ${calculatedSplitsHash}`,
+        `  Possible causes:`,
+        `    - The metadata event is the latest in the DB, but not on-chain.`,
+        `    - The metadata was manually emitted with outdated or mismatched splits.`,
+      ].join('\n'),
     );
 
     return;
   }
 
-  await validateProjectMetadata(project, metadata);
+  await verifyProjectMetadata(project, metadata);
 
-  await updateGitProjectMetadata(
+  await updateProjectMetadata(
     project,
     logManager,
     transaction,
@@ -88,7 +127,15 @@ export default async function handleGitProjectMetadata(
     ipfsHash,
   );
 
-  await createDbEntriesForProjectSplits(
+  await deleteExistingReceivers({
+    for: {
+      accountId: projectId,
+      column: 'funderProjectId',
+    },
+    transaction,
+  });
+
+  await setNewReceivers(
     projectId,
     metadata.splits,
     logManager,
@@ -97,7 +144,7 @@ export default async function handleGitProjectMetadata(
   );
 }
 
-async function updateGitProjectMetadata(
+async function updateProjectMetadata(
   project: GitProjectModel,
   logManager: LogManager,
   transaction: Transaction,
@@ -134,60 +181,63 @@ async function updateGitProjectMetadata(
   await project.save({ transaction });
 }
 
-async function createDbEntriesForProjectSplits(
+async function setNewReceivers(
   funderProjectId: RepoDriverId,
-  splits: AnyVersion<typeof repoDriverAccountMetadataParser>['splits'],
+  receivers: AnyVersion<typeof repoDriverAccountMetadataParser>['splits'],
   logManager: LogManager,
   transaction: Transaction,
   blockTimestamp: Date,
 ) {
-  await clearCurrentProjectSplits(funderProjectId, transaction);
-
-  const { dependencies, maintainers } = splits;
+  const { dependencies, maintainers } = receivers;
 
   const maintainerPromises = maintainers.map((maintainer) => {
     assertAddressDiverId(maintainer.accountId);
 
-    return AddressDriverSplitReceiverModel.create(
-      {
-        funderProjectId,
-        weight: maintainer.weight,
-        fundeeAccountId: maintainer.accountId,
-        fundeeAccountAddress: getUserAddress(maintainer.accountId),
-        type: AddressDriverSplitReceiverType.ProjectMaintainer,
-        blockTimestamp,
+    return createAddressReceiver({
+      logManager,
+      transaction,
+      blockTimestamp,
+      metadataReceiver: maintainer as z.infer<
+        typeof addressDriverSplitReceiverSchema
+      >,
+      funder: {
+        type: 'project',
+        accountId: funderProjectId,
+        dependencyType: 'maintainer',
       },
-      { transaction },
-    );
+    });
   });
 
   const dependencyPromises = dependencies.map(async (dependency) => {
     if (isRepoDriverId(dependency.accountId)) {
-      assertDependencyOfProjectType(dependency);
-
-      return createDbEntriesForProjectDependency(
-        {
+      return createProjectAndProjectReceiver({
+        logManager,
+        transaction,
+        blockTimestamp,
+        metadataReceiver: dependency as z.infer<
+          typeof repoDriverSplitReceiverSchema
+        >, // Safe to cast because we already checked the type of accountId.
+        funder: {
           type: 'project',
           accountId: funderProjectId,
         },
-        dependency,
-        transaction,
-        blockTimestamp,
-      );
+      });
     }
 
     if (isAddressDriverId(dependency.accountId)) {
-      return AddressDriverSplitReceiverModel.create(
-        {
-          funderProjectId,
-          weight: dependency.weight,
-          fundeeAccountId: dependency.accountId,
-          fundeeAccountAddress: getUserAddress(dependency.accountId),
-          type: AddressDriverSplitReceiverType.ProjectDependency,
-          blockTimestamp,
+      return createAddressReceiver({
+        logManager,
+        transaction,
+        blockTimestamp,
+        metadataReceiver: dependency as z.infer<
+          typeof addressDriverSplitReceiverSchema
+        >, // Safe to cast because we already checked the type of accountId.
+        funder: {
+          type: 'project',
+          accountId: funderProjectId,
+          dependencyType: 'dependency',
         },
-        { transaction },
-      );
+      });
     }
 
     if (isNftDriverId(dependency.accountId)) {
@@ -204,7 +254,7 @@ async function createDbEntriesForProjectSplits(
     }
 
     return unreachableError(
-      `Dependency with account ID ${dependency.accountId} is not an Address nor a Git Project.`,
+      `Dependency with account ID ${dependency.accountId} is not an Address nor a Project.`,
     );
   });
 
@@ -221,28 +271,4 @@ async function createDbEntriesForProjectSplits(
       .join(`, `)}
     `,
   );
-}
-
-async function clearCurrentProjectSplits(
-  funderProjectId: string,
-  transaction: Transaction,
-) {
-  await AddressDriverSplitReceiverModel.destroy({
-    where: {
-      funderProjectId,
-    },
-    transaction,
-  });
-  await RepoDriverSplitReceiverModel.destroy({
-    where: {
-      funderProjectId,
-    },
-    transaction,
-  });
-  await DripListSplitReceiverModel.destroy({
-    where: {
-      funderProjectId,
-    },
-    transaction,
-  });
 }

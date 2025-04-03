@@ -1,6 +1,7 @@
 import { Sequelize } from 'sequelize';
 import { Umzug, SequelizeStorage } from 'umzug';
 import getSchema from '../src/utils/getSchema';
+import logger from '../src/core/logger';
 
 export async function runMigrations(): Promise<void> {
   const sequelize = new Sequelize(
@@ -14,7 +15,17 @@ export async function runMigrations(): Promise<void> {
 
   const schema = getSchema();
 
-  // Ensure schema exists before running migrations
+  await sequelize.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT FROM pg_database WHERE datname = 'dripsdb'
+      ) THEN
+        CREATE DATABASE "dripsdb";
+      END IF;
+    END
+    $$;
+  `);
   await sequelize.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
 
   const migrator = new Umzug({
@@ -31,9 +42,11 @@ export async function runMigrations(): Promise<void> {
 
     if (migrations.length > 0) {
       const appliedNames = migrations.map((m) => m.name).join(', ');
-      console.log(`Applied migrations: ${appliedNames}`);
+      logger.info(
+        `✅ Applied ${migrations.length} migration${migrations.length > 1 ? 's' : ''}:\n  - ${appliedNames.split(', ').join('\n  - ')}`,
+      );
     } else {
-      console.log(
+      logger.info(
         'No migrations were applied. The database is already up-to-date. If you expected migrations to be applied, ensure that you run "npm run build" before starting the server.',
       );
     }
@@ -43,7 +56,7 @@ export async function runMigrations(): Promise<void> {
 }
 
 runMigrations().catch((error) => {
-  console.error('Error running migrations:', error);
+  logger.info('Error running migrations:', error);
 
   throw error;
 });
