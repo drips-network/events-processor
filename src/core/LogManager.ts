@@ -59,14 +59,6 @@ export default class LogManager {
     return this;
   }
 
-  public appendIsLatestEventLog(): this {
-    this._logs.push(
-      'Handled event is the latest event. Models will be updated.',
-    );
-
-    return this;
-  }
-
   public appendLog(log: string): this {
     this._logs.push(log);
 
@@ -78,41 +70,43 @@ export default class LogManager {
     type: { new (): T },
     id: string,
   ): this {
+    const changes = LogManager.getChangedProperties(instance);
+
+    const formattedChanges =
+      changes && Object.keys(changes).length > 0
+        ? `\n\tChanged properties:\n${JSON.stringify(changes, null, 2)
+            .split('\n')
+            .map((line) => `\t  ${line}`)
+            .join('\n')}`
+        : `\n\tNo changes detected.`;
+
     this._logs.push(
-      `Updated ${LogManager.nameOfType(type)} with ID ${id}:${
-        LogManager.getChangedProperties(instance)
-          ? `\n\t - ${JSON.stringify(
-              LogManager.getChangedProperties(instance),
-            )}`
-          : ''
-      }`,
+      `Updated ${LogManager.nameOfType(type)} with ID ${id}:${formattedChanges}`,
     );
 
     return this;
   }
 
-  public logAllInfo(): void {
-    LogManager.logRequestInfo(
-      `Completed successfully. The following happened:\n\t - ${this._logs.join(
-        '\n\t - ',
-      )}`,
-      this._requestId,
-    );
+  public logAllInfo(handler: string): void {
+    const formattedLogs = this._logs.map((log) => `\t - ${log}`).join('\n');
+    const message = `${handler} completed successfully. The following happened:\n${formattedLogs}`;
+
+    LogManager.logRequestInfo(message, this._requestId);
   }
 
   public static logRequestDebug(message: string, requestId: UUID): void {
-    logger.debug(`${message}`, { requestId });
+    logger.debug(`[${requestId}] ${message}`);
   }
 
   public static logRequestInfo(message: string, requestId: UUID): void {
-    logger.info(`${message}`, { requestId });
+    logger.info(`[${requestId}] ${message}`);
   }
 
   public static logRequestWarn(message: string, requestId: UUID): void {
-    logger.warn(`${message}`, { requestId });
+    logger.warn(`[${requestId}] ${message}`);
   }
 
   public static logRequestError(message: string, requestId: UUID): void {
-    logger.error(`${message}`, { requestId });
+    logger.error(`[${requestId}] ${message}`);
   }
 }
