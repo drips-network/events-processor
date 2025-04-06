@@ -40,6 +40,7 @@ function loadAppSettings(): AppSettings {
       .VISIBILITY_THRESHOLD_BLOCK_NUMBER
       ? parseInt(process.env.VISIBILITY_THRESHOLD_BLOCK_NUMBER, 10)
       : undefined,
+    ecosystemDeployer: process.env.ECOSYSTEM_DEPLOYER,
   };
 
   try {

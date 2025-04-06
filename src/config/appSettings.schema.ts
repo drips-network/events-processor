@@ -29,6 +29,7 @@ export const appSettingsSchema = z.object({
   shouldStartMonitoringUI: z.boolean().optional().default(false),
   cacheInvalidationEndpoint: z.string(),
   visibilityThresholdBlockNumber: z.number().optional().default(0),
+  ecosystemDeployer: z.string().optional(),
 });
 
 export type LoggingConfig = z.infer<typeof loggingConfigSchema>;
