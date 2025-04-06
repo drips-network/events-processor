@@ -4,7 +4,7 @@ import {
   AddressDriverSplitReceiverModel,
   DripListModel,
   DripListSplitReceiverModel,
-  GitProjectModel,
+  ProjectModel,
   OwnerUpdateRequestedEventModel,
   OwnerUpdatedEventModel,
   RepoDriverSplitReceiverModel,
@@ -17,7 +17,7 @@ import {
   SplitEventModel,
   SqueezedStreamsEventModel,
   SubListModel,
-  EcosystemModel,
+  EcosystemMainAccountModel,
   SubListSplitReceiverModel,
 } from '../models';
 
@@ -38,8 +38,8 @@ export function registerModels(): void {
   registerModel(DripListModel);
   registerModel(GivenEventModel);
   registerModel(SplitEventModel);
-  registerModel(GitProjectModel);
-  registerModel(EcosystemModel);
+  registerModel(ProjectModel);
+  registerModel(EcosystemMainAccountModel);
   registerModel(TransferEventModel);
   registerModel(SplitsSetEventModel);
   registerModel(StreamsSetEventModel);
