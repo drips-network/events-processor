@@ -13,11 +13,12 @@ export default class SubListModel extends Model<
 > {
   public declare id: ImmutableSplitsDriverId;
   public declare parentDripListId: NftDriverId | null;
-  public declare parentEcosystemId: NftDriverId | null;
+  public declare parentEcosystemMainAccountId: NftDriverId | null;
   public declare parentSubListId: ImmutableSplitsDriverId | null;
   public declare rootDripListId: NftDriverId | null;
-  public declare rootEcosystemId: NftDriverId | null;
+  public declare rootEcosystemMainAccountId: NftDriverId | null;
   public declare lastProcessedIpfsHash: string | null;
+  public declare isValid: boolean;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
@@ -35,12 +36,12 @@ export default class SubListModel extends Model<
             key: 'id',
           },
         },
-        parentEcosystemId: {
+        parentEcosystemMainAccountId: {
           // Foreign key
           type: DataTypes.STRING,
           allowNull: true,
           references: {
-            model: 'Ecosystems',
+            model: 'EcosystemMainIdentities',
             key: 'id',
           },
         },
@@ -62,18 +63,22 @@ export default class SubListModel extends Model<
             key: 'id',
           },
         },
-        rootEcosystemId: {
+        rootEcosystemMainAccountId: {
           // Foreign key
           type: DataTypes.STRING,
           allowNull: true,
           references: {
-            model: 'Ecosystems',
+            model: 'EcosystemMainIdentities',
             key: 'id',
           },
         },
         lastProcessedIpfsHash: {
           type: DataTypes.TEXT,
           allowNull: true,
+        },
+        isValid: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
         },
       },
       {
@@ -87,7 +92,7 @@ export default class SubListModel extends Model<
             unique: false,
           },
           {
-            fields: ['parentEcosystemId'],
+            fields: ['parentEcosystemMainAccountId'],
             name: `IX_SubLists_parentEcosystemId`,
             unique: false,
           },
@@ -102,7 +107,7 @@ export default class SubListModel extends Model<
             unique: false,
           },
           {
-            fields: ['rootEcosystemId'],
+            fields: ['rootEcosystemMainAccountId'],
             name: `IX_SubLists_rootEcosystemId`,
             unique: false,
           },

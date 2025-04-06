@@ -13,9 +13,9 @@ import type {
   RepoDriverId,
 } from '../core/types';
 import DripListModel from './DripListModel';
-import GitProjectModel from './GitProjectModel';
+import ProjectModel from './ProjectModel';
 import SubListModel from './SubListModel';
-import EcosystemModel from './EcosystemModel';
+import EcosystemMainAccountModel from './EcosystemMainAccountModel';
 
 export default class SubListSplitReceiverModel extends Model<
   InferAttributes<SubListSplitReceiverModel>,
@@ -25,7 +25,7 @@ export default class SubListSplitReceiverModel extends Model<
   public declare fundeeSubListId: ImmutableSplitsDriverId; // Foreign key
   public declare funderProjectId: RepoDriverId | null; // Foreign key
   public declare funderDripListId: NftDriverId | null; // Foreign key
-  public declare funderEcosystemId: NftDriverId | null; // Foreign key
+  public declare funderEcosystemMainAccountId: NftDriverId | null; // Foreign key
   public declare funderSubListId: ImmutableSplitsDriverId | null; // Foreign key
 
   public declare weight: number;
@@ -53,7 +53,7 @@ export default class SubListSplitReceiverModel extends Model<
           // Foreign key
           type: DataTypes.STRING,
           references: {
-            model: GitProjectModel,
+            model: ProjectModel,
             key: 'id',
           },
           allowNull: true,
@@ -67,11 +67,11 @@ export default class SubListSplitReceiverModel extends Model<
           },
           allowNull: true,
         },
-        funderEcosystemId: {
+        funderEcosystemMainAccountId: {
           // Foreign key
           type: DataTypes.STRING,
           references: {
-            model: EcosystemModel,
+            model: EcosystemMainAccountModel,
             key: 'id',
           },
           allowNull: true,
@@ -80,7 +80,7 @@ export default class SubListSplitReceiverModel extends Model<
           // Foreign key
           type: DataTypes.STRING,
           references: {
-            model: EcosystemModel,
+            model: EcosystemMainAccountModel,
             key: 'id',
           },
           allowNull: true,
@@ -125,7 +125,7 @@ export default class SubListSplitReceiverModel extends Model<
             unique: false,
           },
           {
-            fields: ['funderEcosystemId'],
+            fields: ['funderEcosystemMainAccountId'],
             name: `IX_SubListSplitReceivers_funderEcosystemId`,
             where: {
               type: DependencyType.EcosystemDependency,

@@ -7,7 +7,7 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
-import GitProjectModel from './GitProjectModel';
+import ProjectModel from './ProjectModel';
 import type {
   AddressDriverId,
   ImmutableSplitsDriverId,
@@ -15,7 +15,7 @@ import type {
   RepoDriverId,
 } from '../core/types';
 import DripListModel from './DripListModel';
-import EcosystemModel from './EcosystemModel';
+import EcosystemMainAccountModel from './EcosystemMainAccountModel';
 import SubListModel from './SubListModel';
 
 export enum AddressDriverSplitReceiverType {
@@ -34,7 +34,7 @@ export default class AddressDriverSplitReceiverModel extends Model<
   public declare fundeeAccountAddress: AddressLike;
   public declare funderProjectId: RepoDriverId | null; // Foreign key
   public declare funderDripListId: NftDriverId | null; // Foreign key
-  public declare funderEcosystemId: NftDriverId | null; // Foreign key
+  public declare funderEcosystemMainAccountId: NftDriverId | null; // Foreign key
   public declare funderSubListId: ImmutableSplitsDriverId | null; // Foreign key
 
   public declare weight: number;
@@ -61,7 +61,7 @@ export default class AddressDriverSplitReceiverModel extends Model<
           // Foreign key
           type: DataTypes.STRING,
           references: {
-            model: GitProjectModel,
+            model: ProjectModel,
             key: 'id',
           },
           allowNull: true,
@@ -75,11 +75,11 @@ export default class AddressDriverSplitReceiverModel extends Model<
           },
           allowNull: true,
         },
-        funderEcosystemId: {
+        funderEcosystemMainAccountId: {
           // Foreign key
           type: DataTypes.STRING,
           references: {
-            model: EcosystemModel,
+            model: EcosystemMainAccountModel,
             key: 'id',
           },
           allowNull: true,
@@ -127,7 +127,7 @@ export default class AddressDriverSplitReceiverModel extends Model<
             unique: false,
           },
           {
-            fields: ['funderEcosystemId'],
+            fields: ['funderEcosystemMainAccountId'],
             name: `IX_AddressDriverSplitReceivers_funderEcosystemId`,
             where: {
               type: AddressDriverSplitReceiverType.EcosystemDependency,

@@ -8,9 +8,9 @@ import type { AddressLike } from 'ethers';
 import type { AccountId, NftDriverId } from '../core/types';
 import getSchema from '../utils/getSchema';
 
-export default class EcosystemModel extends Model<
-  InferAttributes<EcosystemModel>,
-  InferCreationAttributes<EcosystemModel>
+export default class EcosystemMainAccountModel extends Model<
+  InferAttributes<EcosystemMainAccountModel>,
+  InferCreationAttributes<EcosystemMainAccountModel>
 > {
   public declare id: NftDriverId;
   public declare isValid: boolean;
@@ -70,7 +70,7 @@ export default class EcosystemModel extends Model<
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'Ecosystems',
+        tableName: 'EcosystemMainIdentities',
         indexes: [
           {
             fields: ['ownerAddress'],

@@ -9,54 +9,56 @@ import type {
 } from '../../core/types';
 import {
   AddressDriverSplitReceiverModel,
+  DripListModel,
   DripListSplitReceiverModel,
-  GitProjectModel,
+  ProjectModel,
   RepoDriverSplitReceiverModel,
+  StreamReceiverSeenEventModel,
+  SubListModel,
   SubListSplitReceiverModel,
 } from '../../models';
 import type LogManager from '../../core/LogManager';
-import unreachableError from '../../utils/unreachableError';
 import type {
   addressDriverSplitReceiverSchema,
   repoDriverSplitReceiverSchema,
 } from '../../metadata/schemas/repo-driver/v2';
 import {
-  toAddressDriverId,
-  toImmutableSplitsDriverId,
-  toNftDriverId,
-  toRepoDriverId,
+  assertIsAccountId,
+  convertToAddressDriverId,
+  convertToImmutableSplitsDriverId,
+  convertToNftDriverId,
+  convertToRepoDriverId,
 } from '../../utils/accountIdUtils';
 import getUserAddress from '../../utils/getAccountAddress';
 import { AddressDriverSplitReceiverType } from '../../models/AddressDriverSplitReceiverModel';
 import type { dripListSplitReceiverSchema } from '../../metadata/schemas/nft-driver/v2';
 import type { subListSplitReceiverSchema } from '../../metadata/schemas/sub-list/v1';
-import { FORGES_MAP } from '../../core/constants';
-import { ProjectVerificationStatus } from '../../models/GitProjectModel';
+import type { Funder } from './buildFunderAccountFields';
+import buildFunderAccountFields, {
+  resolveDependencyType,
+} from './buildFunderAccountFields';
+import RecoverableError from '../../utils/recoverableError';
+import {
+  calculateProjectStatus,
+  METADATA_FORGE_MAP,
+} from '../../utils/projectUtils';
 
 export async function createAddressReceiver({
-  blockTimestamp,
   funder,
-  metadataReceiver,
   logManager,
   transaction,
+  blockTimestamp,
+  metadataReceiver,
 }: {
-  funder:
-    | {
-        type: 'project';
-        accountId: RepoDriverId;
-        dependencyType: 'dependency' | 'maintainer';
-      }
-    | { type: 'dripList'; accountId: NftDriverId }
-    | { type: 'ecosystem'; accountId: NftDriverId }
-    | { type: 'sub-list'; accountId: ImmutableSplitsDriverId };
-  metadataReceiver: z.infer<typeof addressDriverSplitReceiverSchema>;
-  transaction: Transaction;
+  funder: Funder;
   blockTimestamp: Date;
   logManager: LogManager;
+  transaction: Transaction;
+  metadataReceiver: z.infer<typeof addressDriverSplitReceiverSchema>;
 }) {
-  const { weight, accountId: fundeeAccountId } = metadataReceiver;
+  const { weight, accountId } = metadataReceiver;
 
-  const accountId = toAddressDriverId(fundeeAccountId);
+  const fundeeAccountId = convertToAddressDriverId(accountId);
 
   let type: AddressDriverSplitReceiverType;
   if (funder.type === 'project') {
@@ -72,38 +74,21 @@ export async function createAddressReceiver({
   }
 
   // Create the receiver.
-  const [receiver, isReceiverCreated] =
-    await AddressDriverSplitReceiverModel.findOrCreate({
-      lock: true,
-      transaction,
-      where: {
-        weight,
-        fundeeAccountId: accountId,
-        fundeeAccountAddress: getUserAddress(accountId),
-        type,
-        funderProjectId: funder.type === 'project' ? funder.accountId : null,
-        funderDripListId: funder.type === 'dripList' ? funder.accountId : null,
-      },
-      defaults: {
-        blockTimestamp,
-        weight,
-        fundeeAccountId: accountId,
-        fundeeAccountAddress: getUserAddress(accountId),
-        type,
-        funderProjectId: funder.type === 'project' ? funder.accountId : null,
-        funderDripListId: funder.type === 'dripList' ? funder.accountId : null,
-      },
-    });
-
-  if (!isReceiverCreated) {
-    unreachableError(
-      `Sub List receiver ${receiver.id} already exists for sub-list ${accountId}. This means the receiver was created outside the expected flow.`,
-    );
-  }
+  const receiver = await AddressDriverSplitReceiverModel.create(
+    {
+      type,
+      weight,
+      blockTimestamp,
+      fundeeAccountId,
+      ...buildFunderAccountFields(funder),
+      fundeeAccountAddress: getUserAddress(accountId),
+    },
+    { transaction },
+  );
 
   logManager.appendFindOrCreateLog(
     AddressDriverSplitReceiverModel,
-    isReceiverCreated,
+    true,
     receiver.id.toString(),
   );
 }
@@ -115,220 +100,151 @@ export async function createDripListReceiver({
   logManager,
   transaction,
 }: {
-  funder:
-    | { type: 'project'; accountId: RepoDriverId }
-    | { type: 'dripList'; accountId: NftDriverId }
-    | { type: 'ecosystem'; accountId: NftDriverId }
-    | { type: 'sub-list'; accountId: ImmutableSplitsDriverId };
+  funder: Funder;
   metadataReceiver: z.infer<typeof dripListSplitReceiverSchema>;
   transaction: Transaction;
   blockTimestamp: Date;
   logManager: LogManager;
 }) {
-  const { weight, accountId: fundeeDripListId } = metadataReceiver;
+  const { weight, accountId } = metadataReceiver;
+  const fundeeDripListId = convertToNftDriverId(accountId);
 
-  const dripListId = toNftDriverId(fundeeDripListId);
+  const dripList = await DripListModel.findByPk(fundeeDripListId, {
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
 
-  // Create the receiver.
-  const [receiver, isReceiverCreated] =
-    await DripListSplitReceiverModel.findOrCreate({
-      lock: true,
-      transaction,
-      where: {
-        weight,
-        type: DependencyType.DripListDependency,
-        fundeeDripListId: dripListId,
-        funderProjectId: funder.type === 'project' ? funder.accountId : null,
-        funderSubListId: funder.type === 'sub-list' ? funder.accountId : null,
-        funderDripListId: funder.type === 'dripList' ? funder.accountId : null,
-        funderEcosystemId:
-          funder.type === 'ecosystem' ? funder.accountId : null,
-      },
-      defaults: {
-        blockTimestamp,
-        weight,
-        type: DependencyType.DripListDependency,
-        fundeeDripListId: dripListId,
-        funderProjectId: funder.type === 'project' ? funder.accountId : null,
-        funderSubListId: funder.type === 'sub-list' ? funder.accountId : null,
-        funderDripListId: funder.type === 'dripList' ? funder.accountId : null,
-        funderEcosystemId:
-          funder.type === 'ecosystem' ? funder.accountId : null,
-      },
-    });
-
-  if (!isReceiverCreated) {
-    unreachableError(
-      `Drip List receiver ${receiver.id} already exists for sub-list ${dripListId}. This means the receiver was created outside the expected flow.`,
+  if (!dripList) {
+    throw new RecoverableError(
+      `Drip List ${fundeeDripListId} not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
     );
   }
 
+  const receiver = await DripListSplitReceiverModel.create(
+    {
+      weight,
+      fundeeDripListId,
+      type: resolveDependencyType(funder),
+      ...buildFunderAccountFields(funder),
+      blockTimestamp,
+    },
+    {
+      transaction,
+    },
+  );
+
   logManager.appendFindOrCreateLog(
     DripListSplitReceiverModel,
-    isReceiverCreated,
+    true,
     receiver.id.toString(),
   );
 }
 
 export async function createSubListReceiver({
-  blockTimestamp,
   funder,
-  metadataReceiver,
   logManager,
   transaction,
+  blockTimestamp,
+  metadataReceiver,
 }: {
-  funder:
-    | { type: 'project'; accountId: RepoDriverId }
-    | { type: 'dripList'; accountId: NftDriverId }
-    | { type: 'ecosystem'; accountId: NftDriverId }
-    | { type: 'sub-list'; accountId: ImmutableSplitsDriverId };
-  metadataReceiver: z.infer<typeof subListSplitReceiverSchema>;
-  transaction: Transaction;
+  funder: Funder;
   blockTimestamp: Date;
   logManager: LogManager;
+  transaction: Transaction;
+  metadataReceiver: z.infer<typeof subListSplitReceiverSchema>;
 }) {
-  const { weight, accountId: fundeeSubListId } = metadataReceiver;
+  const { weight, accountId } = metadataReceiver;
+  const fundeeSubListId = convertToImmutableSplitsDriverId(accountId);
 
-  const subListId = toImmutableSplitsDriverId(fundeeSubListId);
+  const [subList, isCreated] = await SubListModel.findOrCreate({
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+    where: {
+      id: fundeeSubListId,
+    },
+    defaults: {
+      id: fundeeSubListId,
+      isValid: false, // Until the related Sub List's metadata is processed.
+    },
+  });
 
-  // Create the receiver.
-  const [receiver, isReceiverCreated] =
-    await SubListSplitReceiverModel.findOrCreate({
-      lock: true,
-      transaction,
-      where: {
-        weight,
-        type: DependencyType.EcosystemDependency,
-        fundeeSubListId: subListId,
-        funderProjectId: funder.type === 'project' ? funder.accountId : null,
-        funderSubListId: funder.type === 'sub-list' ? funder.accountId : null,
-        funderDripListId: funder.type === 'dripList' ? funder.accountId : null,
-        funderEcosystemId:
-          funder.type === 'ecosystem' ? funder.accountId : null,
-      },
-      defaults: {
-        weight,
-        blockTimestamp,
-        type: DependencyType.EcosystemDependency,
-        fundeeSubListId: subListId,
-        funderProjectId: funder.type === 'project' ? funder.accountId : null,
-        funderSubListId: funder.type === 'sub-list' ? funder.accountId : null,
-        funderDripListId: funder.type === 'dripList' ? funder.accountId : null,
-        funderEcosystemId:
-          funder.type === 'ecosystem' ? funder.accountId : null,
-      },
-    });
+  logManager.appendFindOrCreateLog(SubListModel, isCreated, subList.id);
 
-  if (!isReceiverCreated) {
-    unreachableError(
-      `Sub List receiver ${receiver.id} already exists for sub-list ${subListId}. This means the receiver was created outside the expected flow.`,
-    );
-  }
+  const receiver = await SubListSplitReceiverModel.create(
+    {
+      weight,
+      blockTimestamp,
+      fundeeSubListId,
+      type: DependencyType.EcosystemDependency, // All sub-list receivers are ecosystem dependencies (soon to be removed).
+      ...buildFunderAccountFields(funder),
+    },
+    { transaction },
+  );
 
   logManager.appendFindOrCreateLog(
     SubListSplitReceiverModel,
-    isReceiverCreated,
+    true,
     receiver.id.toString(),
   );
 }
 
-export async function createProjectAndProjectReceiver({
-  blockTimestamp,
+export async function createProjectReceiver({
   funder,
-  metadataReceiver,
   logManager,
   transaction,
+  blockTimestamp,
+  metadataReceiver,
 }: {
-  funder:
-    | { type: 'project'; accountId: RepoDriverId }
-    | { type: 'dripList'; accountId: NftDriverId }
-    | { type: 'ecosystem'; accountId: NftDriverId }
-    | { type: 'sub-list'; accountId: ImmutableSplitsDriverId };
-  metadataReceiver: z.infer<typeof repoDriverSplitReceiverSchema>;
-  transaction: Transaction;
+  funder: Funder;
   blockTimestamp: Date;
   logManager: LogManager;
+  transaction: Transaction;
+  metadataReceiver: z.infer<typeof repoDriverSplitReceiverSchema>;
 }) {
   const {
     weight,
-    accountId: fundeeProjectId,
-    source: { forge, ownerName, repoName, url },
+    accountId,
+    source: { url, ownerName, repoName, forge },
   } = metadataReceiver;
+  const fundeeProjectId = convertToRepoDriverId(accountId);
 
-  const projectId = toRepoDriverId(fundeeProjectId);
-
-  // Create the project the receiver represents.
-  const [project, isProjectCreated] = await GitProjectModel.findOrCreate({
-    lock: true,
+  const [project, isCreated] = await ProjectModel.findOrCreate({
     transaction,
+    lock: transaction.LOCK.UPDATE,
     where: {
-      id: projectId,
+      id: fundeeProjectId,
     },
     defaults: {
+      id: fundeeProjectId,
       url,
-      isVisible: true, // During creation, the project is visible by default. Account metadata will set the final visibility.
-      isValid: true, // There are no receivers yet, so the project is valid.
-      id: projectId,
+      isVisible: true, // Default to visible on creation. Final visibility will be determined by account metadata.
+      isValid: true, // The project is valid by default since there are no receivers yet.
       name: `${ownerName}/${repoName}`,
-      verificationStatus: ProjectVerificationStatus.Unclaimed,
-      forge:
-        Object.values(FORGES_MAP).find(
-          (f) => f.toLocaleLowerCase() === forge.toLowerCase(),
-        ) ?? unreachableError(),
+      verificationStatus: calculateProjectStatus({
+        id: fundeeProjectId,
+        color: null,
+        ownerAddress: null,
+      }),
+      forge: METADATA_FORGE_MAP[forge],
     },
   });
 
-  logManager
-    .appendFindOrCreateLog(GitProjectModel, isProjectCreated, project.id)
-    .logAllInfo();
+  logManager.appendFindOrCreateLog(ProjectModel, isCreated, project.id);
 
-  let type: DependencyType;
-  if (funder.type === 'project') {
-    type = DependencyType.ProjectDependency;
-  } else if (funder.type === 'dripList') {
-    type = DependencyType.DripListDependency;
-  } else {
-    // TODO: For now we treat both ecosystem and sub-list cases as EcosystemDependency. Type will shortly be removed either way.
-    type = DependencyType.EcosystemDependency;
-  }
-
-  // Create the receiver.
-  const [receiver, isReceiverCreated] =
-    await RepoDriverSplitReceiverModel.findOrCreate({
-      lock: true,
-      transaction,
-      where: {
-        weight,
-        type,
-        fundeeProjectId: projectId,
-        funderProjectId: funder.type === 'project' ? funder.accountId : null,
-        funderSubListId: funder.type === 'sub-list' ? funder.accountId : null,
-        funderDripListId: funder.type === 'dripList' ? funder.accountId : null,
-        funderEcosystemId:
-          funder.type === 'ecosystem' ? funder.accountId : null,
-      },
-      defaults: {
-        weight,
-        type,
-        blockTimestamp,
-        fundeeProjectId: projectId,
-        funderProjectId: funder.type === 'project' ? funder.accountId : null,
-        funderSubListId: funder.type === 'sub-list' ? funder.accountId : null,
-        funderDripListId: funder.type === 'dripList' ? funder.accountId : null,
-        funderEcosystemId:
-          funder.type === 'ecosystem' ? funder.accountId : null,
-      },
-    });
-
-  if (!isReceiverCreated) {
-    unreachableError(
-      `Project receiver ${receiver.id} already exists for project ${projectId}. This means the receiver was created outside the expected flow.`,
-    );
-  }
+  const receiver = await RepoDriverSplitReceiverModel.create(
+    {
+      weight,
+      fundeeProjectId,
+      type: resolveDependencyType(funder),
+      ...buildFunderAccountFields(funder),
+      blockTimestamp,
+    },
+    { transaction },
+  );
 
   logManager.appendFindOrCreateLog(
     RepoDriverSplitReceiverModel,
-    isReceiverCreated,
+    true,
     receiver.id.toString(),
   );
 }
@@ -336,7 +252,7 @@ export async function createProjectAndProjectReceiver({
 type ClearReceiversInput =
   | { accountId: RepoDriverId; column: 'funderProjectId' }
   | { accountId: NftDriverId; column: 'funderDripListId' }
-  | { accountId: NftDriverId; column: 'funderEcosystemId' }
+  | { accountId: NftDriverId; column: 'funderEcosystemMainAccountId' }
   | { accountId: ImmutableSplitsDriverId; column: 'funderSubListId' };
 
 type ClearReceiversParams = {
@@ -348,38 +264,104 @@ type ClearReceiversParams = {
 export async function deleteExistingReceivers({
   transaction,
   for: { accountId, column },
-  excludeReceivers = [],
 }: ClearReceiversParams): Promise<void> {
-  const baseWhere = { [column]: accountId };
-
-  const whereWithExclusions =
-    excludeReceivers.length > 0
-      ? {
-          ...baseWhere,
-          funderProjectId: { [Op.notIn]: excludeReceivers },
-          funderSubListId: { [Op.notIn]: excludeReceivers },
-          funderDripListId: { [Op.notIn]: excludeReceivers },
-          funderEcosystemId: { [Op.notIn]: excludeReceivers },
-        }
-      : baseWhere;
+  const where = { [column]: accountId };
 
   await AddressDriverSplitReceiverModel.destroy({
-    where: whereWithExclusions,
+    where,
     transaction,
   });
 
   await RepoDriverSplitReceiverModel.destroy({
-    where: whereWithExclusions,
+    where,
     transaction,
   });
 
   await DripListSplitReceiverModel.destroy({
-    where: whereWithExclusions,
+    where,
     transaction,
   });
 
   await SubListSplitReceiverModel.destroy({
-    where: whereWithExclusions,
+    where,
     transaction,
   });
+}
+
+export async function getCurrentSplitsByAccountId(
+  emitterAccountId: bigint,
+): Promise<AccountId[]> {
+  assertIsAccountId(emitterAccountId);
+
+  const addressSplits = await AddressDriverSplitReceiverModel.findAll({
+    where: {
+      [Op.or]: [
+        { funderProjectId: emitterAccountId },
+        { funderDripListId: emitterAccountId },
+        { funderEcosystemMainAccountId: emitterAccountId },
+        { funderSubListId: emitterAccountId },
+      ],
+    },
+    lock: true,
+  });
+
+  const dripListSplits = await DripListSplitReceiverModel.findAll({
+    where: {
+      [Op.or]: [
+        { funderProjectId: emitterAccountId },
+        { funderDripListId: emitterAccountId },
+        { funderEcosystemMainAccountId: emitterAccountId },
+        { funderSubListId: emitterAccountId },
+      ],
+    },
+    lock: true,
+  });
+
+  const projectSplits = await RepoDriverSplitReceiverModel.findAll({
+    where: {
+      [Op.or]: [
+        { funderProjectId: emitterAccountId },
+        { funderDripListId: emitterAccountId },
+        { funderEcosystemMainAccountId: emitterAccountId },
+        { funderSubListId: emitterAccountId },
+      ],
+    },
+    lock: true,
+  });
+
+  const subListSplits = await SubListSplitReceiverModel.findAll({
+    where: {
+      [Op.or]: [
+        { funderProjectId: emitterAccountId },
+        { funderDripListId: emitterAccountId },
+        { funderEcosystemMainAccountId: emitterAccountId },
+        { funderSubListId: emitterAccountId },
+      ],
+    },
+    lock: true,
+  });
+
+  const accountIds = [
+    ...addressSplits.map((receiver) => receiver.fundeeAccountId),
+    ...dripListSplits.map((receiver) => receiver.fundeeDripListId),
+    ...projectSplits.map((receiver) => receiver.fundeeProjectId),
+    ...subListSplits.map((receiver) => receiver.fundeeSubListId),
+  ];
+
+  return Array.from(new Set(accountIds));
+}
+
+export async function getCurrentSplitsByReceiversHash(
+  receiversHash: string,
+): Promise<AccountId[]> {
+  const streamReceiverSeenEvents = await StreamReceiverSeenEventModel.findAll({
+    where: {
+      receiversHash,
+    },
+    lock: true,
+  });
+
+  const accountIds = streamReceiverSeenEvents.map((event) => event.accountId);
+
+  return Array.from(new Set(accountIds));
 }

@@ -18,9 +18,9 @@ export enum ProjectVerificationStatus {
   PendingMetadata = 'PendingMetadata',
 }
 
-export default class GitProjectModel extends Model<
-  InferAttributes<GitProjectModel>,
-  InferCreationAttributes<GitProjectModel>
+export default class ProjectModel extends Model<
+  InferAttributes<ProjectModel>,
+  InferCreationAttributes<ProjectModel>
 > {
   public declare id: RepoDriverId; // The `accountId` from `OwnerUpdatedRequested` event.
   public declare isValid: boolean;
@@ -57,7 +57,7 @@ export default class GitProjectModel extends Model<
           validate: {
             isValidName(value: string) {
               if (!value) {
-                throw new Error('Project name is required.');
+                return;
               }
 
               const components = value?.split('/');

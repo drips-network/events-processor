@@ -7,8 +7,10 @@ import { dripsContract } from '../../core/contractClients';
 import { formatSplitReceivers } from '../../utils/formatSplitReceivers';
 import type { SplitsReceiverStruct } from '../../../contracts/CURRENT_NETWORK/Drips';
 
+type AccountId = RepoDriverId | NftDriverId | ImmutableSplitsDriverId;
+
 export default async function verifySplitsReceivers(
-  accountId: RepoDriverId | NftDriverId | ImmutableSplitsDriverId,
+  accountId: AccountId,
   splits: SplitsReceiverStruct[],
 ): Promise<
   [
@@ -17,13 +19,12 @@ export default async function verifySplitsReceivers(
     calculatedSplitsHash: string,
   ]
 > {
-  const formattedSplits = formatSplitReceivers(splits);
-  const calculatedSplitsHash = await dripsContract.hashSplits(formattedSplits);
-  const onChainSplitsHash = await dripsContract.splitsHash(accountId);
+  const calculatedHash = await dripsContract.hashSplits(
+    formatSplitReceivers(splits),
+  );
+  const onChainHash = await dripsContract.splitsHash(accountId);
 
-  if (calculatedSplitsHash !== onChainSplitsHash) {
-    return [false, onChainSplitsHash, calculatedSplitsHash];
-  }
+  const isValid = calculatedHash === onChainHash;
 
-  return [true, onChainSplitsHash, calculatedSplitsHash];
+  return [isValid, onChainHash, calculatedHash];
 }

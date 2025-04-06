@@ -2,20 +2,20 @@ import type { OwnerUpdateRequestedEvent as CurrentNetworkOwnerUpdateRequestedEve
 import type { OwnerUpdateRequestedEvent as FilecoinOwnerUpdateRequestedEvent } from '../../contracts/filecoin/RepoDriver';
 import OwnerUpdateRequestedEventModel from '../models/OwnerUpdateRequestedEventModel';
 import EventHandlerBase from '../events/EventHandlerBase';
-import { GitProjectModel } from '../models';
-import { ProjectVerificationStatus } from '../models/GitProjectModel';
-import {
-  calculateProjectStatus,
-  toForge,
-  toReadable,
-  toUrl,
-} from '../utils/gitProjectUtils';
+import { ProjectModel } from '../models';
 import LogManager from '../core/LogManager';
-import { toRepoDriverId } from '../utils/accountIdUtils';
-import { isLatestEvent } from '../utils/eventUtils';
+import { convertToRepoDriverId } from '../utils/accountIdUtils';
+import { isLatestEvent } from '../utils/isLatestEvent';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import { dbConnection } from '../db/database';
 import { singleOrDefault } from '../utils/linq';
+import {
+  toForge,
+  toReadable,
+  toUrl,
+  calculateProjectStatus,
+} from '../utils/projectUtils';
+import RecoverableError from '../utils/recoverableError';
 
 export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<
   | 'OwnerUpdateRequested(uint256,uint8,bytes,address)'
@@ -26,111 +26,89 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<
     'OwnerUpdateRequested(uint256,uint8,bytes)' as const,
   ];
 
-  protected async _handle(
-    request: EventHandlerRequest<
-      | 'OwnerUpdateRequested(uint256,uint8,bytes,address)'
-      | 'OwnerUpdateRequested(uint256,uint8,bytes)'
-    >,
-  ): Promise<void> {
-    const {
-      id: requestId,
-      event: { args, logIndex, blockNumber, blockTimestamp, transactionHash },
-    } = request;
-
+  protected async _handle({
+    id: requestId,
+    event: {
+      args,
+      logIndex,
+      blockNumber,
+      blockTimestamp,
+      transactionHash,
+      eventSignature,
+    },
+  }: EventHandlerRequest<
+    | 'OwnerUpdateRequested(uint256,uint8,bytes,address)'
+    | 'OwnerUpdateRequested(uint256,uint8,bytes)'
+  >): Promise<void> {
     const [accountId, forge, name] = args as
       | CurrentNetworkOwnerUpdateRequestedEvent.OutputTuple
       | FilecoinOwnerUpdateRequestedEvent.OutputTuple;
 
-    const repoDriverId = toRepoDriverId(accountId);
     const forgeAsString = toForge(forge);
     const decodedName = toReadable(name);
 
     LogManager.logRequestInfo(
-      `📥 ${this.name} is processing the following ${request.event.eventSignature}:
-      \r\t - forge:       ${forgeAsString}
-      \r\t - name:        ${decodedName}
-      \r\t - accountId:   ${repoDriverId}
-      \r\t - logIndex:    ${logIndex}
-      \r\t - blockNumber: ${blockNumber}
-      \r\t - tx hash:     ${transactionHash}`,
+      [
+        `📥 ${this.name} is processing the following ${eventSignature}:`,
+        `  - forge:       ${forgeAsString}`,
+        `  - name:        ${decodedName}`,
+        `  - accountId:   ${accountId}`,
+        `  - logIndex:    ${logIndex}`,
+        `  - blockNumber: ${blockNumber}`,
+        `  - txHash:      ${transactionHash}`,
+      ].join('\n'),
       requestId,
     );
 
     await dbConnection.transaction(async (transaction) => {
       const logManager = new LogManager(requestId);
 
-      const [ownerUpdateRequestedEvent, isEventCreated] =
-        await OwnerUpdateRequestedEventModel.findOrCreate({
-          lock: true,
-          transaction,
-          where: {
-            logIndex,
-            transactionHash,
-          },
-          defaults: {
+      const projectId = convertToRepoDriverId(accountId);
+
+      const ownerUpdateRequestedEvent =
+        await OwnerUpdateRequestedEventModel.create(
+          {
             logIndex,
             blockNumber,
             blockTimestamp,
             transactionHash,
             name: decodedName,
             forge: forgeAsString,
-            accountId: repoDriverId,
+            accountId: projectId,
           },
-        });
+          { transaction },
+        );
 
       logManager.appendFindOrCreateLog(
         OwnerUpdateRequestedEventModel,
-        isEventCreated,
+        true,
         `${ownerUpdateRequestedEvent.transactionHash}-${ownerUpdateRequestedEvent.logIndex}`,
       );
 
-      // Depending on the order of processing, a project can be created:
-      // - By a `OwnerUpdateRequested` event.
-      // - By a `OwnerUpdated` event.
-      // - By an `AccountMetadataEmitted` event, as a (non existing in the DB) Project dependency of the account that emitted the metadata.
-      const [project, isProjectCreated] = await GitProjectModel.findOrCreate({
-        transaction,
-        lock: true,
-        where: {
-          id: repoDriverId,
-        },
-        defaults: {
-          isVisible: true, // During creation, the project is visible by default. Account metadata will set the final visibility.
-          id: repoDriverId,
-          isValid: true, // There are no receivers yet, so the project is valid.
-          name: decodedName,
-          forge: forgeAsString,
-          url: toUrl(forgeAsString, decodedName),
-          verificationStatus: ProjectVerificationStatus.OwnerUpdateRequested,
-        },
-      });
-
-      if (isProjectCreated) {
-        logManager
-          .appendFindOrCreateLog(GitProjectModel, isProjectCreated, project.id)
-          .logAllInfo();
-
-        return;
-      }
-
-      // Here, the Project already exists.
-      // Only if the event is the latest (in the DB), we process the metadata.
-      // After all events are processed, the Project will be updated with the latest values.
       if (
         !(await isLatestEvent(
           ownerUpdateRequestedEvent,
           OwnerUpdateRequestedEventModel,
           {
-            logIndex,
-            transactionHash,
             accountId,
           },
           transaction,
         ))
       ) {
-        logManager.logAllInfo();
+        logManager.logAllInfo(this.name);
 
         return;
+      }
+
+      const project = await ProjectModel.findByPk(projectId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (!project) {
+        throw new RecoverableError(
+          `Project ${projectId} not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
+        );
       }
 
       project.name = decodedName;
@@ -138,13 +116,9 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<
       project.url = toUrl(forgeAsString, decodedName);
       project.verificationStatus = calculateProjectStatus(project);
 
-      logManager
-        .appendIsLatestEventLog()
-        .appendUpdateLog(project, GitProjectModel, project.id);
-
       await project.save({ transaction });
 
-      logManager.logAllInfo();
+      logManager.logAllInfo(this.name);
     });
   }
 
@@ -156,9 +130,9 @@ export default class OwnerUpdateRequestedEventHandler extends EventHandlerBase<
     const [accountId] = args;
 
     const ownerAccountId = singleOrDefault(
-      await GitProjectModel.findAll({
+      await ProjectModel.findAll({
         where: {
-          id: toRepoDriverId(accountId),
+          id: convertToRepoDriverId(accountId),
         },
       }),
     )?.ownerAccountId;

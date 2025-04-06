@@ -1,19 +1,15 @@
-/* eslint-disable no-param-reassign */
-import type { Transaction } from 'sequelize';
+/* eslint-disable no-param-reassign */ // Mutating Sequelize model instance is intentional and safe here.
+import { type Transaction } from 'sequelize';
 import type { AnyVersion } from '@efstajas/versioned-parser';
-import type { z } from 'zod';
-import {
-  AccountMetadataEmittedEventModel,
-  DripListSplitReceiverModel,
-  GitProjectModel,
-} from '../../../models';
+import { type z } from 'zod';
+import { ProjectModel } from '../../../models';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
 import LogManager from '../../../core/LogManager';
-import { calculateProjectStatus } from '../../../utils/gitProjectUtils';
+import { calculateProjectStatus } from '../../../utils/projectUtils';
 import type { IpfsHash, RepoDriverId } from '../../../core/types';
-import { DependencyType } from '../../../core/types';
 import {
   assertAddressDiverId,
+  convertToRepoDriverId,
   isAddressDriverId,
   isNftDriverId,
   isRepoDriverId,
@@ -21,173 +17,166 @@ import {
 import unreachableError from '../../../utils/unreachableError';
 import { getProjectMetadata } from '../../../utils/metadataUtils';
 import verifySplitsReceivers from '../verifySplitsReceivers';
-import { isLatestEvent } from '../../../utils/eventUtils';
-import { verifyProjectMetadata } from '../projectVerification';
+import verifyProjectSources from '../projectVerification';
 import {
   createAddressReceiver,
-  createProjectAndProjectReceiver,
+  createDripListReceiver,
+  createProjectReceiver,
   deleteExistingReceivers,
 } from '../receiversRepository';
 import type {
   addressDriverSplitReceiverSchema,
   repoDriverSplitReceiverSchema,
 } from '../../../metadata/schemas/repo-driver/v2';
+import type { dripListSplitReceiverSchema } from '../../../metadata/schemas/nft-driver/v2';
 
 type Params = {
   ipfsHash: IpfsHash;
   blockTimestamp: Date;
   logManager: LogManager;
-  projectId: RepoDriverId;
   transaction: Transaction;
-  originEventDetails: {
-    entity: AccountMetadataEmittedEventModel;
-    logIndex: number;
-    transactionHash: string;
-  };
+  emitterAccountId: RepoDriverId;
 };
 
-export default async function handleGitProjectMetadata({
+export default async function handleProjectMetadata({
   ipfsHash,
   logManager,
-  projectId,
   transaction,
   blockTimestamp,
-  originEventDetails: { entity, logIndex, transactionHash },
+  emitterAccountId,
 }: Params) {
-  // Only process metadata if this is the latest event.
-  if (
-    !(await isLatestEvent(
-      entity,
-      AccountMetadataEmittedEventModel,
-      {
-        logIndex,
-        transactionHash,
-        accountId: projectId,
-      },
-      transaction,
-    ))
-  ) {
-    logManager.logAllInfo();
-
-    return;
-  }
-  logManager.appendIsLatestEventLog();
-
-  const project = await GitProjectModel.findByPk(projectId, {
-    transaction,
-    lock: true,
-  });
-
-  if (!project) {
-    throw new Error(
-      [
-        `Failed to update metadata for Project ${projectId}: Project not found.`,
-        `Possible reasons:`,
-        `  - The event that should have created the Project hasn't been processed yet.`,
-        `  - Metadata was manually emitted for a Project that doesn't exist in the system.`,
-      ].join('\n'),
-    );
-  }
-
   const metadata = await getProjectMetadata(ipfsHash);
 
   const [areSplitsValid, onChainSplitsHash, calculatedSplitsHash] =
-    await verifySplitsReceivers(
-      project.id,
-      metadata.splits.dependencies
-        .concat(metadata.splits.maintainers as any)
-        .map((s) => ({
-          weight: s.weight,
-          accountId: s.accountId,
-        })),
-    );
+    await verifySplitsReceivers(emitterAccountId, [
+      ...metadata.splits.dependencies,
+      ...metadata.splits.maintainers,
+    ]);
 
   if (!areSplitsValid) {
     logManager.appendLog(
-      [
-        `Skipping metadata update for Project ${projectId} due to mismatch in splits hash.`,
-        `  On-chain hash: ${onChainSplitsHash}`,
-        `  Metadata hash: ${calculatedSplitsHash}`,
-        `  Possible causes:`,
-        `    - The metadata event is the latest in the DB, but not on-chain.`,
-        `    - The metadata was manually emitted with outdated or mismatched splits.`,
-      ].join('\n'),
+      `Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: on-chain splits hash '${onChainSplitsHash}' does not match '${calculatedSplitsHash}' calculated from metadata.`,
     );
 
     return;
   }
 
-  await verifyProjectMetadata(project, metadata);
+  const projects = metadata.splits.dependencies
+    .flatMap((s) => ('type' in s && s.type === 'repoDriver' ? [s] : []))
+    .filter((dep) => dep.type === 'repoDriver');
 
-  await updateProjectMetadata(
-    project,
-    logManager,
-    transaction,
+  await verifyProjectSources(projects);
+
+  await createProject({
     metadata,
     ipfsHash,
-  );
+    logManager,
+    transaction,
+  });
 
   await deleteExistingReceivers({
     for: {
-      accountId: projectId,
+      accountId: emitterAccountId,
       column: 'funderProjectId',
     },
     transaction,
   });
 
-  await setNewReceivers(
-    projectId,
-    metadata.splits,
+  await setNewReceivers({
     logManager,
     transaction,
     blockTimestamp,
-  );
+    emitterAccountId,
+    receivers: metadata.splits,
+  });
 }
 
-async function updateProjectMetadata(
-  project: GitProjectModel,
-  logManager: LogManager,
-  transaction: Transaction,
-  metadata: AnyVersion<typeof repoDriverAccountMetadataParser>,
-  metadataIpfsHash: IpfsHash,
-): Promise<void> {
-  const { color, source, description } = metadata;
+async function createProject({
+  ipfsHash,
+  metadata,
+  logManager,
+  transaction,
+}: {
+  ipfsHash: IpfsHash;
+  logManager: LogManager;
+  transaction: Transaction;
+  metadata: AnyVersion<typeof repoDriverAccountMetadataParser>;
+}): Promise<void> {
+  const {
+    color,
+    source,
+    description,
+    describes: { accountId },
+  } = metadata;
 
-  project.color = color;
-  project.url = source.url;
-  project.description = description ?? null;
-  project.verificationStatus = calculateProjectStatus(project);
-  project.isVisible = 'isVisible' in metadata ? metadata.isVisible : true; // Projects without `isVisible` field (V4 and below) are considered visible by default.
-  project.lastProcessedIpfsHash = metadataIpfsHash;
+  const projectId = convertToRepoDriverId(accountId);
 
-  if ('avatar' in metadata) {
-    // Metadata V4
-
-    if (metadata.avatar.type === 'emoji') {
-      project.emoji = metadata.avatar.emoji;
-      project.avatarCid = null;
-    } else if (metadata.avatar.type === 'image') {
-      project.avatarCid = metadata.avatar.cid;
-      project.emoji = null;
+  function getEmoji(): string | null {
+    if ('avatar' in metadata) {
+      return metadata.avatar.type === 'emoji' ? metadata.avatar.emoji : null;
     }
-  } else {
-    // Metadata V3
 
-    project.emoji = metadata.emoji;
+    return metadata.emoji ?? null;
   }
 
-  logManager.appendUpdateLog(project, GitProjectModel, project.id);
+  function getAvatarCid(): string | null {
+    if ('avatar' in metadata && metadata.avatar.type === 'image') {
+      return metadata.avatar.cid;
+    }
 
-  await project.save({ transaction });
+    return null;
+  }
+
+  const projectProps = {
+    id: projectId,
+    color,
+    url: source.url,
+    description: description ?? null,
+    verificationStatus: calculateProjectStatus({
+      id: projectId,
+      color,
+      ownerAddress: null,
+    }),
+    isVisible: 'isVisible' in metadata ? metadata.isVisible : true, // Projects without `isVisible` field (V4 and below) are considered visible by default.
+    lastProcessedIpfsHash: ipfsHash,
+    emoji: getEmoji(),
+    avatarCid: getAvatarCid(),
+  };
+
+  const [project, isCreated] = await ProjectModel.findOrCreate({
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+    where: { id: projectId },
+    defaults: {
+      ...projectProps,
+      isValid: false, // Until the related `SplitsSet` is processed.
+    },
+  });
+
+  if (isCreated) {
+    logManager.appendFindOrCreateLog(ProjectModel, true, project.id);
+  } else {
+    project.set(projectProps);
+
+    logManager.appendUpdateLog(project, ProjectModel, project.id);
+
+    await project.save({ transaction });
+  }
 }
 
-async function setNewReceivers(
-  funderProjectId: RepoDriverId,
-  receivers: AnyVersion<typeof repoDriverAccountMetadataParser>['splits'],
-  logManager: LogManager,
-  transaction: Transaction,
-  blockTimestamp: Date,
-) {
+async function setNewReceivers({
+  receivers,
+  logManager,
+  transaction,
+  blockTimestamp,
+  emitterAccountId,
+}: {
+  blockTimestamp: Date;
+  logManager: LogManager;
+  transaction: Transaction;
+  emitterAccountId: RepoDriverId;
+  receivers: AnyVersion<typeof repoDriverAccountMetadataParser>['splits'];
+}) {
   const { dependencies, maintainers } = receivers;
 
   const maintainerPromises = maintainers.map((maintainer) => {
@@ -199,18 +188,18 @@ async function setNewReceivers(
       blockTimestamp,
       metadataReceiver: maintainer as z.infer<
         typeof addressDriverSplitReceiverSchema
-      >,
+      >, // Safe to cast because we already checked the type of accountId.
       funder: {
         type: 'project',
-        accountId: funderProjectId,
         dependencyType: 'maintainer',
+        accountId: emitterAccountId,
       },
     });
   });
 
   const dependencyPromises = dependencies.map(async (dependency) => {
     if (isRepoDriverId(dependency.accountId)) {
-      return createProjectAndProjectReceiver({
+      return createProjectReceiver({
         logManager,
         transaction,
         blockTimestamp,
@@ -219,7 +208,8 @@ async function setNewReceivers(
         >, // Safe to cast because we already checked the type of accountId.
         funder: {
           type: 'project',
-          accountId: funderProjectId,
+          dependencyType: 'dependency',
+          accountId: emitterAccountId,
         },
       });
     }
@@ -234,27 +224,31 @@ async function setNewReceivers(
         >, // Safe to cast because we already checked the type of accountId.
         funder: {
           type: 'project',
-          accountId: funderProjectId,
           dependencyType: 'dependency',
+          accountId: emitterAccountId,
         },
       });
     }
 
     if (isNftDriverId(dependency.accountId)) {
-      return DripListSplitReceiverModel.create(
-        {
-          funderProjectId,
-          fundeeDripListId: dependency.accountId,
-          weight: dependency.weight,
-          type: DependencyType.ProjectDependency,
-          blockTimestamp,
+      // NFT Driver is always represents a DripList receiver for Projects. Ecosystem Main Account receivers are not yet supported for projects.
+      return createDripListReceiver({
+        logManager,
+        transaction,
+        blockTimestamp,
+        metadataReceiver: dependency as z.infer<
+          typeof dripListSplitReceiverSchema
+        >, // Safe to cast because we already checked the type of accountId.,
+        funder: {
+          type: 'project',
+          dependencyType: 'dependency',
+          accountId: emitterAccountId,
         },
-        { transaction },
-      );
+      });
     }
 
     return unreachableError(
-      `Dependency with account ID ${dependency.accountId} is not an Address nor a Project.`,
+      `Cannot process project dependency '${dependency.accountId}': unsupported Driver type.`,
     );
   });
 
@@ -264,11 +258,8 @@ async function setNewReceivers(
   ]);
 
   logManager.appendLog(
-    `Updated ${LogManager.nameOfType(
-      GitProjectModel,
-    )} with ID ${funderProjectId} splits: ${result
-      .map((p) => JSON.stringify(p))
-      .join(`, `)}
-    `,
+    `Updated ${LogManager.nameOfType(ProjectModel)} with ID ${emitterAccountId} splits:\n${result
+      .map((p) => `  - ${JSON.stringify(p)}`)
+      .join('\n')}`,
   );
 }

@@ -5,15 +5,11 @@ import type { UUID } from 'crypto';
 import type { z } from 'zod';
 import type { IpfsHash, NftDriverId } from '../../../core/types';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
-import LogManager from '../../../core/LogManager';
-import {
-  AccountMetadataEmittedEventModel,
-  DripListModel,
-} from '../../../models';
+import type LogManager from '../../../core/LogManager';
+import { DripListModel } from '../../../models';
 import unreachableError from '../../../utils/unreachableError';
 import verifySplitsReceivers from '../verifySplitsReceivers';
 import appSettings from '../../../config/appSettings';
-import { isLatestEvent } from '../../../utils/eventUtils';
 import type { dripListSplitReceiverSchema } from '../../../metadata/schemas/nft-driver/v2';
 import type {
   repoDriverSplitReceiverSchema,
@@ -23,7 +19,7 @@ import type { subListSplitReceiverSchema } from '../../../metadata/schemas/sub-l
 import verifyProjectSources from '../projectVerification';
 import {
   deleteExistingReceivers,
-  createProjectAndProjectReceiver,
+  createProjectReceiver,
   createSubListReceiver,
   createDripListReceiver,
   createAddressReceiver,
@@ -34,78 +30,27 @@ type Params = {
   blockNumber: number;
   blockTimestamp: Date;
   logManager: LogManager;
-  dripListId: NftDriverId;
   transaction: Transaction;
+  emitterAccountId: NftDriverId;
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>;
-  originEventDetails: {
-    entity: AccountMetadataEmittedEventModel;
-    logIndex: number;
-    transactionHash: string;
-  };
 };
 
 export default async function handleDripListMetadata({
   ipfsHash,
   metadata,
   logManager,
-  dripListId,
   blockNumber,
   transaction,
   blockTimestamp,
-  originEventDetails: { entity, logIndex, transactionHash },
+  emitterAccountId,
 }: Params) {
-  // Only process metadata if this is the latest event.
-  if (
-    !(await isLatestEvent(
-      entity,
-      AccountMetadataEmittedEventModel,
-      {
-        logIndex,
-        transactionHash,
-        accountId: dripListId,
-      },
-      transaction,
-    ))
-  ) {
-    logManager.logAllInfo();
-
-    return;
-  }
-  logManager.appendIsLatestEventLog();
-
-  assertMetadataIsValid(dripListId, metadata);
-
-  // Here, is the only place an Drip List is created.
-  const dripList = await DripListModel.create(
-    {
-      id: dripListId,
-      isValid: false, // Until the related `TransferEvent` is processed.
-      name: metadata.name ?? null,
-      description:
-        'description' in metadata ? metadata.description || null : null,
-      latestVotingRoundId:
-        'latestVotingRoundId' in metadata
-          ? (metadata.latestVotingRoundId as UUID) || null
-          : null,
-      lastProcessedIpfsHash: ipfsHash,
-      isVisible:
-        blockNumber > appSettings.visibilityThresholdBlockNumber &&
-        'isVisible' in metadata
-          ? metadata.isVisible
-          : true,
-    },
-    { transaction },
-  );
-
-  logManager
-    .appendFindOrCreateLog(DripListModel, true, dripList.id)
-    .logAllInfo();
+  validateMetadata(emitterAccountId, metadata);
 
   const receivers = metadata.projects ?? metadata.recipients;
 
   const [areSplitsValid, onChainSplitsHash, calculatedSplitsHash] =
     await verifySplitsReceivers(
-      dripList.id,
+      emitterAccountId,
       receivers.map(({ weight, accountId }) => ({
         weight,
         accountId,
@@ -114,14 +59,7 @@ export default async function handleDripListMetadata({
 
   if (!areSplitsValid) {
     logManager.appendLog(
-      [
-        `Skipping metadata update for Drip List ${dripListId} due to mismatch in splits hash.`,
-        `  On-chain hash: ${onChainSplitsHash}`,
-        `  Metadata hash: ${calculatedSplitsHash}`,
-        `  Possible causes:`,
-        `    - The metadata event is the latest in the DB, but not on-chain.`,
-        `    - The metadata was manually emitted with outdated or mismatched splits.`,
-      ].join('\n'),
+      `Skipped Drip List ${emitterAccountId} metadata processing: on-chain splits hash '${onChainSplitsHash}' does not match hash '${calculatedSplitsHash}' calculated from metadata.`,
     );
 
     return;
@@ -129,9 +67,48 @@ export default async function handleDripListMetadata({
 
   await verifyProjectSources(receivers);
 
+  const dripListProps = {
+    id: emitterAccountId,
+    name: metadata.name ?? null,
+    description:
+      'description' in metadata ? metadata.description || null : null,
+    latestVotingRoundId:
+      'latestVotingRoundId' in metadata
+        ? (metadata.latestVotingRoundId as UUID) || null
+        : null,
+    lastProcessedIpfsHash: ipfsHash,
+    isVisible:
+      blockNumber > appSettings.visibilityThresholdBlockNumber &&
+      'isVisible' in metadata
+        ? metadata.isVisible
+        : true,
+  };
+
+  const [dripList, isCreated] = await DripListModel.findOrCreate({
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+    where: {
+      id: emitterAccountId,
+    },
+    defaults: {
+      ...dripListProps,
+      isValid: false, // Until the related `TransferEvent` is processed.
+    },
+  });
+
+  if (isCreated) {
+    logManager.appendFindOrCreateLog(DripListModel, true, dripList.id);
+  } else {
+    dripList.set(dripListProps);
+
+    logManager.appendUpdateLog(dripList, DripListModel, dripList.id);
+
+    await dripList.save({ transaction });
+  }
+
   await deleteExistingReceivers({
     for: {
-      accountId: dripListId,
+      accountId: emitterAccountId,
       column: 'funderDripListId',
     },
     transaction,
@@ -142,7 +119,7 @@ export default async function handleDripListMetadata({
     logManager,
     transaction,
     blockTimestamp,
-    funderDripListId: dripListId,
+    emitterAccountId,
   });
 }
 
@@ -151,12 +128,12 @@ async function setNewReceivers({
   logManager,
   transaction,
   blockTimestamp,
-  funderDripListId,
+  emitterAccountId,
 }: {
   blockTimestamp: Date;
   logManager: LogManager;
   transaction: Transaction;
-  funderDripListId: NftDriverId;
+  emitterAccountId: NftDriverId;
   receivers: (
     | z.infer<typeof repoDriverSplitReceiverSchema>
     | z.infer<typeof subListSplitReceiverSchema>
@@ -167,14 +144,14 @@ async function setNewReceivers({
   const receiverPromises = receivers.map(async (receiver) => {
     switch (receiver.type) {
       case 'repoDriver':
-        return createProjectAndProjectReceiver({
+        return createProjectReceiver({
           logManager,
           transaction,
           blockTimestamp,
           metadataReceiver: receiver,
           funder: {
             type: 'dripList',
-            accountId: funderDripListId,
+            accountId: emitterAccountId,
           },
         });
 
@@ -186,7 +163,7 @@ async function setNewReceivers({
           metadataReceiver: receiver,
           funder: {
             type: 'dripList',
-            accountId: funderDripListId,
+            accountId: emitterAccountId,
           },
         });
 
@@ -198,7 +175,7 @@ async function setNewReceivers({
           metadataReceiver: receiver,
           funder: {
             type: 'dripList',
-            accountId: funderDripListId,
+            accountId: emitterAccountId,
           },
         });
 
@@ -210,7 +187,7 @@ async function setNewReceivers({
           metadataReceiver: receiver,
           funder: {
             type: 'dripList',
-            accountId: funderDripListId,
+            accountId: emitterAccountId,
           },
         });
 
@@ -221,20 +198,11 @@ async function setNewReceivers({
     }
   });
 
-  const result = await Promise.all(receiverPromises);
-
-  logManager.appendLog(
-    `Updated ${LogManager.nameOfType(
-      DripListModel,
-    )} with ID ${funderDripListId} splits: ${result
-      .map((p) => JSON.stringify(p))
-      .join(`, `)}
-    `,
-  );
+  await Promise.all(receiverPromises);
 }
 
-function assertMetadataIsValid(
-  dripListId: NftDriverId,
+function validateMetadata(
+  emitterAccountId: NftDriverId,
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
 ): asserts metadata is Extract<
   typeof metadata,
@@ -255,9 +223,9 @@ function assertMetadataIsValid(
       )[];
     }
 > {
-  if (dripListId !== metadata.describes.accountId) {
-    unreachableError(
-      `Drip List metadata describes account ID '${metadata.describes.accountId}' but it was emitted by ${dripListId}.`,
+  if (emitterAccountId !== metadata.describes.accountId) {
+    throw new Error(
+      `Invalid Drip List metadata: emitter account ID is '${emitterAccountId}', but metadata describes '${metadata.describes.accountId}'.`,
     );
   }
 
@@ -265,6 +233,6 @@ function assertMetadataIsValid(
   const isLegacy = 'projects' in metadata;
 
   if (!isCurrent && !isLegacy) {
-    throw new Error('Invalid Drip List metadata format.');
+    throw new Error('Invalid Drip List metadata schema.');
   }
 }

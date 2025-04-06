@@ -2,21 +2,17 @@ import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { z } from 'zod';
 import appSettings from '../../../config/appSettings';
-import LogManager from '../../../core/LogManager';
+import type LogManager from '../../../core/LogManager';
 import type { IpfsHash, NftDriverId } from '../../../core/types';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
-import {
-  EcosystemModel,
-  AccountMetadataEmittedEventModel,
-} from '../../../models';
+import { EcosystemMainAccountModel } from '../../../models';
 import unreachableError from '../../../utils/unreachableError';
 import verifySplitsReceivers from '../verifySplitsReceivers';
-import { isLatestEvent } from '../../../utils/eventUtils';
 import type { repoDriverSplitReceiverSchema } from '../../../metadata/schemas/repo-driver/v2';
 import type { subListSplitReceiverSchema } from '../../../metadata/schemas/sub-list/v1';
 import verifyProjectSources from '../projectVerification';
 import {
-  createProjectAndProjectReceiver,
+  createProjectReceiver,
   createSubListReceiver,
   deleteExistingReceivers,
 } from '../receiversRepository';
@@ -26,72 +22,25 @@ type Params = {
   blockNumber: number;
   blockTimestamp: Date;
   logManager: LogManager;
-  ecosystemId: NftDriverId;
   transaction: Transaction;
+  emitterAccountId: NftDriverId;
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>;
-  originEventDetails: {
-    entity: AccountMetadataEmittedEventModel;
-    logIndex: number;
-    transactionHash: string;
-  };
 };
 
-export default async function handleEcosystemMetadata({
+export default async function handleEcosystemMainAccountMetadata({
   ipfsHash,
   metadata,
   logManager,
-  ecosystemId,
   blockNumber,
   transaction,
   blockTimestamp,
-  originEventDetails: { entity, logIndex, transactionHash },
+  emitterAccountId,
 }: Params) {
-  // Only process metadata if this is the latest event.
-  if (
-    !(await isLatestEvent(
-      entity,
-      AccountMetadataEmittedEventModel,
-      {
-        logIndex,
-        transactionHash,
-        accountId: ecosystemId,
-      },
-      transaction,
-    ))
-  ) {
-    logManager.logAllInfo();
-
-    return;
-  }
-  logManager.appendIsLatestEventLog();
-
-  assertMetadataIsValid(ecosystemId, metadata);
-
-  // Here, is the only place an Ecosystem is created.
-  const ecosystem = await EcosystemModel.create(
-    {
-      id: ecosystemId,
-      isValid: false, // Until the related `TransferEvent` is processed.
-      name: metadata.name ?? null,
-      description:
-        'description' in metadata ? metadata.description || null : null,
-      lastProcessedIpfsHash: ipfsHash,
-      isVisible:
-        blockNumber > appSettings.visibilityThresholdBlockNumber &&
-        'isVisible' in metadata
-          ? metadata.isVisible
-          : true,
-    },
-    { transaction },
-  );
-
-  logManager
-    .appendFindOrCreateLog(EcosystemModel, true, ecosystem.id)
-    .logAllInfo();
+  validateMetadata(emitterAccountId, metadata);
 
   const [areSplitsValid, onChainSplitsHash, calculatedSplitsHash] =
     await verifySplitsReceivers(
-      ecosystem.id,
+      emitterAccountId,
       metadata.recipients.map(({ weight, accountId }) => ({
         weight,
         accountId,
@@ -100,35 +49,70 @@ export default async function handleEcosystemMetadata({
 
   if (!areSplitsValid) {
     logManager.appendLog(
-      [
-        `Skipping metadata update for Ecosystem ${ecosystemId} due to mismatch in splits hash.`,
-        `  On-chain hash: ${onChainSplitsHash}`,
-        `  Metadata hash: ${calculatedSplitsHash}`,
-        `  Possible causes:`,
-        `    - The metadata event is the latest in the DB, but not on-chain.`,
-        `    - The metadata was manually emitted with outdated or mismatched splits.`,
-      ].join('\n'),
+      `Skipped Drip List ${emitterAccountId} metadata processing: on-chain splits hash '${onChainSplitsHash}' does not match hash '${calculatedSplitsHash}' calculated from metadata.`,
     );
 
     return;
   }
-
   await verifyProjectSources(metadata.recipients);
+
+  const ecosystemMainAccountProps = {
+    id: emitterAccountId,
+    name: metadata.name ?? null,
+    description:
+      'description' in metadata ? metadata.description || null : null,
+    lastProcessedIpfsHash: ipfsHash,
+    isVisible:
+      blockNumber > appSettings.visibilityThresholdBlockNumber &&
+      'isVisible' in metadata
+        ? metadata.isVisible
+        : true,
+  };
+
+  const [ecosystemMainIdentity, isCreated] =
+    await EcosystemMainAccountModel.findOrCreate({
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+      where: { id: emitterAccountId },
+      defaults: {
+        ...ecosystemMainAccountProps,
+        isValid: false, // Until the related `TransferEvent` is processed.
+      },
+    });
+
+  if (isCreated) {
+    logManager.appendFindOrCreateLog(
+      EcosystemMainAccountModel,
+      true,
+      ecosystemMainIdentity.id,
+    );
+  } else {
+    ecosystemMainIdentity.set(ecosystemMainAccountProps);
+
+    logManager.appendUpdateLog(
+      ecosystemMainIdentity,
+      EcosystemMainAccountModel,
+      ecosystemMainIdentity.id,
+    );
+
+    await ecosystemMainIdentity.save({ transaction });
+  }
 
   await deleteExistingReceivers({
     for: {
-      accountId: ecosystemId,
-      column: 'funderEcosystemId',
+      accountId: emitterAccountId,
+      column: 'funderEcosystemMainAccountId',
     },
     transaction,
   });
 
   await setNewReceivers({
+    ipfsHash,
     logManager,
     transaction,
     blockTimestamp,
+    emitterAccountId,
     receivers: metadata.recipients,
-    funderEcosystemId: ecosystemId,
   });
 }
 
@@ -137,12 +121,13 @@ async function setNewReceivers({
   logManager,
   transaction,
   blockTimestamp,
-  funderEcosystemId,
+  emitterAccountId,
 }: {
+  ipfsHash: IpfsHash;
   blockTimestamp: Date;
   logManager: LogManager;
   transaction: Transaction;
-  funderEcosystemId: NftDriverId;
+  emitterAccountId: NftDriverId;
   receivers: (
     | z.infer<typeof repoDriverSplitReceiverSchema>
     | z.infer<typeof subListSplitReceiverSchema>
@@ -151,14 +136,14 @@ async function setNewReceivers({
   const receiverPromises = receivers.map(async (receiver) => {
     switch (receiver.type) {
       case 'repoDriver':
-        return createProjectAndProjectReceiver({
+        return createProjectReceiver({
           logManager,
           transaction,
           blockTimestamp,
           metadataReceiver: receiver,
           funder: {
             type: 'ecosystem',
-            accountId: funderEcosystemId,
+            accountId: emitterAccountId,
           },
         });
 
@@ -170,7 +155,7 @@ async function setNewReceivers({
           metadataReceiver: receiver,
           funder: {
             type: 'ecosystem',
-            accountId: funderEcosystemId,
+            accountId: emitterAccountId,
           },
         });
 
@@ -181,20 +166,11 @@ async function setNewReceivers({
     }
   });
 
-  const result = await Promise.all(receiverPromises);
-
-  logManager.appendLog(
-    `Updated ${LogManager.nameOfType(
-      EcosystemModel,
-    )} with ID ${funderEcosystemId} splits: ${result
-      .map((p) => JSON.stringify(p))
-      .join(`, `)}
-    `,
-  );
+  await Promise.all(receiverPromises);
 }
 
-function assertMetadataIsValid(
-  ecosystemId: NftDriverId,
+function validateMetadata(
+  emitterAccountId: NftDriverId,
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
 ): asserts metadata is Extract<
   typeof metadata,
@@ -206,9 +182,9 @@ function assertMetadataIsValid(
     )[];
   }
 > {
-  if (ecosystemId !== metadata.describes.accountId) {
-    unreachableError(
-      `Ecosystem metadata describes account ID ${metadata.describes.accountId} but it was emitted by ${ecosystemId}.`,
+  if (emitterAccountId !== metadata.describes.accountId) {
+    throw new Error(
+      `Invalid Ecosystem Main Account metadata: emitter account ID is '${emitterAccountId}', but metadata describes '${metadata.describes.accountId}'.`,
     );
   }
 
@@ -219,6 +195,6 @@ function assertMetadataIsValid(
       metadata.type === 'ecosystem'
     )
   ) {
-    throw new Error('Invalid Ecosystem metadata.');
+    throw new Error('Invalid Ecosystem Main Account ID metadata schema.');
   }
 }

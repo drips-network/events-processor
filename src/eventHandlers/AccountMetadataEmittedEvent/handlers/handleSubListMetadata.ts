@@ -1,131 +1,98 @@
 /* eslint-disable no-param-reassign */
 import type { Transaction } from 'sequelize';
 import type { z } from 'zod';
-import LogManager from '../../../core/LogManager';
+import type { AnyVersion } from '@efstajas/versioned-parser';
+import type LogManager from '../../../core/LogManager';
 import type { ImmutableSplitsDriverId, IpfsHash } from '../../../core/types';
-import {
-  AccountMetadataEmittedEventModel,
-  SubListModel,
-} from '../../../models';
-import {
-  toNftDriverId,
-  toImmutableSplitsDriverId,
-} from '../../../utils/accountIdUtils';
+import { EcosystemMainAccountModel, SubListModel } from '../../../models';
+import { convertToNftDriverId } from '../../../utils/accountIdUtils';
 import { getImmutableSpitsDriverMetadata } from '../../../utils/metadataUtils';
 import unreachableError from '../../../utils/unreachableError';
 import verifySplitsReceivers from '../verifySplitsReceivers';
-import { isLatestEvent } from '../../../utils/eventUtils';
-import verifyProjectSources from '../projectVerification';
+import {
+  createProjectReceiver,
+  createSubListReceiver,
+  createDripListReceiver,
+  deleteExistingReceivers,
+  createAddressReceiver,
+} from '../receiversRepository';
 import type {
   addressDriverSplitReceiverSchema,
   repoDriverSplitReceiverSchema,
 } from '../../../metadata/schemas/repo-driver/v2';
 import type { subListSplitReceiverSchema } from '../../../metadata/schemas/sub-list/v1';
 import type { dripListSplitReceiverSchema } from '../../../metadata/schemas/nft-driver/v2';
-import {
-  createProjectAndProjectReceiver,
-  createSubListReceiver,
-  createDripListReceiver,
-  deleteExistingReceivers,
-  createAddressReceiver,
-} from '../receiversRepository';
+import verifyProjectSources from '../projectVerification';
+import RecoverableError from '../../../utils/recoverableError';
+import type { immutableSplitsDriverMetadataParser } from '../../../metadata/schemas';
 
 type Params = {
   ipfsHash: IpfsHash;
   blockTimestamp: Date;
   logManager: LogManager;
-  subListId: ImmutableSplitsDriverId;
+  emitterAccountId: ImmutableSplitsDriverId;
   transaction: Transaction;
-  originEventDetails: {
-    entity: AccountMetadataEmittedEventModel;
-    logIndex: number;
-    transactionHash: string;
-  };
 };
 
 export default async function handleSubListMetadata({
   ipfsHash,
   logManager,
-  subListId,
   transaction,
   blockTimestamp,
-  originEventDetails: { entity, logIndex, transactionHash },
+  emitterAccountId,
 }: Params) {
-  // Only process metadata if this is the latest event.
-  if (
-    !(await isLatestEvent(
-      entity,
-      AccountMetadataEmittedEventModel,
-      {
-        logIndex,
-        transactionHash,
-        accountId: subListId,
-      },
-      transaction,
-    ))
-  ) {
-    logManager.logAllInfo();
-
-    return;
-  }
-  logManager.appendIsLatestEventLog();
-
   const metadata = await getImmutableSpitsDriverMetadata(ipfsHash);
 
-  // Here, is the only place an Ecosystem is created.
-  const subList = await SubListModel.create(
-    {
-      id: subListId,
-      parentDripListId:
-        metadata.parent.type === 'drip-list'
-          ? toNftDriverId(metadata.parent.accountId)
-          : null,
-      parentEcosystemId:
-        metadata.parent.type === 'ecosystem'
-          ? toNftDriverId(metadata.parent.accountId)
-          : null,
-      parentSubListId:
-        metadata.parent.type === 'sub-list'
-          ? toImmutableSplitsDriverId(metadata.parent.accountId)
-          : null,
-      rootDripListId:
-        metadata.root.type === 'drip-list'
-          ? toNftDriverId(metadata.root.accountId)
-          : null,
-      rootEcosystemId:
-        metadata.root.type === 'ecosystem'
-          ? toNftDriverId(metadata.root.accountId)
-          : null,
-      lastProcessedIpfsHash: ipfsHash,
-    },
-    { transaction },
-  );
-
-  logManager.appendFindOrCreateLog(SubListModel, true, subList.id).logAllInfo();
-
   const [areSplitsValid, onChainSplitsHash, calculatedSplitsHash] =
-    await verifySplitsReceivers(subList.id, metadata.recipients);
+    await verifySplitsReceivers(emitterAccountId, metadata.recipients);
 
   if (!areSplitsValid) {
     logManager.appendLog(
-      [
-        `Skipping metadata update for Sub List ${subListId} due to mismatch in splits hash.`,
-        `  On-chain hash: ${onChainSplitsHash}`,
-        `  Metadata hash: ${calculatedSplitsHash}`,
-        `  Possible causes:`,
-        `    - The metadata event is the latest in the DB, but not on-chain.`,
-        `    - The metadata was manually emitted with outdated or mismatched splits.`,
-      ].join('\n'),
+      `Skipped Drip List ${emitterAccountId} metadata processing: on-chain splits hash '${onChainSplitsHash}' does not match hash '${calculatedSplitsHash}' calculated from metadata.`,
     );
 
     return;
   }
-
   await verifyProjectSources(metadata.recipients);
+
+  await validateRootAndParentExist(metadata, transaction);
+
+  const subListProps = {
+    id: emitterAccountId,
+    parentEcosystemMainAccountId:
+      metadata.parent.type === 'ecosystem'
+        ? convertToNftDriverId(metadata.parent.accountId)
+        : null,
+    rootEcosystemMainAccountId:
+      metadata.root.type === 'ecosystem'
+        ? convertToNftDriverId(metadata.root.accountId)
+        : null,
+    lastProcessedIpfsHash: ipfsHash,
+  };
+
+  const [subList, isCreated] = await SubListModel.findOrCreate({
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+    where: { id: emitterAccountId },
+    defaults: {
+      ...subListProps,
+      isValid: false, // Until the related Sub List's metadata is processed.
+    },
+  });
+
+  if (isCreated) {
+    logManager.appendFindOrCreateLog(SubListModel, true, subList.id);
+  } else {
+    subList.set(subListProps);
+
+    logManager.appendUpdateLog(subList, SubListModel, subList.id);
+
+    await subList.save({ transaction });
+  }
 
   await deleteExistingReceivers({
     for: {
-      accountId: subListId,
+      accountId: emitterAccountId,
       column: 'funderSubListId',
     },
     transaction,
@@ -135,7 +102,7 @@ export default async function handleSubListMetadata({
     logManager,
     transaction,
     blockTimestamp,
-    funderSubListId: subListId,
+    emitterAccountId,
     receivers: metadata.recipients,
   });
 }
@@ -145,12 +112,12 @@ async function setNewReceivers({
   logManager,
   transaction,
   blockTimestamp,
-  funderSubListId,
+  emitterAccountId,
 }: {
   blockTimestamp: Date;
   logManager: LogManager;
   transaction: Transaction;
-  funderSubListId: ImmutableSplitsDriverId;
+  emitterAccountId: ImmutableSplitsDriverId;
   receivers: (
     | z.infer<typeof repoDriverSplitReceiverSchema>
     | z.infer<typeof subListSplitReceiverSchema>
@@ -161,14 +128,14 @@ async function setNewReceivers({
   const receiverPromises = receivers.map(async (receiver) => {
     switch (receiver.type) {
       case 'repoDriver':
-        return createProjectAndProjectReceiver({
+        return createProjectReceiver({
           logManager,
           transaction,
           blockTimestamp,
           metadataReceiver: receiver,
           funder: {
             type: 'sub-list',
-            accountId: funderSubListId,
+            accountId: emitterAccountId,
           },
         });
 
@@ -180,7 +147,7 @@ async function setNewReceivers({
           metadataReceiver: receiver,
           funder: {
             type: 'sub-list',
-            accountId: funderSubListId,
+            accountId: emitterAccountId,
           },
         });
 
@@ -192,7 +159,7 @@ async function setNewReceivers({
           metadataReceiver: receiver,
           funder: {
             type: 'sub-list',
-            accountId: funderSubListId,
+            accountId: emitterAccountId,
           },
         });
 
@@ -204,7 +171,7 @@ async function setNewReceivers({
           metadataReceiver: receiver,
           funder: {
             type: 'sub-list',
-            accountId: funderSubListId,
+            accountId: emitterAccountId,
           },
         });
 
@@ -215,14 +182,43 @@ async function setNewReceivers({
     }
   });
 
-  const result = await Promise.all(receiverPromises);
+  await Promise.all(receiverPromises);
+}
 
-  logManager.appendLog(
-    `Updated ${LogManager.nameOfType(
-      SubListModel,
-    )} with ID ${funderSubListId} splits: ${result
-      .map((p) => JSON.stringify(p))
-      .join(`, `)}
-    `,
+async function validateRootAndParentExist(
+  metadata: AnyVersion<typeof immutableSplitsDriverMetadataParser>,
+  transaction: Transaction,
+) {
+  if (
+    metadata.parent.type !== 'ecosystem' ||
+    metadata.root.type !== 'ecosystem'
+  ) {
+    throw new Error('Sub Lists are currently only supported in Ecosystems.');
+  }
+
+  const root = await EcosystemMainAccountModel.findByPk(
+    metadata.root.accountId,
+    {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    },
   );
+  if (!root) {
+    throw new RecoverableError(
+      `Root Ecosystem Main Account '${metadata.root.accountId}' not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
+    );
+  }
+
+  const parent = await EcosystemMainAccountModel.findByPk(
+    metadata.parent.accountId,
+    {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    },
+  );
+  if (!parent) {
+    throw new RecoverableError(
+      `Parent Ecosystem Main Account '${metadata.parent.accountId}' not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
+    );
+  }
 }
