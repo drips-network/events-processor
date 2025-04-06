@@ -1,6 +1,6 @@
 import { DataTypes, literal, type QueryInterface } from 'sequelize';
 import { COMMON_EVENT_INIT_ATTRIBUTES, FORGES_MAP } from '../../core/constants';
-import { ProjectVerificationStatus } from '../../models/GitProjectModel';
+import { ProjectVerificationStatus } from '../../models/ProjectModel';
 import getSchema from '../../utils/getSchema';
 import { DependencyType, type DbSchema } from '../../core/types';
 import { AddressDriverSplitReceiverType } from '../../models/AddressDriverSplitReceiverModel';
@@ -390,15 +390,30 @@ async function createRepoDriverSplitReceiversTable(
         primaryKey: true,
       },
       fundeeProjectId: {
+        // Foreign key
         type: DataTypes.STRING,
+        references: {
+          model: 'GitProjects',
+          key: 'id',
+        },
         allowNull: false,
       },
       funderProjectId: {
+        // Foreign key
         type: DataTypes.STRING,
+        references: {
+          model: 'GitProjects',
+          key: 'id',
+        },
         allowNull: true,
       },
       funderDripListId: {
+        // Foreign key
         type: DataTypes.STRING,
+        references: {
+          model: 'DripLists',
+          key: 'id',
+        },
         allowNull: true,
       },
       weight: {
@@ -605,15 +620,30 @@ async function createDripListSplitReceiversTable(
         primaryKey: true,
       },
       fundeeDripListId: {
+        // Foreign key
         type: DataTypes.STRING,
+        references: {
+          model: 'DripLists',
+          key: 'id',
+        },
         allowNull: false,
       },
       funderProjectId: {
+        // Foreign key
         type: DataTypes.STRING,
+        references: {
+          model: 'GitProjects',
+          key: 'id',
+        },
         allowNull: true,
       },
       funderDripListId: {
+        // Foreign key
         type: DataTypes.STRING,
+        references: {
+          model: 'DripLists',
+          key: 'id',
+        },
         allowNull: true,
       },
       weight: {

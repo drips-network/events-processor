@@ -7,11 +7,11 @@ export async function up({ context: sequelize }: any): Promise<void> {
 
   await queryInterface.addColumn(
     { tableName: 'RepoDriverSplitReceivers', schema },
-    'funderEcosystemId',
+    'funderEcosystemMainAccountId',
     {
       type: DataTypes.STRING,
       references: {
-        model: 'Ecosystems',
+        model: 'EcosystemMainIdentities',
         key: 'id',
       },
       allowNull: true,
@@ -20,7 +20,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
 
   await queryInterface.addIndex(
     { tableName: 'RepoDriverSplitReceivers', schema },
-    ['funderEcosystemId'],
+    ['funderEcosystemMainAccountId'],
     {
       name: 'IX_RepoDriverSplitReceivers_funderEcosystemId',
       where: {
@@ -57,11 +57,11 @@ export async function up({ context: sequelize }: any): Promise<void> {
 
   await queryInterface.addColumn(
     { tableName: 'DripListSplitReceivers', schema },
-    'funderEcosystemId',
+    'funderEcosystemMainAccountId',
     {
       type: DataTypes.STRING,
       references: {
-        model: 'Ecosystems',
+        model: 'EcosystemMainIdentities',
         key: 'id',
       },
       allowNull: true,
@@ -70,7 +70,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
 
   await queryInterface.addIndex(
     { tableName: 'DripListSplitReceivers', schema },
-    ['funderEcosystemId'],
+    ['funderEcosystemMainAccountId'],
     {
       name: 'IX_DripListSplitReceivers_funderEcosystemId',
       where: {
@@ -107,11 +107,11 @@ export async function up({ context: sequelize }: any): Promise<void> {
 
   await queryInterface.addColumn(
     { tableName: 'AddressDriverSplitReceivers', schema },
-    'funderEcosystemId',
+    'funderEcosystemMainAccountId',
     {
       type: DataTypes.STRING,
       references: {
-        model: 'Ecosystems',
+        model: 'EcosystemMainIdentities',
         key: 'id',
       },
       allowNull: true,
@@ -120,7 +120,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
 
   await queryInterface.addIndex(
     { tableName: 'AddressDriverSplitReceivers', schema },
-    ['funderEcosystemId'],
+    ['funderEcosystemMainAccountId'],
     {
       name: 'IX_AddressDriverSplitReceivers_funderEcosystemId',
       where: {
@@ -162,7 +162,7 @@ export async function down({ context: sequelize }: any): Promise<void> {
 
   await queryInterface.removeColumn(
     { tableName: 'RepoDriverSplitReceivers', schema },
-    'funderEcosystemId',
+    'funderEcosystemMainAccountId',
   );
   await queryInterface.removeIndex(
     { tableName: 'RepoDriverSplitReceivers', schema },
@@ -170,7 +170,7 @@ export async function down({ context: sequelize }: any): Promise<void> {
   );
   await queryInterface.removeColumn(
     { tableName: 'DripListSplitReceivers', schema },
-    'funderEcosystemId',
+    'funderEcosystemMainAccountId',
   );
   await queryInterface.removeIndex(
     { tableName: 'DripListSplitReceivers', schema },
@@ -178,7 +178,7 @@ export async function down({ context: sequelize }: any): Promise<void> {
   );
   await queryInterface.removeColumn(
     { tableName: 'AddressDriverSplitReceivers', schema },
-    'funderEcosystemId',
+    'funderEcosystemMainAccountId',
   );
   await queryInterface.removeIndex(
     { tableName: 'AddressDriverSplitReceivers', schema },

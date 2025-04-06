@@ -15,17 +15,6 @@ export async function runMigrations(): Promise<void> {
 
   const schema = getSchema();
 
-  await sequelize.query(`
-    DO $$
-    BEGIN
-      IF NOT EXISTS (
-        SELECT FROM pg_database WHERE datname = 'dripsdb'
-      ) THEN
-        CREATE DATABASE "dripsdb";
-      END IF;
-    END
-    $$;
-  `);
   await sequelize.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
 
   const migrator = new Umzug({

@@ -42,12 +42,12 @@ async function createSubListsTable(
           key: 'id',
         },
       },
-      parentEcosystemId: {
+      parentEcosystemMainAccountId: {
         // Foreign key
         type: DataTypes.STRING,
         allowNull: true,
         references: {
-          model: 'Ecosystems',
+          model: 'EcosystemMainIdentities',
           key: 'id',
         },
       },
@@ -69,18 +69,22 @@ async function createSubListsTable(
           key: 'id',
         },
       },
-      rootEcosystemId: {
+      rootEcosystemMainAccountId: {
         // Foreign key
         type: DataTypes.STRING,
         allowNull: true,
         references: {
-          model: 'Ecosystems',
+          model: 'EcosystemMainIdentities',
           key: 'id',
         },
       },
       lastProcessedIpfsHash: {
         type: DataTypes.TEXT,
         allowNull: true,
+      },
+      isValid: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
       },
       createdAt: {
         type: DataTypes.DATE,
@@ -106,7 +110,7 @@ async function createSubListsTable(
 
   await queryInterface.addIndex(
     { tableName: 'SubLists', schema },
-    ['parentEcosystemId'],
+    ['parentEcosystemMainAccountId'],
     {
       name: 'IX_SubLists_parentEcosystemId',
       unique: false,
@@ -133,7 +137,7 @@ async function createSubListsTable(
 
   await queryInterface.addIndex(
     { tableName: 'SubLists', schema },
-    ['rootEcosystemId'],
+    ['rootEcosystemMainAccountId'],
     {
       name: 'IX_SubLists_rootEcosystemId',
       unique: false,
@@ -180,11 +184,20 @@ async function createSubListSplitReceiversTable(
         },
         allowNull: true,
       },
-      funderEcosystemId: {
+      funderEcosystemMainAccountId: {
         // Foreign key
         type: DataTypes.STRING,
         references: {
-          model: 'Ecosystems',
+          model: 'EcosystemMainIdentities',
+          key: 'id',
+        },
+        allowNull: true,
+      },
+      funderSubListId: {
+        // Foreign key
+        type: DataTypes.STRING,
+        references: {
+          model: 'SubLists',
           key: 'id',
         },
         allowNull: true,
@@ -249,7 +262,7 @@ async function createSubListSplitReceiversTable(
 
   await queryInterface.addIndex(
     { tableName: 'SubListSplitReceivers', schema },
-    ['funderEcosystemId'],
+    ['funderEcosystemMainAccountId'],
     {
       name: 'IX_SubListSplitReceivers_funderEcosystemId',
       where: {

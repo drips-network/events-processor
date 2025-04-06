@@ -6,7 +6,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
   const queryInterface: QueryInterface = sequelize.getQueryInterface();
 
   await queryInterface.removeColumn(
-    { tableName: 'Ecosystems', schema },
+    { tableName: 'EcosystemMainIdentities', schema },
     'latestVotingRoundId',
   );
 }
@@ -16,7 +16,7 @@ export async function down({ context: sequelize }: any): Promise<void> {
   const queryInterface: QueryInterface = sequelize.getQueryInterface();
 
   await queryInterface.addColumn(
-    { tableName: 'Ecosystems', schema },
+    { tableName: 'EcosystemMainIdentities', schema },
     'latestVotingRoundId',
     {
       type: DataTypes.STRING,

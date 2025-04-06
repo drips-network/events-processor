@@ -1,6 +1,5 @@
 import { DataTypes, literal, type QueryInterface } from 'sequelize';
 import getSchema from '../../utils/getSchema';
-import { COMMON_EVENT_INIT_ATTRIBUTES } from '../../core/constants';
 import type { DbSchema } from '../../core/types';
 
 export async function up({ context: sequelize }: any): Promise<void> {
@@ -10,45 +9,8 @@ export async function up({ context: sequelize }: any): Promise<void> {
   await createTableIfNotExists(
     queryInterface,
     schema,
-    'Ecosystems',
+    'EcosystemMainIdentities',
     createEcosystemsTable,
-  );
-
-  await createTableIfNotExists(
-    queryInterface,
-    schema,
-    'CreatedSplitsEvents',
-    createCreatedSplitsEventsTable,
-  );
-}
-
-async function createCreatedSplitsEventsTable(
-  queryInterface: QueryInterface,
-  schema: DbSchema,
-) {
-  await queryInterface.createTable(
-    { tableName: 'CreatedSplitsEvents', schema },
-    {
-      accountId: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      receiversHash: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      ...COMMON_EVENT_INIT_ATTRIBUTES,
-      createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: literal('NOW()'),
-      },
-      updatedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: literal('NOW()'),
-      },
-    },
   );
 }
 
@@ -57,7 +19,7 @@ async function createEcosystemsTable(
   schema: DbSchema,
 ) {
   await queryInterface.createTable(
-    { tableName: 'Ecosystems', schema },
+    { tableName: 'EcosystemMainIdentities', schema },
     {
       id: {
         type: DataTypes.STRING,
@@ -117,7 +79,7 @@ async function createEcosystemsTable(
   );
 
   await queryInterface.addIndex(
-    { tableName: 'Ecosystems', schema },
+    { tableName: 'EcosystemMainIdentities', schema },
     ['ownerAddress'],
     {
       name: 'IX_Ecosystems_ownerAddress',
@@ -147,5 +109,8 @@ export async function down({ context: sequelize }: any): Promise<void> {
   const queryInterface = sequelize.getQueryInterface();
 
   await queryInterface.dropTable({ tableName: 'CreatedSplitsEvents', schema });
-  await queryInterface.dropTable({ tableName: 'Ecosystems', schema });
+  await queryInterface.dropTable({
+    tableName: 'EcosystemMainIdentities',
+    schema,
+  });
 }
