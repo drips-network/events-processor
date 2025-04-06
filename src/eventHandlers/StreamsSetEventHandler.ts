@@ -4,7 +4,7 @@ import { dbConnection } from '../db/database';
 import EventHandlerBase from '../events/EventHandlerBase';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import StreamsSetEventModel from '../models/StreamsSetEventModel';
-import { toAccountId } from '../utils/accountIdUtils';
+import { convertToAccountId } from '../utils/accountIdUtils';
 import { toBigIntString } from '../utils/bigintUtils';
 
 export default class StreamsSetEventHandler extends EventHandlerBase<'StreamsSet(uint256,address,bytes32,bytes32,uint128,uint32)'> {
@@ -29,7 +29,7 @@ export default class StreamsSetEventHandler extends EventHandlerBase<'StreamsSet
       rawMaxEnd,
     ] = args as StreamsSetEvent.OutputTuple;
 
-    const accountId = toAccountId(rawAccountId);
+    const accountId = convertToAccountId(rawAccountId);
     const balance = toBigIntString(rawBalance.toString());
     const maxEnd = toBigIntString(rawMaxEnd.toString());
 
@@ -49,31 +49,27 @@ export default class StreamsSetEventHandler extends EventHandlerBase<'StreamsSet
     await dbConnection.transaction(async (transaction) => {
       const logManager = new LogManager(requestId);
 
-      const [streamsSetEvent, isEventCreated] =
-        await StreamsSetEventModel.findOrCreate({
-          lock: true,
+      const streamsSetEvent = await StreamsSetEventModel.create(
+        {
+          accountId,
+          erc20: rawErc20,
+          receiversHash: rawReceiversHash,
+          streamsHistoryHash: rawStreamsHistoryHash,
+          balance,
+          maxEnd,
+          logIndex,
+          blockNumber,
+          blockTimestamp,
+          transactionHash,
+        },
+        {
           transaction,
-          where: {
-            logIndex,
-            transactionHash,
-          },
-          defaults: {
-            accountId,
-            erc20: rawErc20,
-            receiversHash: rawReceiversHash,
-            streamsHistoryHash: rawStreamsHistoryHash,
-            balance,
-            maxEnd,
-            logIndex,
-            blockNumber,
-            blockTimestamp,
-            transactionHash,
-          },
-        });
+        },
+      );
 
       logManager.appendFindOrCreateLog(
         StreamsSetEventModel,
-        isEventCreated,
+        true,
         `${streamsSetEvent.transactionHash}-${streamsSetEvent.logIndex}`,
       );
     });

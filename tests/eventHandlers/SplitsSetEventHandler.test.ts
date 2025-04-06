@@ -5,7 +5,7 @@ import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import SplitsSetEventModel from '../../src/models/SplitsSetEventModel';
 import LogManager from '../../src/core/LogManager';
-import { toAccountId } from '../../src/utils/accountIdUtils';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { SplitsSetEventHandler } from '../../src/eventHandlers';
 import setIsValidFlag from '../../src/eventHandlers/SplitsSetEventHandler/setIsValidFlag';
 
@@ -81,7 +81,7 @@ describe('SplitsSetEventHandler', () => {
           transactionHash,
         },
         defaults: {
-          accountId: toAccountId(rawAccountId),
+          accountId: convertToAccountId(rawAccountId),
           receiversHash: rawReceiversHash,
           logIndex,
           blockNumber,

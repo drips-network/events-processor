@@ -4,7 +4,7 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { TransferEventHandler } from '../../src/eventHandlers';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
-import { toNftDriverId } from '../../src/utils/accountIdUtils';
+import { convertToNftDriverId } from '../../src/utils/accountIdUtils';
 import LogManager from '../../src/core/LogManager';
 import TransferEventModel from '../../src/models/TransferEventModel';
 import DripListModel from '../../src/models/DripListModel';
@@ -88,7 +88,7 @@ describe('TransferEventHandler', () => {
           transactionHash,
         },
         defaults: {
-          tokenId: toNftDriverId(tokenId),
+          tokenId: convertToNftDriverId(tokenId),
           to,
           from,
           logIndex,

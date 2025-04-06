@@ -6,7 +6,7 @@ import type { EventData } from '../../src/events/types';
 import SqueezedStreamsEventModel from '../../src/models/SqueezedStreamsEventModel';
 import LogManager from '../../src/core/LogManager';
 import SqueezedStreamsEventHandler from '../../src/eventHandlers/SqueezedStreamsEventHandler';
-import { toAccountId } from '../../src/utils/accountIdUtils';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { toAddress } from '../../src/utils/ethereumAddressUtils';
 import { toBigIntString } from '../../src/utils/bigintUtils';
 
@@ -90,9 +90,9 @@ describe('SqueezedStreamsEventHandler', () => {
           transactionHash,
         },
         defaults: {
-          accountId: toAccountId(rawAccountId),
+          accountId: convertToAccountId(rawAccountId),
           erc20: toAddress(rawErc20),
-          senderId: toAccountId(rawSenderId),
+          senderId: convertToAccountId(rawSenderId),
           amount: toBigIntString(rawAmt.toString()),
           streamsHistoryHashes: SqueezedStreamsEventModel.toStreamHistoryHashes(
             rawStreamsHistoryHashes,

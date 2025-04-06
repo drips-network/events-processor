@@ -1,6 +1,6 @@
 import EventHandlerBase from '../events/EventHandlerBase';
 import LogManager from '../core/LogManager';
-import { toAccountId } from '../utils/accountIdUtils';
+import { convertToAccountId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import { dbConnection } from '../db/database';
 import type { SqueezedStreamsEvent } from '../../contracts/CURRENT_NETWORK/Drips';
@@ -29,9 +29,9 @@ export default class SqueezedStreamsEventHandler extends EventHandlerBase<'Squee
       rawStreamsHistoryHashes,
     ] = args as SqueezedStreamsEvent.OutputTuple;
 
-    const accountId = toAccountId(rawAccountId);
+    const accountId = convertToAccountId(rawAccountId);
     const erc20 = toAddress(rawErc20);
-    const senderId = toAccountId(rawSenderId);
+    const senderId = convertToAccountId(rawSenderId);
     const amt = toBigIntString(rawAmt.toString());
     const streamsHistoryHashes =
       SqueezedStreamsEventModel.toStreamHistoryHashes(rawStreamsHistoryHashes);
@@ -51,34 +51,28 @@ export default class SqueezedStreamsEventHandler extends EventHandlerBase<'Squee
     await dbConnection.transaction(async (transaction) => {
       const logManager = new LogManager(requestId);
 
-      const [transferEvent, isEventCreated] =
-        await SqueezedStreamsEventModel.findOrCreate({
-          lock: true,
-          transaction,
-          where: {
-            logIndex,
-            transactionHash,
-          },
-          defaults: {
-            accountId,
-            erc20,
-            senderId,
-            amount: amt,
-            streamsHistoryHashes,
-            logIndex,
-            blockNumber,
-            blockTimestamp,
-            transactionHash,
-          },
-        });
+      const transferEvent = await SqueezedStreamsEventModel.create(
+        {
+          accountId,
+          erc20,
+          senderId,
+          amount: amt,
+          streamsHistoryHashes,
+          logIndex,
+          blockNumber,
+          blockTimestamp,
+          transactionHash,
+        },
+        { transaction },
+      );
 
       logManager.appendFindOrCreateLog(
         SqueezedStreamsEventModel,
-        isEventCreated,
+        true,
         `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
       );
 
-      logManager.logAllInfo();
+      logManager.logAllInfo(this.name);
     });
   }
 }

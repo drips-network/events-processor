@@ -6,7 +6,7 @@ import type { EventData } from '../../src/events/types';
 import GivenEventModel from '../../src/models/GivenEventModel';
 import LogManager from '../../src/core/LogManager';
 import GivenEventHandler from '../../src/eventHandlers/GivenEventHandler';
-import { toAccountId } from '../../src/utils/accountIdUtils';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { toAddress } from '../../src/utils/ethereumAddressUtils';
 import { toBigIntString } from '../../src/utils/bigintUtils';
 
@@ -83,8 +83,8 @@ describe('GivenEventHandler', () => {
           transactionHash,
         },
         defaults: {
-          accountId: toAccountId(rawAccountId),
-          receiver: toAccountId(rawReceiver),
+          accountId: convertToAccountId(rawAccountId),
+          receiver: convertToAccountId(rawReceiver),
           erc20: toAddress(rawErc20),
           amt: toBigIntString(rawAmt.toString()),
           logIndex,

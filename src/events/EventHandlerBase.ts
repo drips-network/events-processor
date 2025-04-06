@@ -1,9 +1,10 @@
 import { isAddress } from 'ethers';
+import { ValidationError } from 'sequelize';
 import appSettings from '../config/appSettings';
 import logger from '../core/logger';
 import type { AccountId, Result } from '../core/types';
 import saveEventProcessingJob from '../queue/saveEventProcessingJob';
-import { toAccountId } from '../utils/accountIdUtils';
+import { convertToAccountId } from '../utils/accountIdUtils';
 import getResult from '../utils/getResult';
 import type EventHandlerRequest from './EventHandlerRequest';
 import type { EventSignature } from './types';
@@ -31,6 +32,12 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
     const result = await getResult(this._handle.bind(this))(request);
 
     if (!result.ok) {
+      if (result.error instanceof ValidationError) {
+        logger.error(
+          `[${request.id}] ${this.name} failed to process event: ${result.error.message}`,
+        );
+      }
+
       throw result.error;
     }
 
@@ -64,7 +71,7 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
     for (const arg of args) {
       if (!isAddress(arg)) {
         try {
-          const accountId = toAccountId(arg);
+          const accountId = convertToAccountId(arg);
           if (!accountIds.includes(accountId)) {
             accountIds.push(accountId);
           }

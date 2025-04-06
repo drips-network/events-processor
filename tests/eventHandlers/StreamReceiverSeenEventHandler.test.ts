@@ -5,7 +5,7 @@ import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import StreamReceiverSeenEventModel from '../../src/models/StreamReceiverSeenEventModel';
 import LogManager from '../../src/core/LogManager';
-import { toAccountId } from '../../src/utils/accountIdUtils';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { StreamReceiverSeenEventHandler } from '../../src/eventHandlers';
 import { toBigIntString } from '../../src/utils/bigintUtils';
 
@@ -81,7 +81,7 @@ describe('StreamReceiverSeenEventHandler', () => {
           transactionHash,
         },
         defaults: {
-          accountId: toAccountId(rawAccountId),
+          accountId: convertToAccountId(rawAccountId),
           receiversHash: rawReceiversHash,
           config: toBigIntString(rawConfig.toString()),
           logIndex,

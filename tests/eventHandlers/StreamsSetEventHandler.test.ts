@@ -5,7 +5,7 @@ import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import StreamsSetEventModel from '../../src/models/StreamsSetEventModel';
 import LogManager from '../../src/core/LogManager';
-import { toAccountId } from '../../src/utils/accountIdUtils';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { StreamsSetEventHandler } from '../../src/eventHandlers';
 import { toBigIntString } from '../../src/utils/bigintUtils';
 
@@ -91,7 +91,7 @@ describe('StreamsSetEventHandler', () => {
           transactionHash,
         },
         defaults: {
-          accountId: toAccountId(rawAccountId),
+          accountId: convertToAccountId(rawAccountId),
           erc20: rawErc20,
           receiversHash: rawReceiversHash,
           streamsHistoryHash: rawStreamsHistoryHash,

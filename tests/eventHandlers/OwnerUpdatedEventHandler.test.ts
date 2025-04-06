@@ -4,17 +4,20 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { OwnerUpdatedEventHandler } from '../../src/eventHandlers';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
-import { calcAccountId, toRepoDriverId } from '../../src/utils/accountIdUtils';
-import { calculateProjectStatus } from '../../src/utils/gitProjectUtils';
+import {
+  calcAccountId,
+  convertToRepoDriverId,
+} from '../../src/utils/accountIdUtils';
+import { calculateProjectStatus } from '../../src/utils/projectUtils';
 import OwnerUpdatedEventModel from '../../src/models/OwnerUpdatedEventModel';
-import GitProjectModel, {
+import ProjectModel, {
   ProjectVerificationStatus,
-} from '../../src/models/GitProjectModel';
+} from '../../src/models/ProjectModel';
 import LogManager from '../../src/core/LogManager';
-import { isLatestEvent } from '../../src/utils/eventUtils';
+import { isLatestEvent } from '../../src/utils/isLatestEvent';
 
 jest.mock('../../src/models/OwnerUpdatedEventModel');
-jest.mock('../../src/models/GitProjectModel');
+jest.mock('../../src/models/ProjectModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
 jest.mock('../../src/utils/eventUtils');
@@ -53,7 +56,7 @@ describe('OwnerUpdatedEventHandler', () => {
   });
 
   describe('_handle', () => {
-    test('should create new OwnerUpdatedEventModel and GitProjectModel', async () => {
+    test('should create new OwnerUpdatedEventModel and ProjectModel', async () => {
       // Arrange
       OwnerUpdatedEventModel.findOrCreate = jest.fn().mockResolvedValue([
         {
@@ -63,11 +66,11 @@ describe('OwnerUpdatedEventHandler', () => {
         true,
       ]);
 
-      (toRepoDriverId as jest.Mock).mockReturnValue('1');
+      (convertToRepoDriverId as jest.Mock).mockReturnValue('1');
 
-      GitProjectModel.findOrCreate = jest.fn().mockResolvedValue([
+      ProjectModel.findOrCreate = jest.fn().mockResolvedValue([
         {
-          id: toRepoDriverId(mockRequest.event.args[0]),
+          id: convertToRepoDriverId(mockRequest.event.args[0]),
         },
         true,
       ]);
@@ -103,18 +106,18 @@ describe('OwnerUpdatedEventHandler', () => {
           blockNumber,
           blockTimestamp,
           transactionHash,
-          accountId: toRepoDriverId(accountId),
+          accountId: convertToRepoDriverId(accountId),
         },
       });
 
-      expect(GitProjectModel.findOrCreate).toHaveBeenCalledWith({
+      expect(ProjectModel.findOrCreate).toHaveBeenCalledWith({
         transaction: mockDbTransaction,
         lock: true,
         where: {
-          id: toRepoDriverId(accountId),
+          id: convertToRepoDriverId(accountId),
         },
         defaults: {
-          id: toRepoDriverId(accountId),
+          id: convertToRepoDriverId(accountId),
           isValid: true,
           isVisible: true,
           ownerAddress: owner,
@@ -125,7 +128,7 @@ describe('OwnerUpdatedEventHandler', () => {
       });
     });
 
-    test('should update the GitProjectModel when the incoming event is the latest', async () => {
+    test('should update the ProjectModel when the incoming event is the latest', async () => {
       // Arrange
       OwnerUpdatedEventModel.findOrCreate = jest.fn().mockResolvedValue([
         {
@@ -141,13 +144,11 @@ describe('OwnerUpdatedEventHandler', () => {
         verificationStatus: ProjectVerificationStatus.Unclaimed,
         save: jest.fn(),
       };
-      GitProjectModel.findOrCreate = jest
+      ProjectModel.findOrCreate = jest
         .fn()
         .mockResolvedValue([mockGitProject, false]);
 
       (isLatestEvent as jest.Mock).mockResolvedValue(true);
-
-      LogManager.prototype.appendIsLatestEventLog = jest.fn().mockReturnThis();
 
       (calcAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
 
