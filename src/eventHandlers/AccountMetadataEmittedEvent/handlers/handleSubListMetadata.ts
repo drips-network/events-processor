@@ -20,7 +20,7 @@ import type {
   addressDriverSplitReceiverSchema,
   repoDriverSplitReceiverSchema,
 } from '../../../metadata/schemas/repo-driver/v2';
-import type { subListSplitReceiverSchema } from '../../../metadata/schemas/sub-list/v1';
+import type { subListSplitReceiverSchema } from '../../../metadata/schemas/immutable-splits-driver/v1';
 import type { dripListSplitReceiverSchema } from '../../../metadata/schemas/nft-driver/v2';
 import verifyProjectSources from '../projectVerification';
 import RecoverableError from '../../../utils/recoverableError';

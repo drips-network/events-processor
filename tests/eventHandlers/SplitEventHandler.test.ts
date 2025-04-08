@@ -51,12 +51,11 @@ describe('SplitEventHandler', () => {
   describe('_handle', () => {
     test('should create a new SplitEventModel', async () => {
       // Arrange
-      SplitEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      SplitEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'SplitEventTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
       LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
@@ -75,14 +74,8 @@ describe('SplitEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(SplitEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
+      expect(SplitEventModel.create).toHaveBeenCalledWith(
+        {
           accountId: convertToAccountId(rawAccountId),
           receiver: convertToAccountId(rawReceiver),
           erc20: toAddress(rawErc20),
@@ -92,7 +85,10 @@ describe('SplitEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
     });
   });
 });

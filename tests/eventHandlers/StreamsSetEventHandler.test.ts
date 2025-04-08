@@ -52,7 +52,7 @@ describe('StreamsSetEventHandler', () => {
   describe('_handle', () => {
     test('should create a new StreamsSetEventModel', async () => {
       // Arrange
-      StreamsSetEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      StreamsSetEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'StreamsSetTransactionHash',
           logIndex: 1,
@@ -83,14 +83,8 @@ describe('StreamsSetEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(StreamsSetEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
+      expect(StreamsSetEventModel.create).toHaveBeenCalledWith(
+        {
           accountId: convertToAccountId(rawAccountId),
           erc20: rawErc20,
           receiversHash: rawReceiversHash,
@@ -102,7 +96,10 @@ describe('StreamsSetEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
     });
   });
 });

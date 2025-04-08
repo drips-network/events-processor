@@ -9,20 +9,25 @@ import { isLatestEvent } from '../../src/utils/isLatestEvent';
 import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { DRIPS_APP_USER_METADATA_KEY } from '../../src/core/constants';
 import * as handleProjectMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleProjectMetadata';
-import { convertToIpfsHash } from '../../src/utils/metadataUtils';
+import {
+  convertToIpfsHash,
+  getNftDriverMetadata,
+} from '../../src/utils/metadataUtils';
 import * as handleDripListMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleDripListMetadata';
 
 jest.mock('../../src/models/AccountMetadataEmittedEventModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
 jest.mock('../../src/core/LogManager');
-jest.mock('../../src/utils/eventUtils');
+jest.mock('../../src/events/eventHandlerUtils');
 jest.mock(
-  '../../src/eventHandlers/AccountMetadataEmittedEvent/gitProject/handleProjectMetadata',
+  '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleProjectMetadata',
 );
 jest.mock(
-  '../../src/eventHandlers/AccountMetadataEmittedEvent/dripList/handleDripListMetadata',
+  '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleDripListMetadata',
 );
+jest.mock('../../src/utils/isLatestEvent');
+jest.mock('../../src/utils/metadataUtils');
 
 describe('AccountMetadataEmittedHandler', () => {
   let mockDbTransaction: {};
@@ -51,6 +56,8 @@ describe('AccountMetadataEmittedHandler', () => {
 
     mockDbTransaction = {};
 
+    (convertToIpfsHash as jest.Mock).mockReturnValue('ipfsHash');
+
     dbConnection.transaction = jest
       .fn()
       .mockImplementation((callback) => callback(mockDbTransaction));
@@ -65,7 +72,28 @@ describe('AccountMetadataEmittedHandler', () => {
           args: [
             80920745289880686872077472087501508459438916877610571750365932290048n,
             'key',
-            'value',
+            '0x516d65444e625169575257666333395844754d354d69796337725755465156666b706d5a7675723965757767584a',
+          ],
+          logIndex: 1,
+          blockNumber: 1,
+          blockTimestamp: new Date(),
+          transactionHash: 'requestTransactionHash',
+        } as EventData<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
+      });
+
+      // Assert
+      expect(dbConnection.transaction).not.toHaveBeenCalled();
+    });
+
+    test('should return if the metadata are not emitted by a supported Driver', async () => {
+      // Act
+      await handler['_handle']({
+        id: randomUUID(),
+        event: {
+          args: [
+            1n,
+            DRIPS_APP_USER_METADATA_KEY,
+            '0x516d65444e625169575257666333395844754d354d69796337725755465156666b706d5a7675723965757767584a',
           ],
           logIndex: 1,
           blockNumber: 1,
@@ -80,15 +108,12 @@ describe('AccountMetadataEmittedHandler', () => {
 
     test('should create a new AccountMetadataEmittedEventModel', async () => {
       // Arrange
-      AccountMetadataEmittedEventModel.findOrCreate = jest
-        .fn()
-        .mockResolvedValue([
-          {
-            transactionHash: 'AccountMetadataEmittedEventTransactionHash',
-            logIndex: 1,
-          },
-          true,
-        ]);
+      AccountMetadataEmittedEventModel.create = jest.fn().mockResolvedValue([
+        {
+          transactionHash: 'AccountMetadataEmittedEventTransactionHash',
+          logIndex: 1,
+        },
+      ]);
 
       (isLatestEvent as jest.Mock).mockResolvedValue(false);
 
@@ -106,16 +131,8 @@ describe('AccountMetadataEmittedHandler', () => {
         },
       } = mockRequest;
 
-      expect(
-        AccountMetadataEmittedEventModel.findOrCreate,
-      ).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
+      expect(AccountMetadataEmittedEventModel.create).toHaveBeenCalledWith(
+        {
           key,
           value,
           logIndex,
@@ -124,20 +141,21 @@ describe('AccountMetadataEmittedHandler', () => {
           transactionHash,
           accountId: convertToAccountId(accountId),
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
     });
 
     test('should handle Project metadata when metadata are coming from a Project and the incoming event is the latest', async () => {
       // Arrange
-      AccountMetadataEmittedEventModel.findOrCreate = jest
-        .fn()
-        .mockResolvedValue([
-          {
-            transactionHash: 'AccountMetadataEmittedEventTransactionHash',
-            logIndex: 1,
-          },
-          true,
-        ]);
+      AccountMetadataEmittedEventModel.create = jest.fn().mockResolvedValue([
+        {
+          transactionHash: 'AccountMetadataEmittedEventTransactionHash',
+          logIndex: 1,
+        },
+        true,
+      ]);
 
       (isLatestEvent as jest.Mock).mockResolvedValue(true);
 
@@ -147,26 +165,24 @@ describe('AccountMetadataEmittedHandler', () => {
       await handler['_handle'](mockRequest);
 
       // Assert
-      expect(handleProjectMetadata.default).toHaveBeenCalledWith(
-        expect.anything(),
-        convertToAccountId(mockRequest.event.args[0]),
-        mockDbTransaction,
-        convertToIpfsHash(mockRequest.event.args[2]),
-        mockRequest.event.blockTimestamp,
-      );
+      expect(handleProjectMetadata.default).toHaveBeenCalledWith({
+        logManager: expect.anything(),
+        emitterAccountId: convertToAccountId(mockRequest.event.args[0]),
+        transaction: mockDbTransaction,
+        ipfsHash: convertToIpfsHash(mockRequest.event.args[2]),
+        blockTimestamp: mockRequest.event.blockTimestamp,
+      });
     });
 
     test('should handle Drip List metadata when metadata are coming from a Drip List and the incoming event is the latest', async () => {
       // Arrange
-      AccountMetadataEmittedEventModel.findOrCreate = jest
-        .fn()
-        .mockResolvedValue([
-          {
-            transactionHash: 'AccountMetadataEmittedEventTransactionHash',
-            logIndex: 1,
-          },
-          true,
-        ]);
+      AccountMetadataEmittedEventModel.create = jest.fn().mockResolvedValue([
+        {
+          transactionHash: 'AccountMetadataEmittedEventTransactionHash',
+          logIndex: 1,
+        },
+        true,
+      ]);
 
       (isLatestEvent as jest.Mock).mockResolvedValue(true);
 
@@ -187,18 +203,23 @@ describe('AccountMetadataEmittedHandler', () => {
         } as EventData<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
       };
 
+      const mockMetadata = {
+        type: 'dripList',
+      };
+      (getNftDriverMetadata as jest.Mock).mockResolvedValue(mockMetadata);
+
       // Act
       await new AccountMetadataEmittedEventHandler()['_handle'](request);
 
       // Assert
       expect(handleDripListMetadata.default).toHaveBeenCalledWith({
-        logManager: expect.anything(),
-        dripListId: convertToAccountId(request.event.args[0]),
-        transaction: mockDbTransaction,
         ipfsHash: convertToIpfsHash(request.event.args[2]),
+        metadata: mockMetadata,
+        logManager: expect.anything(),
+        transaction: mockDbTransaction,
         blockTimestamp: request.event.blockTimestamp,
-        blockNumber: 1,
-        metadata: expect.anything(),
+        blockNumber: request.event.blockNumber,
+        emitterAccountId: convertToAccountId(request.event.args[0]),
       });
     });
   });

@@ -52,12 +52,11 @@ describe('SqueezedStreamsEventHandler', () => {
   describe('_handle', () => {
     test('should create a new SqueezedStreamsEventModel', async () => {
       // Arrange
-      SqueezedStreamsEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      SqueezedStreamsEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'SqueezedStreamsTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
       LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
@@ -82,14 +81,8 @@ describe('SqueezedStreamsEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(SqueezedStreamsEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
+      expect(SqueezedStreamsEventModel.create).toHaveBeenCalledWith(
+        {
           accountId: convertToAccountId(rawAccountId),
           erc20: toAddress(rawErc20),
           senderId: convertToAccountId(rawSenderId),
@@ -102,7 +95,10 @@ describe('SqueezedStreamsEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
     });
   });
 });

@@ -4,13 +4,18 @@ import {
   addressDriverSplitReceiverSchema,
   repoDriverSplitReceiverSchema,
 } from '../repo-driver/v2';
-import { subListSplitReceiverSchema } from '../sub-list/v1';
+import { subListSplitReceiverSchema } from '../immutable-splits-driver/v1';
 import { dripListSplitReceiverSchema } from './v2';
 
-const base = nftDriverAccountMetadataSchemaV5.extend({
-  isDripList: z.undefined().optional(),
-  projects: z.undefined().optional(),
-});
+const base = nftDriverAccountMetadataSchemaV5
+  .omit({
+    isDripList: true,
+    projects: true,
+  })
+  .extend({
+    isDripList: z.undefined().optional(),
+    projects: z.undefined().optional(),
+  });
 
 const ecosystemVariant = base.extend({
   type: z.literal('ecosystem'),

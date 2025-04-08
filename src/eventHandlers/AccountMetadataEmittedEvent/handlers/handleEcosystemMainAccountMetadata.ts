@@ -9,7 +9,7 @@ import { EcosystemMainAccountModel } from '../../../models';
 import unreachableError from '../../../utils/unreachableError';
 import verifySplitsReceivers from '../verifySplitsReceivers';
 import type { repoDriverSplitReceiverSchema } from '../../../metadata/schemas/repo-driver/v2';
-import type { subListSplitReceiverSchema } from '../../../metadata/schemas/sub-list/v1';
+import type { subListSplitReceiverSchema } from '../../../metadata/schemas/immutable-splits-driver/v1';
 import verifyProjectSources from '../projectVerification';
 import {
   createProjectReceiver,

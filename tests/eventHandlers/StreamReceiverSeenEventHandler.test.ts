@@ -49,12 +49,11 @@ describe('StreamReceiverSeenEventHandler', () => {
   describe('_handle', () => {
     test('should create a new StreamReceiverSeenEventModel', async () => {
       // Arrange
-      StreamReceiverSeenEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      StreamReceiverSeenEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'StreamReceiverSeenTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
       LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
@@ -73,14 +72,8 @@ describe('StreamReceiverSeenEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(StreamReceiverSeenEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
+      expect(StreamReceiverSeenEventModel.create).toHaveBeenCalledWith(
+        {
           accountId: convertToAccountId(rawAccountId),
           receiversHash: rawReceiversHash,
           config: toBigIntString(rawConfig.toString()),
@@ -89,7 +82,10 @@ describe('StreamReceiverSeenEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
     });
   });
 });

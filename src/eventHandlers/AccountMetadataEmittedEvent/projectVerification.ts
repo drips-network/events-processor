@@ -7,7 +7,7 @@ import type {
   repoDriverSplitReceiverSchema,
   addressDriverSplitReceiverSchema,
 } from '../../metadata/schemas/repo-driver/v2';
-import type { subListSplitReceiverSchema } from '../../metadata/schemas/sub-list/v1';
+import type { subListSplitReceiverSchema } from '../../metadata/schemas/immutable-splits-driver/v1';
 import type { repoDriverAccountMetadataParser } from '../../metadata/schemas';
 import type { ProjectModel } from '../../models';
 import unreachableError from '../../utils/unreachableError';

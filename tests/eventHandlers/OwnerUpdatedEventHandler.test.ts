@@ -20,9 +20,10 @@ jest.mock('../../src/models/OwnerUpdatedEventModel');
 jest.mock('../../src/models/ProjectModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
-jest.mock('../../src/utils/eventUtils');
+jest.mock('../../src/events/eventHandlerUtils');
 jest.mock('../../src/core/LogManager');
 jest.mock('../../src/utils/accountIdUtils');
+jest.mock('../../src/utils/isLatestEvent');
 
 describe('OwnerUpdatedEventHandler', () => {
   let mockDbTransaction: {};
@@ -48,7 +49,11 @@ describe('OwnerUpdatedEventHandler', () => {
       } as EventData<'OwnerUpdated(uint256,address)'>,
     };
 
-    mockDbTransaction = {};
+    mockDbTransaction = {
+      LOCK: {
+        UPDATE: 'UPDATE',
+      },
+    };
 
     dbConnection.transaction = jest
       .fn()
@@ -56,9 +61,9 @@ describe('OwnerUpdatedEventHandler', () => {
   });
 
   describe('_handle', () => {
-    test('should create new OwnerUpdatedEventModel and ProjectModel', async () => {
+    test('should create new OwnerUpdatedEventModel', async () => {
       // Arrange
-      OwnerUpdatedEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      OwnerUpdatedEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'OwnerUpdatedEventTransactionHash',
           logIndex: 1,
@@ -67,13 +72,6 @@ describe('OwnerUpdatedEventHandler', () => {
       ]);
 
       (convertToRepoDriverId as jest.Mock).mockReturnValue('1');
-
-      ProjectModel.findOrCreate = jest.fn().mockResolvedValue([
-        {
-          id: convertToRepoDriverId(mockRequest.event.args[0]),
-        },
-        true,
-      ]);
 
       LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
 
@@ -93,14 +91,8 @@ describe('OwnerUpdatedEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(OwnerUpdatedEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
+      expect(OwnerUpdatedEventModel.create).toHaveBeenCalledWith(
+        {
           owner,
           logIndex,
           blockNumber,
@@ -108,34 +100,19 @@ describe('OwnerUpdatedEventHandler', () => {
           transactionHash,
           accountId: convertToRepoDriverId(accountId),
         },
-      });
-
-      expect(ProjectModel.findOrCreate).toHaveBeenCalledWith({
-        transaction: mockDbTransaction,
-        lock: true,
-        where: {
-          id: convertToRepoDriverId(accountId),
+        {
+          transaction: mockDbTransaction,
         },
-        defaults: {
-          id: convertToRepoDriverId(accountId),
-          isValid: true,
-          isVisible: true,
-          ownerAddress: owner,
-          claimedAt: blockTimestamp,
-          ownerAccountId: await calcAccountId(owner),
-          verificationStatus: ProjectVerificationStatus.OwnerUpdated,
-        },
-      });
+      );
     });
 
     test('should update the ProjectModel when the incoming event is the latest', async () => {
       // Arrange
-      OwnerUpdatedEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      OwnerUpdatedEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'OwnerUpdatedEventTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
       const mockGitProject = {
@@ -144,9 +121,7 @@ describe('OwnerUpdatedEventHandler', () => {
         verificationStatus: ProjectVerificationStatus.Unclaimed,
         save: jest.fn(),
       };
-      ProjectModel.findOrCreate = jest
-        .fn()
-        .mockResolvedValue([mockGitProject, false]);
+      ProjectModel.findByPk = jest.fn().mockResolvedValue(mockGitProject);
 
       (isLatestEvent as jest.Mock).mockResolvedValue(true);
 

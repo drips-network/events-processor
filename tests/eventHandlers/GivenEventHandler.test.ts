@@ -51,12 +51,11 @@ describe('GivenEventHandler', () => {
   describe('_handle', () => {
     test('should create a new GivenEventModel', async () => {
       // Arrange
-      GivenEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      GivenEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'GivenEventTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
       LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
@@ -75,14 +74,8 @@ describe('GivenEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(GivenEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
+      expect(GivenEventModel.create).toHaveBeenCalledWith(
+        {
           accountId: convertToAccountId(rawAccountId),
           receiver: convertToAccountId(rawReceiver),
           erc20: toAddress(rawErc20),
@@ -92,7 +85,10 @@ describe('GivenEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
     });
   });
 });

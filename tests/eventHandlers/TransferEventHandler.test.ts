@@ -13,9 +13,10 @@ jest.mock('../../src/models/TransferEventModel');
 jest.mock('../../src/models/DripListModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
-jest.mock('../../src/utils/eventUtils');
+jest.mock('../../src/events/eventHandlerUtils');
 jest.mock('../../src/utils/accountIdUtils');
 jest.mock('../../src/core/LogManager');
+jest.mock('../../src/utils/isLatestEvent');
 
 describe('TransferEventHandler', () => {
   let mockDbTransaction: {};
@@ -52,12 +53,11 @@ describe('TransferEventHandler', () => {
   describe('_handle', () => {
     test('should create a new TransferEventModel', async () => {
       // Arrange
-      TransferEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      TransferEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'TransferEventTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
       DripListModel.findOne = jest
@@ -80,14 +80,8 @@ describe('TransferEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(TransferEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
+      expect(TransferEventModel.create).toHaveBeenCalledWith(
+        {
           tokenId: convertToNftDriverId(tokenId),
           to,
           from,
@@ -96,7 +90,10 @@ describe('TransferEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
     });
   });
 });
