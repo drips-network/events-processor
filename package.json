@@ -18,7 +18,7 @@
     "dev": "npx nodemon",
     "start": "node dist/src/index.js",
     "sequelize": "ts-node --transpile-only node_modules/sequelize-cli/lib/sequelize",
-    "db:run-migrations": "npm run clean && npm run build && ts-node scripts/run-migrations.ts",
+    "db:run-migrations": "ts-node scripts/run-migrations.ts",
     "db:create-migration": "npm run sequelize migration:generate -- --migrations-path src/db/migrations",
     "dev:db:revert-migration": "npm run sequelize -- db:migrate:undo --migrations-path src/db/migrations --config dist/src/config/sequelizeConfig.js",
     "dev:db:log-pending-migrations": "npm run sequelize -- db:migrate:status --migrations-path src/db/migrations --config dist/src/config/sequelizeConfig.js"
