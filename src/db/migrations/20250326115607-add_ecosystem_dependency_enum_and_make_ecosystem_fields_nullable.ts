@@ -19,7 +19,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
   `);
 
   await queryInterface.changeColumn(
-    { tableName: 'EcosystemMainIdentities', schema },
+    { tableName: 'EcosystemMainAccounts', schema },
     'creator',
     {
       type: DataTypes.STRING,
@@ -28,7 +28,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
   );
 
   await queryInterface.changeColumn(
-    { tableName: 'EcosystemMainIdentities', schema },
+    { tableName: 'EcosystemMainAccounts', schema },
     'ownerAddress',
     {
       type: DataTypes.STRING,
@@ -37,7 +37,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
   );
 
   await queryInterface.changeColumn(
-    { tableName: 'EcosystemMainIdentities', schema },
+    { tableName: 'EcosystemMainAccounts', schema },
     'ownerAccountId',
     {
       type: DataTypes.STRING,
@@ -46,7 +46,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
   );
 
   await queryInterface.changeColumn(
-    { tableName: 'EcosystemMainIdentities', schema },
+    { tableName: 'EcosystemMainAccounts', schema },
     'previousOwnerAddress',
     {
       type: DataTypes.STRING,
@@ -55,7 +55,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
   );
 
   await queryInterface.changeColumn(
-    { tableName: 'EcosystemMainIdentities', schema },
+    { tableName: 'EcosystemMainAccounts', schema },
     'isVisible',
     {
       type: DataTypes.BOOLEAN,
@@ -69,7 +69,7 @@ export async function down({ context: sequelize }: any): Promise<void> {
   const queryInterface: QueryInterface = sequelize.getQueryInterface();
 
   await queryInterface.changeColumn(
-    { tableName: 'EcosystemMainIdentities', schema },
+    { tableName: 'EcosystemMainAccounts', schema },
     'creator',
     {
       type: DataTypes.STRING,
@@ -78,7 +78,7 @@ export async function down({ context: sequelize }: any): Promise<void> {
   );
 
   await queryInterface.changeColumn(
-    { tableName: 'EcosystemMainIdentities', schema },
+    { tableName: 'EcosystemMainAccounts', schema },
     'ownerAddress',
     {
       type: DataTypes.STRING,
@@ -87,7 +87,7 @@ export async function down({ context: sequelize }: any): Promise<void> {
   );
 
   await queryInterface.changeColumn(
-    { tableName: 'EcosystemMainIdentities', schema },
+    { tableName: 'EcosystemMainAccounts', schema },
     'ownerAccountId',
     {
       type: DataTypes.STRING,
@@ -96,7 +96,7 @@ export async function down({ context: sequelize }: any): Promise<void> {
   );
 
   await queryInterface.changeColumn(
-    { tableName: 'EcosystemMainIdentities', schema },
+    { tableName: 'EcosystemMainAccounts', schema },
     'previousOwnerAddress',
     {
       type: DataTypes.STRING,
@@ -105,7 +105,7 @@ export async function down({ context: sequelize }: any): Promise<void> {
   );
 
   await queryInterface.changeColumn(
-    { tableName: 'EcosystemMainIdentities', schema },
+    { tableName: 'EcosystemMainAccounts', schema },
     'isVisible',
     {
       type: DataTypes.BOOLEAN,

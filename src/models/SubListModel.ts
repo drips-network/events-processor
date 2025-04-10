@@ -41,7 +41,7 @@ export default class SubListModel extends Model<
           type: DataTypes.STRING,
           allowNull: true,
           references: {
-            model: 'EcosystemMainIdentities',
+            model: 'EcosystemMainAccounts',
             key: 'id',
           },
         },
@@ -68,7 +68,7 @@ export default class SubListModel extends Model<
           type: DataTypes.STRING,
           allowNull: true,
           references: {
-            model: 'EcosystemMainIdentities',
+            model: 'EcosystemMainAccounts',
             key: 'id',
           },
         },

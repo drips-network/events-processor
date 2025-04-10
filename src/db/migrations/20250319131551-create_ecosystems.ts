@@ -9,7 +9,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
   await createTableIfNotExists(
     queryInterface,
     schema,
-    'EcosystemMainIdentities',
+    'EcosystemMainAccounts',
     createEcosystemsTable,
   );
 }
@@ -19,7 +19,7 @@ async function createEcosystemsTable(
   schema: DbSchema,
 ) {
   await queryInterface.createTable(
-    { tableName: 'EcosystemMainIdentities', schema },
+    { tableName: 'EcosystemMainAccounts', schema },
     {
       id: {
         type: DataTypes.STRING,
@@ -79,7 +79,7 @@ async function createEcosystemsTable(
   );
 
   await queryInterface.addIndex(
-    { tableName: 'EcosystemMainIdentities', schema },
+    { tableName: 'EcosystemMainAccounts', schema },
     ['ownerAddress'],
     {
       name: 'IX_Ecosystems_ownerAddress',
@@ -110,7 +110,7 @@ export async function down({ context: sequelize }: any): Promise<void> {
 
   await queryInterface.dropTable({ tableName: 'CreatedSplitsEvents', schema });
   await queryInterface.dropTable({
-    tableName: 'EcosystemMainIdentities',
+    tableName: 'EcosystemMainAccounts',
     schema,
   });
 }

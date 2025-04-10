@@ -69,7 +69,7 @@ export default async function handleEcosystemMainAccountMetadata({
         : true,
   };
 
-  const [ecosystemMainIdentity, isCreated] =
+  const [ecosystemMainAccount, isCreated] =
     await EcosystemMainAccountModel.findOrCreate({
       transaction,
       lock: transaction.LOCK.UPDATE,
@@ -84,18 +84,18 @@ export default async function handleEcosystemMainAccountMetadata({
     logManager.appendFindOrCreateLog(
       EcosystemMainAccountModel,
       true,
-      ecosystemMainIdentity.id,
+      ecosystemMainAccount.id,
     );
   } else {
-    ecosystemMainIdentity.set(ecosystemMainAccountProps);
+    ecosystemMainAccount.set(ecosystemMainAccountProps);
 
     logManager.appendUpdateLog(
-      ecosystemMainIdentity,
+      ecosystemMainAccount,
       EcosystemMainAccountModel,
-      ecosystemMainIdentity.id,
+      ecosystemMainAccount.id,
     );
 
-    await ecosystemMainIdentity.save({ transaction });
+    await ecosystemMainAccount.save({ transaction });
   }
 
   await deleteExistingReceivers({

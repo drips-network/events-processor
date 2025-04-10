@@ -11,7 +11,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
     {
       type: DataTypes.STRING,
       references: {
-        model: 'EcosystemMainIdentities',
+        model: 'EcosystemMainAccounts',
         key: 'id',
       },
       allowNull: true,
@@ -61,7 +61,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
     {
       type: DataTypes.STRING,
       references: {
-        model: 'EcosystemMainIdentities',
+        model: 'EcosystemMainAccounts',
         key: 'id',
       },
       allowNull: true,
@@ -111,7 +111,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
     {
       type: DataTypes.STRING,
       references: {
-        model: 'EcosystemMainIdentities',
+        model: 'EcosystemMainAccounts',
         key: 'id',
       },
       allowNull: true,

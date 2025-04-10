@@ -70,7 +70,7 @@ export default class EcosystemMainAccountModel extends Model<
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'EcosystemMainIdentities',
+        tableName: 'EcosystemMainAccounts',
         indexes: [
           {
             fields: ['ownerAddress'],

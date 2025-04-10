@@ -47,7 +47,7 @@ async function createSubListsTable(
         type: DataTypes.STRING,
         allowNull: true,
         references: {
-          model: 'EcosystemMainIdentities',
+          model: 'EcosystemMainAccounts',
           key: 'id',
         },
       },
@@ -74,7 +74,7 @@ async function createSubListsTable(
         type: DataTypes.STRING,
         allowNull: true,
         references: {
-          model: 'EcosystemMainIdentities',
+          model: 'EcosystemMainAccounts',
           key: 'id',
         },
       },
@@ -188,7 +188,7 @@ async function createSubListSplitReceiversTable(
         // Foreign key
         type: DataTypes.STRING,
         references: {
-          model: 'EcosystemMainIdentities',
+          model: 'EcosystemMainAccounts',
           key: 'id',
         },
         allowNull: true,
