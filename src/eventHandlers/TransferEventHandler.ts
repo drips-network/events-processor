@@ -2,132 +2,123 @@ import { ZeroAddress } from 'ethers';
 import type { TransferEvent } from '../../contracts/CURRENT_NETWORK/NftDriver';
 import EventHandlerBase from '../events/EventHandlerBase';
 import LogManager from '../core/LogManager';
-import { calcAccountId, toNftDriverId } from '../utils/accountIdUtils';
+import { calcAccountId, convertToNftDriverId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
-import { DripListModel, TransferEventModel } from '../models';
+import {
+  DripListModel,
+  EcosystemMainAccountModel,
+  TransferEventModel,
+} from '../models';
 import { dbConnection } from '../db/database';
-import { isLatestEvent } from '../utils/eventUtils';
+import { isLatestEvent } from '../utils/isLatestEvent';
 import appSettings from '../config/appSettings';
+import RecoverableError from '../utils/recoverableError';
 
 export default class TransferEventHandler extends EventHandlerBase<'Transfer(address,address,uint256)'> {
   public eventSignatures = ['Transfer(address,address,uint256)' as const];
 
-  protected async _handle(
-    request: EventHandlerRequest<'Transfer(address,address,uint256)'>,
-  ): Promise<void> {
-    const {
-      id: requestId,
-      event: { args, logIndex, blockNumber, blockTimestamp, transactionHash },
-    } = request;
-
-    const [from, to, tokenId] = args as TransferEvent.OutputTuple;
-
-    const id = toNftDriverId(tokenId);
+  protected async _handle({
+    id: requestId,
+    event: {
+      args,
+      logIndex,
+      blockNumber,
+      blockTimestamp,
+      transactionHash,
+      eventSignature,
+    },
+  }: EventHandlerRequest<'Transfer(address,address,uint256)'>): Promise<void> {
+    const [from, to, rawTokenId] = args as TransferEvent.OutputTuple;
 
     LogManager.logRequestInfo(
-      `📥 ${this.name} is processing the following ${request.event.eventSignature}:
-      \r\t - from:        ${from}
-      \r\t - to:          ${to}
-      \r\t - tokenId:     ${tokenId}
-      \r\t - logIndex:    ${logIndex}
-      \r\t - tx hash:     ${transactionHash}`,
+      [
+        `📥 ${this.name} is processing ${eventSignature}:`,
+        `  - from:       ${from}`,
+        `  - to:         ${to}`,
+        `  - tokenId:    ${rawTokenId}`,
+        `  - logIndex:   ${logIndex}`,
+        `  - txHash:     ${transactionHash}`,
+      ].join('\n'),
       requestId,
     );
 
     await dbConnection.transaction(async (transaction) => {
       const logManager = new LogManager(requestId);
 
-      const [transferEvent, isEventCreated] =
-        await TransferEventModel.findOrCreate({
-          lock: true,
+      const tokenId = convertToNftDriverId(rawTokenId);
+
+      const transferEvent = await TransferEventModel.create(
+        {
+          tokenId,
+          to,
+          from,
+          logIndex,
+          blockNumber,
+          blockTimestamp,
+          transactionHash,
+        },
+        {
           transaction,
-          where: {
-            logIndex,
-            transactionHash,
-          },
-          defaults: {
-            tokenId: id,
-            to,
-            from,
-            logIndex,
-            blockNumber,
-            blockTimestamp,
-            transactionHash,
-          },
-        });
+        },
+      );
 
       logManager.appendFindOrCreateLog(
         TransferEventModel,
-        isEventCreated,
+        true,
         `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
       );
 
-      const { visibilityThresholdBlockNumber } = appSettings;
-
-      // This must be the only place a Drip List is created.
-      const [dripList, isDripListCreated] = await DripListModel.findOrCreate({
-        transaction,
-        lock: true,
-        where: {
-          id,
-        },
-        defaults: {
-          id,
-          creator: to, // TODO: https://github.com/drips-network/events-processor/issues/14
-          isValid: true, // There are no receivers yet, so the drip list is valid.
-          ownerAddress: to,
-          ownerAccountId: await calcAccountId(to),
-          previousOwnerAddress: from,
-
-          isVisible:
-            blockNumber > visibilityThresholdBlockNumber
-              ? from === ZeroAddress // If it's a mint, then the Drip List will be visible. If it's a real transfer, then it's not.
-              : true, // If the block number is less than the visibility threshold, then the Drip List is visible by default.
-        },
-      });
-
-      if (isDripListCreated) {
-        logManager
-          .appendFindOrCreateLog(DripListModel, isDripListCreated, dripList.id)
-          .logAllInfo();
-
-        return;
-      }
-
-      // Here, the Drip List already exists.
-      // Only if the event is the latest (in the DB), we process its data.
-      // After all events are processed, the Drip List will be updated with the latest values.
+      // Only process if this is the latest event.
       if (
         !(await isLatestEvent(
           transferEvent,
           TransferEventModel,
-          {
-            transactionHash,
-            logIndex,
-            tokenId,
-          },
+          { tokenId },
           transaction,
         ))
       ) {
-        logManager.logAllInfo();
+        logManager.logAllInfo(this.name);
 
         return;
       }
 
-      dripList.ownerAddress = to;
-      dripList.previousOwnerAddress = from;
-      dripList.ownerAccountId = await calcAccountId(to);
+      const dripList = await DripListModel.findByPk(tokenId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
 
-      // This is real transfer. The Drip List should not be visible unless the block number is less than the visibility threshold.
-      dripList.isVisible = blockNumber < visibilityThresholdBlockNumber;
+      const ecosystemMainAccount = await EcosystemMainAccountModel.findByPk(
+        tokenId,
+        {
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        },
+      );
 
-      logManager
-        .appendIsLatestEventLog()
-        .appendUpdateLog(dripList, DripListModel, dripList.id);
+      if (!dripList && !ecosystemMainAccount) {
+        throw new RecoverableError(
+          `Drip List or Ecosystem Main Account '${tokenId}' not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
+        );
+      }
 
-      await dripList.save({ transaction });
+      const entity = (dripList ?? ecosystemMainAccount)!;
+      const entityModel = dripList ? DripListModel : EcosystemMainAccountModel;
 
-      logManager.logAllInfo();
+      entity.ownerAddress = to;
+      entity.previousOwnerAddress = from;
+      entity.ownerAccountId = await calcAccountId(to);
+      entity.creator = to; // TODO: https://github.com/drips-network/events-processor/issues/14
+      entity.isVisible =
+        blockNumber > appSettings.visibilityThresholdBlockNumber
+          ? from === ZeroAddress || from === appSettings.ecosystemDeployer
+          : true;
+      entity.isValid = true; // The entity is initialized with `false` when created during account metadata processing.
+
+      logManager.appendUpdateLog(entity, entityModel, entity.id);
+
+      await entity.save({ transaction });
+
+      logManager.logAllInfo(this.name);
     });
   }
 

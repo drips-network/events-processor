@@ -7,18 +7,26 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
 import { DependencyType } from '../core/types';
-import type { DripListId, ProjectId } from '../core/types';
+import type {
+  ImmutableSplitsDriverId,
+  NftDriverId,
+  RepoDriverId,
+} from '../core/types';
 import DripListModel from './DripListModel';
-import GitProjectModel from './GitProjectModel';
+import ProjectModel from './ProjectModel';
+import EcosystemMainAccountModel from './EcosystemMainAccountModel';
+import SubListModel from './SubListModel';
 
 export default class DripListSplitReceiverModel extends Model<
   InferAttributes<DripListSplitReceiverModel>,
   InferCreationAttributes<DripListSplitReceiverModel>
 > {
   public declare id: CreationOptional<number>; // Primary key
-  public declare fundeeDripListId: DripListId; // Foreign key
-  public declare funderProjectId: ProjectId | null; // Foreign key
-  public declare funderDripListId: DripListId | null; // Foreign key
+  public declare fundeeDripListId: NftDriverId; // Foreign key
+  public declare funderProjectId: RepoDriverId | null; // Foreign key
+  public declare funderDripListId: NftDriverId | null; // Foreign key
+  public declare funderEcosystemMainAccountId: NftDriverId | null; // Foreign key
+  public declare funderSubListId: ImmutableSplitsDriverId | null; // Foreign key
 
   public declare weight: number;
   public declare type: DependencyType;
@@ -45,7 +53,7 @@ export default class DripListSplitReceiverModel extends Model<
           // Foreign key
           type: DataTypes.STRING,
           references: {
-            model: GitProjectModel,
+            model: ProjectModel,
             key: 'id',
           },
           allowNull: true,
@@ -55,6 +63,24 @@ export default class DripListSplitReceiverModel extends Model<
           type: DataTypes.STRING,
           references: {
             model: DripListModel,
+            key: 'id',
+          },
+          allowNull: true,
+        },
+        funderEcosystemMainAccountId: {
+          // Foreign key
+          type: DataTypes.STRING,
+          references: {
+            model: EcosystemMainAccountModel,
+            key: 'id',
+          },
+          allowNull: true,
+        },
+        funderSubListId: {
+          // Foreign key
+          type: DataTypes.STRING,
+          references: {
+            model: SubListModel,
             key: 'id',
           },
           allowNull: true,
@@ -95,6 +121,14 @@ export default class DripListSplitReceiverModel extends Model<
             name: `IX_DripListSplitReceivers_funderDripListId`,
             where: {
               type: DependencyType.DripListDependency,
+            },
+            unique: false,
+          },
+          {
+            fields: ['funderEcosystemMainAccountId'],
+            name: `IX_DripListSplitReceivers_funderEcosystemId`,
+            where: {
+              type: DependencyType.EcosystemDependency,
             },
             unique: false,
           },

@@ -1,159 +1,211 @@
+import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { AccountMetadataEmittedEvent } from '../../../contracts/CURRENT_NETWORK/Drips';
 import type { AccountId } from '../../core/types';
-
 import EventHandlerBase from '../../events/EventHandlerBase';
 import { DRIPS_APP_USER_METADATA_KEY } from '../../core/constants';
-import handleGitProjectMetadata from './gitProject/handleGitProjectMetadata';
+import handleProjectMetadata from './handlers/handleProjectMetadata';
 import LogManager from '../../core/LogManager';
 import {
+  isImmutableSplitsDriverId,
   isNftDriverId,
   isRepoDriverId,
-  toAccountId,
+  convertToAccountId,
+  convertToRepoDriverId,
+  convertToNftDriverId,
+  convertToImmutableSplitsDriverId,
 } from '../../utils/accountIdUtils';
-import { isLatestEvent } from '../../utils/eventUtils';
-import { toIpfsHash } from '../../utils/metadataUtils';
-import handleDripListMetadata from './dripList/handleDripListMetadata';
+import {
+  getNftDriverMetadata,
+  convertToIpfsHash,
+} from '../../utils/metadataUtils';
+import handleDripListMetadata from './handlers/handleDripListMetadata';
 import type EventHandlerRequest from '../../events/EventHandlerRequest';
 import { AccountMetadataEmittedEventModel } from '../../models';
 import { dbConnection } from '../../db/database';
-import { getCurrentSplitsByAccountId } from '../../utils/getCurrentSplits';
+import handleEcosystemMainAccountMetadata from './handlers/handleEcosystemMainAccountMetadata';
+import handleSubListMetadata from './handlers/handleSubListMetadata';
+import type { nftDriverAccountMetadataParser } from '../../metadata/schemas';
+import { getCurrentSplitsByAccountId } from './receiversRepository';
+import { isLatestEvent } from '../../utils/isLatestEvent';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignatures = [
     'AccountMetadataEmitted(uint256,bytes32,bytes)' as const,
   ];
 
-  protected async _handle(
-    request: EventHandlerRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
-  ): Promise<void> {
-    const {
-      id: requestId,
-      event: { args, logIndex, blockNumber, blockTimestamp, transactionHash },
-    } = request;
-
+  protected async _handle({
+    id: requestId,
+    event: {
+      args,
+      logIndex,
+      blockNumber,
+      blockTimestamp,
+      transactionHash,
+      eventSignature,
+    },
+  }: EventHandlerRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>): Promise<void> {
     const [accountId, key, value] =
       args as AccountMetadataEmittedEvent.OutputTuple;
 
+    const ipfsHash = convertToIpfsHash(value);
+
+    LogManager.logRequestInfo(
+      [
+        `📥 ${this.name} is processing ${eventSignature}:`,
+        `  - key:        ${key}`,
+        `  - value:      ${value} (IPFS hash: ${ipfsHash})`,
+        `  - accountId:  ${accountId}`,
+        `  - logIndex:   ${logIndex}`,
+        `  - txHash:     ${transactionHash}`,
+      ].join('\n'),
+      requestId,
+    );
+
     if (!this._isEmittedByTheDripsApp(key)) {
       LogManager.logRequestInfo(
-        `Skipping ${request.event.eventSignature} event processing because the key '${key}' is not emitted by the Drips App.`,
+        `Skipping ${eventSignature} event: key '${key}' not emitted by the Drips App.`,
         requestId,
       );
 
       return;
     }
 
-    const typedAccountId = toAccountId(accountId);
-    const ipfsHash = toIpfsHash(value);
+    if (!this._canProcessDriverType(accountId)) {
+      LogManager.logRequestInfo(
+        `Skipping ${eventSignature} event: accountId '${accountId}' is not a Driver type that can be processed.`,
+        requestId,
+      );
 
-    LogManager.logRequestInfo(
-      `📥 ${this.name} is processing the following ${request.event.eventSignature}:
-      \r\t - key:         ${key}
-      \r\t - value:       ${value} (ipfs hash: ${ipfsHash})
-      \r\t - accountId:   ${typedAccountId}
-      \r\t - logIndex:    ${logIndex}
-      \r\t - tx hash:     ${transactionHash}`,
-      requestId,
-    );
+      return;
+    }
 
     await dbConnection.transaction(async (transaction) => {
       const logManager = new LogManager(requestId);
 
-      const [accountMetadataEmittedEventModel, isEventCreated] =
-        await AccountMetadataEmittedEventModel.findOrCreate({
-          lock: true,
-          transaction,
-          where: {
-            logIndex,
-            transactionHash,
-          },
-          defaults: {
+      const accountMetadataEmittedEvent =
+        await AccountMetadataEmittedEventModel.create(
+          {
             key,
             value,
             logIndex,
             blockNumber,
             blockTimestamp,
             transactionHash,
-            accountId: typedAccountId,
+            accountId: convertToAccountId(accountId),
           },
-        });
+          {
+            transaction,
+          },
+        );
 
       logManager.appendFindOrCreateLog(
         AccountMetadataEmittedEventModel,
-        isEventCreated,
-        `${accountMetadataEmittedEventModel.transactionHash}-${accountMetadataEmittedEventModel.logIndex}`,
+        true,
+        `${accountMetadataEmittedEvent.transactionHash}-${accountMetadataEmittedEvent.logIndex}`,
       );
 
-      // Only if the event is the latest (in the DB), we process the metadata.
-
+      // Only process metadata if this is the latest event.
       if (
         !(await isLatestEvent(
-          accountMetadataEmittedEventModel,
+          accountMetadataEmittedEvent,
           AccountMetadataEmittedEventModel,
           {
-            logIndex,
-            transactionHash,
-            accountId: typedAccountId,
+            accountId: convertToAccountId(accountId),
           },
           transaction,
         ))
       ) {
-        logManager.logAllInfo();
-
         return;
       }
 
-      logManager.appendIsLatestEventLog();
-
-      // The metadata are related to a Project.
-      if (isRepoDriverId(typedAccountId)) {
-        await handleGitProjectMetadata(
-          logManager,
-          typedAccountId,
-          transaction,
+      if (isRepoDriverId(accountId)) {
+        await handleProjectMetadata({
           ipfsHash,
-          blockTimestamp,
-        );
-      }
-      // The metadata are related to a Drip List.
-      else if (isNftDriverId(typedAccountId)) {
-        await handleDripListMetadata(
           logManager,
-          typedAccountId,
           transaction,
-          ipfsHash,
           blockTimestamp,
-          blockNumber,
-        );
-      } else {
-        logManager.appendLog(
-          `Skipping metadata processing because the account with ID ${typedAccountId} is not a Project or a Drip List.`,
-        );
+          emitterAccountId: convertToRepoDriverId(accountId),
+        });
       }
 
-      logManager.logAllInfo();
+      if (isNftDriverId(accountId)) {
+        const metadata = await getNftDriverMetadata(ipfsHash);
+
+        if (this._isDripListMetadata(metadata)) {
+          await handleDripListMetadata({
+            ipfsHash,
+            metadata,
+            logManager,
+            transaction,
+            blockNumber,
+            blockTimestamp,
+            emitterAccountId: convertToNftDriverId(accountId),
+          });
+        }
+
+        if (this._isEcosystemMainAccountMetadata(metadata)) {
+          await handleEcosystemMainAccountMetadata({
+            ipfsHash,
+            metadata,
+            logManager,
+            transaction,
+            blockNumber,
+            blockTimestamp,
+            emitterAccountId: convertToNftDriverId(accountId),
+          });
+        }
+      }
+
+      if (isImmutableSplitsDriverId(accountId)) {
+        await handleSubListMetadata({
+          ipfsHash,
+          logManager,
+          transaction,
+          blockTimestamp,
+          emitterAccountId: convertToImmutableSplitsDriverId(accountId),
+        });
+      }
+
+      logManager.logAllInfo(this.name);
     });
   }
 
-  public override async beforeHandle(
-    request: EventHandlerRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
-  ): Promise<{
+  public override async beforeHandle({
+    event: { args },
+  }: EventHandlerRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>): Promise<{
     accountIdsToInvalidate: AccountId[];
   }> {
-    const {
-      event: { args },
-    } = request;
-
     const [accountId] = args as AccountMetadataEmittedEvent.OutputTuple;
 
-    const typedAccountId = toAccountId(accountId);
-
     return {
-      accountIdsToInvalidate: await getCurrentSplitsByAccountId(typedAccountId),
+      accountIdsToInvalidate: await getCurrentSplitsByAccountId(accountId),
     };
   }
 
   private _isEmittedByTheDripsApp(key: string): boolean {
     return key === DRIPS_APP_USER_METADATA_KEY;
+  }
+
+  private _canProcessDriverType(accountId: bigint): boolean {
+    return (
+      isRepoDriverId(accountId) ||
+      isNftDriverId(accountId) ||
+      isImmutableSplitsDriverId(accountId)
+    );
+  }
+
+  private _isEcosystemMainAccountMetadata(
+    metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
+  ): boolean {
+    return 'type' in metadata && metadata.type === 'ecosystem';
+  }
+
+  private _isDripListMetadata(
+    metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
+  ): boolean {
+    return (
+      metadata.isDripList ||
+      ('type' in metadata ? metadata.type === 'dripList' : false)
+    );
   }
 }

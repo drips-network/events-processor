@@ -6,7 +6,7 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
-import type { AccountId, Forge, ProjectId } from '../core/types';
+import type { AccountId, Forge, RepoDriverId } from '../core/types';
 import { FORGES_MAP } from '../core/constants';
 
 export enum ProjectVerificationStatus {
@@ -18,11 +18,11 @@ export enum ProjectVerificationStatus {
   PendingMetadata = 'PendingMetadata',
 }
 
-export default class GitProjectModel extends Model<
-  InferAttributes<GitProjectModel>,
-  InferCreationAttributes<GitProjectModel>
+export default class ProjectModel extends Model<
+  InferAttributes<ProjectModel>,
+  InferCreationAttributes<ProjectModel>
 > {
-  public declare id: ProjectId; // The `accountId` from `OwnerUpdatedRequested` event.
+  public declare id: RepoDriverId; // The `accountId` from `OwnerUpdatedRequested` event.
   public declare isValid: boolean;
   public declare name: string | null;
   public declare forge: Forge | null;
@@ -57,7 +57,7 @@ export default class GitProjectModel extends Model<
           validate: {
             isValidName(value: string) {
               if (!value) {
-                throw new Error('Project name is required.');
+                return;
               }
 
               const components = value?.split('/');

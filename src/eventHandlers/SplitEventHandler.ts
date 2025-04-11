@@ -1,6 +1,6 @@
 import EventHandlerBase from '../events/EventHandlerBase';
 import LogManager from '../core/LogManager';
-import { toAccountId } from '../utils/accountIdUtils';
+import { convertToAccountId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import { SplitEventModel } from '../models';
 import { dbConnection } from '../db/database';
@@ -22,8 +22,8 @@ export default class SplitEventHandler extends EventHandlerBase<'Split(uint256,u
     const [rawAccountId, rawReceiver, rawErc20, rawAmt] =
       args as SplitEvent.OutputTuple;
 
-    const accountId = toAccountId(rawAccountId);
-    const receiver = toAccountId(rawReceiver);
+    const accountId = convertToAccountId(rawAccountId);
+    const receiver = convertToAccountId(rawReceiver);
     const erc20 = toAddress(rawErc20);
     const amt = toBigIntString(rawAmt.toString());
 
@@ -41,14 +41,8 @@ export default class SplitEventHandler extends EventHandlerBase<'Split(uint256,u
     await dbConnection.transaction(async (transaction) => {
       const logManager = new LogManager(requestId);
 
-      const [givenEvent, isEventCreated] = await SplitEventModel.findOrCreate({
-        lock: true,
-        transaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
+      const splitEvent = await SplitEventModel.create(
+        {
           accountId,
           receiver,
           erc20,
@@ -58,15 +52,16 @@ export default class SplitEventHandler extends EventHandlerBase<'Split(uint256,u
           blockTimestamp,
           transactionHash,
         },
-      });
+        { transaction },
+      );
 
       logManager.appendFindOrCreateLog(
         SplitEventModel,
-        isEventCreated,
-        `${givenEvent.transactionHash}-${givenEvent.logIndex}`,
+        true,
+        `${splitEvent.transactionHash}-${splitEvent.logIndex}`,
       );
 
-      logManager.logAllInfo();
+      logManager.logAllInfo(this.name);
     });
   }
 }

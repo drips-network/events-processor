@@ -1,133 +1,168 @@
-import type { DripListId, RepoDriverId } from '../../core/types';
+import type { Transaction } from 'sequelize';
+import type {
+  ImmutableSplitsDriverId,
+  NftDriverId,
+  RepoDriverId,
+} from '../../core/types';
 import type { SplitsSetEventModel } from '../../models';
 import {
   AddressDriverSplitReceiverModel,
   DripListModel,
   DripListSplitReceiverModel,
-  GitProjectModel,
+  EcosystemMainAccountModel,
+  ProjectModel,
   RepoDriverSplitReceiverModel,
+  SubListModel,
+  SubListSplitReceiverModel,
 } from '../../models';
-import { isNftDriverId, isRepoDriverId } from '../../utils/accountIdUtils';
+import {
+  isImmutableSplitsDriverId,
+  isNftDriverId,
+  isRepoDriverId,
+} from '../../utils/accountIdUtils';
 import type { SplitsReceiverStruct } from '../../../contracts/CURRENT_NETWORK/Drips';
 import unreachableError from '../../utils/unreachableError';
 import { dripsContract } from '../../core/contractClients';
 import type LogManager from '../../core/LogManager';
-import { formatSplitReceivers } from '../AccountMetadataEmittedEvent/splitsValidator';
+import { formatSplitReceivers } from '../../utils/formatSplitReceivers';
+import RecoverableError from '../../utils/recoverableError';
 
 export default async function setIsValidFlag(
   splitsSetEvent: SplitsSetEventModel,
   logManager: LogManager,
+  transaction: Transaction,
 ): Promise<void> {
   const { accountId, receiversHash } = splitsSetEvent;
   const onChainSplitsHash = await dripsContract.splitsHash(accountId);
 
-  // Only if the `SplitsSet` event is the latest event (on-chain), we validate the splits.
+  // Only try to set the 'isValid' flag if this is the latest event.
   if (receiversHash !== onChainSplitsHash) {
     return;
   }
 
-  // Here, we know that the `SplitsSet` event is the latest event (on-chain).
-
   if (isRepoDriverId(accountId)) {
-    const project = await GitProjectModel.findByPk(accountId, {
-      lock: true,
+    const project = await ProjectModel.findByPk(accountId, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
     });
 
     if (!project) {
-      throw new Error(
-        `Failed to set 'isValid' flag for Project with ID '${accountId}': Project not found.
-        \r Possible reasons:
-        \r\t - The event that should have created the Project was not processed yet.
-        \r\t - The event was emitted as a result of a manual 'SetSplits' transaction that for a Project that does not exist in the app.`,
+      throw new RecoverableError(
+        `Failed to set 'isValid' flag for Project: Project '${accountId}' not found.`,
       );
     }
 
     const storedInDbFromMetaReceiversHash = await dripsContract.hashSplits(
-      formatSplitReceivers(await getProjectDbReceivers(accountId)),
+      formatSplitReceivers(await getProjectDbReceivers(accountId, transaction)),
     );
-
-    // If we reach this point, it means that `receiversHash` is the latest on-chain hash.
 
     if (receiversHash !== storedInDbFromMetaReceiversHash) {
       project.isValid = false;
 
-      logManager.appendUpdateLog(project, GitProjectModel, project.id);
+      logManager.appendUpdateLog(project, ProjectModel, project.id);
 
-      await project.save();
+      await project.save({ transaction });
 
-      // We need to throw so that the job is retried...
-      throw new Error(
-        `Splits receivers hashes do not match for Project with ID '${accountId}':
-        \r\t - On-chain splits hash:                     ${onChainSplitsHash}
-        \r\t - 'SetSplits' event splits hash:            ${receiversHash}
-        \r\t - DB (populated from metadata) splits hash: ${storedInDbFromMetaReceiversHash}
-        \r Possible reasons:
-        \r\t - The 'AccountMetadataEmitted' event that should have created the Project splits was not processed yet.
-        \r\t - The 'SetSplits' event (was manually emitted?) had splits that do not match what's already stored in the DB (from metadata).`,
+      throw new RecoverableError(
+        `Failed to set 'isValid' for Project '${accountId}': mismatch between on-chain, event, and DB splits receiver hashes (on-chain: ${onChainSplitsHash}, event: ${receiversHash}, db: ${storedInDbFromMetaReceiversHash}).`,
       );
     } else if (project.isValid === false) {
       project.isValid = true;
 
-      logManager.appendUpdateLog(project, GitProjectModel, project.id);
+      logManager.appendUpdateLog(project, ProjectModel, project.id);
 
-      await project.save();
+      await project.save({ transaction });
     }
   } else if (isNftDriverId(accountId)) {
     const dripList = await DripListModel.findByPk(accountId, {
-      lock: true,
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    const ecosystem = await EcosystemMainAccountModel.findByPk(accountId, {
+      lock: transaction.LOCK.UPDATE,
+      transaction,
     });
 
-    if (!dripList) {
-      throw new Error(
-        `Failed to set 'isValid' flag for Drip List with ID '${accountId}': Drip List not found.
-        \r Possible reasons:
-        \r\t - The event that should have created the Drip List was not processed yet.
-        \r\t - The event was emitted as a result of a manual 'SetSplits' transaction that for a Drip List that does not exist in the app.`,
+    const entity = (dripList ?? ecosystem)!;
+    const entityModel = dripList ? DripListModel : EcosystemMainAccountModel;
+
+    if (!dripList && !ecosystem) {
+      throw new RecoverableError(
+        `Failed to set 'isValid' flag for ${entityModel.name}: ${entityModel.name} '${accountId}' not found.`,
       );
     }
 
     const storedInDbFromMetaReceiversHash = await dripsContract.hashSplits(
-      formatSplitReceivers(await getDripListDbReceivers(accountId)),
+      formatSplitReceivers(
+        entityModel.name === 'DripListModel'
+          ? await getDripListDbReceivers(accountId, transaction)
+          : await getEcosystemDbReceivers(accountId, transaction),
+      ),
+    );
+
+    if (receiversHash !== storedInDbFromMetaReceiversHash) {
+      entity.isValid = false;
+
+      logManager.appendUpdateLog(entity, entityModel, entity.id);
+
+      await entity.save({ transaction });
+
+      throw new RecoverableError(
+        `Failed to set 'isValid' for ${dripList ? 'Drip List' : 'Ecosystem Main Identity'} '${accountId}': mismatch between on-chain, event, and DB splits receiver hashes (on-chain: ${onChainSplitsHash}, event: ${receiversHash}, db: ${storedInDbFromMetaReceiversHash}).`,
+      );
+    } else if (entity.isValid === false) {
+      entity.isValid = true;
+
+      logManager.appendUpdateLog(entity, entityModel, entity.id);
+
+      await entity.save({ transaction });
+    }
+  } else if (isImmutableSplitsDriverId(accountId)) {
+    const subList = await SubListModel.findByPk(accountId, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!subList) {
+      throw new RecoverableError(
+        `Failed to set 'isValid' flag for Sub List: Sub List '${accountId}' not found.`,
+      );
+    }
+
+    const storedInDbFromMetaReceiversHash = await dripsContract.hashSplits(
+      formatSplitReceivers(await getSubListDbReceivers(accountId, transaction)),
     );
 
     // If we reach this point, it means that `receiversHash` is the latest on-chain hash.
 
     if (receiversHash !== storedInDbFromMetaReceiversHash) {
-      dripList.isValid = false;
+      subList.isValid = false;
 
-      logManager.appendUpdateLog(dripList, DripListModel, dripList.id);
+      logManager.appendUpdateLog(subList, SubListModel, subList.id);
 
-      await dripList.save();
+      await subList.save({ transaction });
 
-      // We need to throw so that the job is retried...
-      throw new Error(
-        `Splits receivers hashes do not match for Drip List with ID '${accountId}':
-        \r\t - On-chain splits hash:                     ${onChainSplitsHash}
-        \r\t - 'SetSplits' event splits hash:            ${receiversHash}
-        \r\t - DB (populated from metadata) splits hash: ${storedInDbFromMetaReceiversHash}
-        \r Possible reasons:
-        \r\t - The 'AccountMetadataEmitted' event that should have created the Drip List splits was not processed yet.
-        \r\t - The 'SetSplits' event (was manually emitted?) had splits that do not match what's already stored in the DB (from metadata).`,
+      throw new RecoverableError(
+        `Failed to set 'isValid' for Sub List '${accountId}': mismatch between on-chain, event, and DB splits receiver hashes (on-chain: ${onChainSplitsHash}, event: ${receiversHash}, db: ${storedInDbFromMetaReceiversHash}).`,
       );
-    } else if (dripList.isValid === false) {
-      dripList.isValid = true;
+    } else if (subList.isValid === false) {
+      subList.isValid = true;
 
-      logManager.appendUpdateLog(dripList, DripListModel, dripList.id);
+      logManager.appendUpdateLog(subList, SubListModel, subList.id);
 
-      await dripList.save();
+      await subList.save({ transaction });
     }
-  } else {
-    logManager.appendLog(
-      `Skipping 'isValid' flag update for account with ID '${accountId}' because it's not a Project or a Drip List.`,
-    );
   }
 }
 
-async function getProjectDbReceivers(accountId: RepoDriverId) {
+async function getProjectDbReceivers(
+  accountId: RepoDriverId,
+  transaction: Transaction,
+) {
   const addressReceivers: SplitsReceiverStruct[] =
     await AddressDriverSplitReceiverModel.findAll({
-      lock: true,
-
+      transaction,
+      lock: transaction.LOCK.UPDATE,
       where: {
         funderProjectId: accountId,
       },
@@ -140,8 +175,8 @@ async function getProjectDbReceivers(accountId: RepoDriverId) {
 
   const projectReceivers: SplitsReceiverStruct[] =
     await RepoDriverSplitReceiverModel.findAll({
-      lock: true,
-
+      transaction,
+      lock: transaction.LOCK.UPDATE,
       where: {
         funderProjectId: accountId,
       },
@@ -154,8 +189,8 @@ async function getProjectDbReceivers(accountId: RepoDriverId) {
 
   const dripListReceivers: SplitsReceiverStruct[] =
     await DripListSplitReceiverModel.findAll({
-      lock: true,
-
+      transaction,
+      lock: transaction.LOCK.UPDATE,
       where: {
         funderProjectId: accountId,
       },
@@ -169,11 +204,14 @@ async function getProjectDbReceivers(accountId: RepoDriverId) {
   return [...addressReceivers, ...projectReceivers, ...dripListReceivers];
 }
 
-async function getDripListDbReceivers(accountId: DripListId) {
+async function getDripListDbReceivers(
+  accountId: NftDriverId,
+  transaction: Transaction,
+) {
   const addressReceivers: SplitsReceiverStruct[] =
     await AddressDriverSplitReceiverModel.findAll({
-      lock: true,
-
+      transaction,
+      lock: transaction.LOCK.UPDATE,
       where: {
         funderDripListId: accountId,
       },
@@ -186,8 +224,8 @@ async function getDripListDbReceivers(accountId: DripListId) {
 
   const projectReceivers: SplitsReceiverStruct[] =
     await RepoDriverSplitReceiverModel.findAll({
-      lock: true,
-
+      transaction,
+      lock: transaction.LOCK.UPDATE,
       where: {
         funderDripListId: accountId,
       },
@@ -200,8 +238,8 @@ async function getDripListDbReceivers(accountId: DripListId) {
 
   const dripListReceivers: SplitsReceiverStruct[] =
     await DripListSplitReceiverModel.findAll({
-      lock: true,
-
+      transaction,
+      lock: transaction.LOCK.UPDATE,
       where: {
         funderDripListId: accountId,
       },
@@ -213,4 +251,107 @@ async function getDripListDbReceivers(accountId: DripListId) {
     );
 
   return [...addressReceivers, ...projectReceivers, ...dripListReceivers];
+}
+
+async function getEcosystemDbReceivers(
+  accountId: NftDriverId,
+  transaction: Transaction,
+) {
+  const projectReceivers: SplitsReceiverStruct[] =
+    await RepoDriverSplitReceiverModel.findAll({
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+      where: {
+        funderEcosystemMainAccountId: accountId,
+      },
+    }).then((receivers) =>
+      receivers.map((receiver) => ({
+        accountId: receiver.fundeeProjectId ?? unreachableError(),
+        weight: receiver.weight,
+      })),
+    );
+
+  const subListReceivers: SplitsReceiverStruct[] =
+    await SubListSplitReceiverModel.findAll({
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+      where: {
+        funderEcosystemMainAccountId: accountId,
+      },
+    }).then((receivers) =>
+      receivers.map((receiver) => ({
+        accountId: receiver.fundeeSubListId ?? unreachableError(),
+        weight: receiver.weight,
+      })),
+    );
+
+  return [...projectReceivers, ...subListReceivers];
+}
+
+async function getSubListDbReceivers(
+  accountId: ImmutableSplitsDriverId,
+  transaction: Transaction,
+) {
+  const addressReceivers: SplitsReceiverStruct[] =
+    await AddressDriverSplitReceiverModel.findAll({
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+      where: {
+        funderSubListId: accountId,
+      },
+    }).then((receivers) =>
+      receivers.map((receiver) => ({
+        accountId: receiver.fundeeAccountId ?? unreachableError(),
+        weight: receiver.weight,
+      })),
+    );
+
+  const projectReceivers: SplitsReceiverStruct[] =
+    await RepoDriverSplitReceiverModel.findAll({
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+      where: {
+        funderSubListId: accountId,
+      },
+    }).then((receivers) =>
+      receivers.map((receiver) => ({
+        accountId: receiver.fundeeProjectId ?? unreachableError(),
+        weight: receiver.weight,
+      })),
+    );
+
+  const dripListReceivers: SplitsReceiverStruct[] =
+    await DripListSplitReceiverModel.findAll({
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+      where: {
+        funderSubListId: accountId,
+      },
+    }).then((receivers) =>
+      receivers.map((receiver) => ({
+        accountId: receiver.fundeeDripListId ?? unreachableError(),
+        weight: receiver.weight,
+      })),
+    );
+
+  const subListReceivers: SplitsReceiverStruct[] =
+    await SubListSplitReceiverModel.findAll({
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+      where: {
+        funderSubListId: accountId,
+      },
+    }).then((receivers) =>
+      receivers.map((receiver) => ({
+        accountId: receiver.fundeeSubListId ?? unreachableError(),
+        weight: receiver.weight,
+      })),
+    );
+
+  return [
+    ...projectReceivers,
+    ...subListReceivers,
+    ...dripListReceivers,
+    ...addressReceivers,
+  ];
 }

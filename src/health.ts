@@ -41,11 +41,9 @@ export const healthEndpoint: RequestHandler = async (req, res) => {
     });
   } catch (error: any) {
     logger.error(`Health check endpoint error: ${error.message}`, error);
-    return res
-      .status(500)
-      .send({
-        status: 'Error',
-        message: 'Internal server error during health check.',
-      });
+    return res.status(500).send({
+      status: 'Error',
+      message: 'Internal server error during health check.',
+    });
   }
 };

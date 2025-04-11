@@ -1,10 +1,11 @@
 import type { AddressLike } from 'ethers';
 import { ethers } from 'ethers';
+import type { z } from 'zod';
 import { FORGES_MAP } from '../core/constants';
 import type { Forge } from '../core/types';
-import type { GitProjectModel } from '../models';
-import { ProjectVerificationStatus } from '../models/GitProjectModel';
 import unreachableError from './unreachableError';
+import { ProjectVerificationStatus } from '../models/ProjectModel';
+import type { sourceSchema } from '../metadata/schemas/common/sources';
 
 export function toProjectOwnerAddress(address: string): AddressLike {
   if (!ethers.isAddress(address)) {
@@ -33,13 +34,22 @@ export function toForge(forge: bigint): Forge {
   return forgeAsString;
 }
 
+export const METADATA_FORGE_MAP: Record<
+  z.infer<typeof sourceSchema>['forge'],
+  Forge
+> = {
+  github: 'GitHub',
+};
+
 export function toReadable(bytes: string): string {
   return ethers.toUtf8String(bytes);
 }
 
-export function calculateProjectStatus(
-  project: GitProjectModel,
-): ProjectVerificationStatus {
+export function calculateProjectStatus(project: {
+  id: string;
+  color: string | null;
+  ownerAddress: AddressLike | null;
+}): ProjectVerificationStatus {
   if (!project.ownerAddress && !project.color) {
     return ProjectVerificationStatus.Unclaimed;
   }
@@ -57,7 +67,10 @@ export function calculateProjectStatus(
   }
 
   return unreachableError(
-    `Project with ID ${project.id} (${project.name}) has an invalid status.
-    \r\tProject: ${JSON.stringify(project, null, 2)}`,
+    `Project with ID ${project.id} has an invalid status.\n` +
+      `  Project:\n${JSON.stringify(project, null, 2)
+        .split('\n')
+        .map((line) => `    ${line}`)
+        .join('\n')}`,
   );
 }

@@ -5,7 +5,7 @@ import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import SplitsSetEventModel from '../../src/models/SplitsSetEventModel';
 import LogManager from '../../src/core/LogManager';
-import { toAccountId } from '../../src/utils/accountIdUtils';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { SplitsSetEventHandler } from '../../src/eventHandlers';
 import setIsValidFlag from '../../src/eventHandlers/SplitsSetEventHandler/setIsValidFlag';
 
@@ -49,12 +49,11 @@ describe('SplitsSetEventHandler', () => {
   describe('_handle', () => {
     test('should create a new SplitsSetEventModel', async () => {
       // Arrange
-      SplitsSetEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      SplitsSetEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'SplitsSetTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
       LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
@@ -73,22 +72,19 @@ describe('SplitsSetEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(SplitsSetEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
-          accountId: toAccountId(rawAccountId),
+      expect(SplitsSetEventModel.create).toHaveBeenCalledWith(
+        {
+          accountId: convertToAccountId(rawAccountId),
           receiversHash: rawReceiversHash,
           logIndex,
           blockNumber,
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
 
       expect(setIsValidFlag).toHaveBeenCalled();
     });

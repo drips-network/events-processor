@@ -5,7 +5,7 @@ import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import StreamReceiverSeenEventModel from '../../src/models/StreamReceiverSeenEventModel';
 import LogManager from '../../src/core/LogManager';
-import { toAccountId } from '../../src/utils/accountIdUtils';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { StreamReceiverSeenEventHandler } from '../../src/eventHandlers';
 import { toBigIntString } from '../../src/utils/bigintUtils';
 
@@ -49,12 +49,11 @@ describe('StreamReceiverSeenEventHandler', () => {
   describe('_handle', () => {
     test('should create a new StreamReceiverSeenEventModel', async () => {
       // Arrange
-      StreamReceiverSeenEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      StreamReceiverSeenEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'StreamReceiverSeenTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
       LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
@@ -73,15 +72,9 @@ describe('StreamReceiverSeenEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(StreamReceiverSeenEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
-          accountId: toAccountId(rawAccountId),
+      expect(StreamReceiverSeenEventModel.create).toHaveBeenCalledWith(
+        {
+          accountId: convertToAccountId(rawAccountId),
           receiversHash: rawReceiversHash,
           config: toBigIntString(rawConfig.toString()),
           logIndex,
@@ -89,7 +82,10 @@ describe('StreamReceiverSeenEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
     });
   });
 });

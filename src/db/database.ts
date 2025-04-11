@@ -5,106 +5,95 @@ import {
   AddressDriverSplitReceiverModel,
   DripListModel,
   DripListSplitReceiverModel,
-  GitProjectModel,
+  ProjectModel,
+  EcosystemMainAccountModel,
   RepoDriverSplitReceiverModel,
+  SubListModel,
+  SubListSplitReceiverModel,
 } from '../models';
 import appSettings from '../config/appSettings';
-import unreachableError from '../utils/unreachableError';
 
-const { postgresConnectionString } = appSettings;
-
-export const dbConnection = new Sequelize(`${postgresConnectionString}`, {
-  dialect: 'postgres',
-  logging: false,
-  timezone: 'UTC',
-});
+export const dbConnection = new Sequelize(
+  appSettings.postgresConnectionString,
+  {
+    dialect: 'postgres',
+    logging: false,
+    timezone: 'UTC',
+  },
+);
 
 export async function connectToDb(): Promise<void> {
-  logger.info('Initializing database...');
-
-  await authenticate();
-  registerModels();
-  await initializeEntities();
-  defineAssociations();
-
-  await dbConnection.sync();
-
-  logger.info('Database initialized.');
-}
-
-async function authenticate(): Promise<void> {
   try {
     await dbConnection.authenticate();
 
-    logger.info('Connection has been established successfully.');
+    registerModels();
+    await initializeEntities();
 
-    const schema = `"${(
-      appSettings.network ||
-      unreachableError('Missing network in app settings.')
-    ).replace(/"/g, '""')}"`;
+    defineProjectAssociations();
+    defineDripListAssociations();
+    defineEcosystemMainAccountsAssociations();
+    defineSubListAssociations();
 
-    await dbConnection.query(`CREATE SCHEMA IF NOT EXISTS ${schema};`);
+    logger.info('Connected to the database.');
+  } catch (error) {
+    logger.error('Failed to connect to the database.', error);
 
-    await dbConnection.authenticate();
-  } catch (error: any) {
-    logger.error(
-      `Unable to connect to the database: ${error} in ${error.stack}`,
-    );
     throw error;
   }
 }
 
 async function initializeEntities(): Promise<void> {
-  try {
-    logger.info('Initializing database schema...');
+  logger.info('Initializing database schema...');
 
-    const promises = getRegisteredModels().map(async (Model) => {
-      Model.initialize(dbConnection);
-    });
+  getRegisteredModels().map((Model) => Model.initialize(dbConnection));
 
-    await Promise.all(promises);
-
-    logger.info('Database schema initialized.');
-  } catch (error: any) {
-    logger.error(`Unable to initialize the database schema: ${error}.`);
-    throw error;
-  }
+  logger.info('Database schema initialized.');
 }
 
-function defineAssociations() {
-  // One-to-Many: A project can fund multiple address splits.
-  GitProjectModel.hasMany(AddressDriverSplitReceiverModel, {
+function defineProjectAssociations() {
+  // One-to-Many: A project can fund multiple addresses.
+  ProjectModel.hasMany(AddressDriverSplitReceiverModel, {
     foreignKey: 'funderProjectId',
   });
-  AddressDriverSplitReceiverModel.belongsTo(GitProjectModel, {
-    foreignKey: 'funderProjectId',
-  });
-
-  // One-to-Many: A project can fund multiple project splits.
-  GitProjectModel.hasMany(RepoDriverSplitReceiverModel, {
-    foreignKey: 'funderProjectId',
-  });
-  RepoDriverSplitReceiverModel.belongsTo(GitProjectModel, {
+  AddressDriverSplitReceiverModel.belongsTo(ProjectModel, {
     foreignKey: 'funderProjectId',
   });
 
-  // One-to-Many: A project can fund multiple drip list splits.
-  GitProjectModel.hasMany(DripListSplitReceiverModel, {
+  // One-to-Many: A project can fund multiple projects.
+  ProjectModel.hasMany(RepoDriverSplitReceiverModel, {
     foreignKey: 'funderProjectId',
   });
-  DripListSplitReceiverModel.belongsTo(GitProjectModel, {
+  RepoDriverSplitReceiverModel.belongsTo(ProjectModel, {
     foreignKey: 'funderProjectId',
   });
 
-  // One-to-One: A RepoDriverSplitReceiver represents/is a project.
-  GitProjectModel.hasOne(RepoDriverSplitReceiverModel, {
+  // One-to-Many: A project can fund multiple Drip Lists.
+  ProjectModel.hasMany(DripListSplitReceiverModel, {
+    foreignKey: 'funderProjectId',
+  });
+  DripListSplitReceiverModel.belongsTo(ProjectModel, {
+    foreignKey: 'funderProjectId',
+  });
+
+  // One-to-Many: A project can fund multiple Sub Lists.
+  ProjectModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'funderProjectId',
+  });
+  SubListSplitReceiverModel.belongsTo(ProjectModel, {
+    foreignKey: 'funderProjectId',
+  });
+
+  // One-to-One: A project receiver represents/is a project.
+  ProjectModel.hasOne(RepoDriverSplitReceiverModel, {
     foreignKey: 'fundeeProjectId',
   });
-  RepoDriverSplitReceiverModel.belongsTo(GitProjectModel, {
+  RepoDriverSplitReceiverModel.belongsTo(ProjectModel, {
     foreignKey: 'fundeeProjectId',
   });
+}
 
-  // One-to-Many: A drip list can fund multiple address splits.
+function defineDripListAssociations() {
+  // One-to-Many: A Drip List can fund multiple addresses.
   DripListModel.hasMany(AddressDriverSplitReceiverModel, {
     foreignKey: 'funderDripListId',
   });
@@ -112,7 +101,7 @@ function defineAssociations() {
     foreignKey: 'funderDripListId',
   });
 
-  // One-to-Many: A drip list can fund multiple project splits.
+  // One-to-Many: A Drip List can fund multiple projects.
   DripListModel.hasMany(RepoDriverSplitReceiverModel, {
     foreignKey: 'funderDripListId',
   });
@@ -120,7 +109,7 @@ function defineAssociations() {
     foreignKey: 'funderDripListId',
   });
 
-  // One-to-Many: A drip list can fund multiple drip list splits.
+  // One-to-Many: A Drip List can fund multiple Drip Lists.
   DripListModel.hasMany(DripListSplitReceiverModel, {
     foreignKey: 'funderDripListId',
   });
@@ -128,11 +117,95 @@ function defineAssociations() {
     foreignKey: 'funderDripListId',
   });
 
-  // One-to-One: A DripListSplitReceiverModel represents/is a drip list.
+  // One-to-Many: A Drip List can fund multiple Sub Lists.
+  DripListModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'funderDripListId',
+  });
+  SubListSplitReceiverModel.belongsTo(DripListModel, {
+    foreignKey: 'funderDripListId',
+  });
+
+  // One-to-One: A Drip List receiver represents/is a Drip List.
   DripListModel.hasOne(DripListSplitReceiverModel, {
     foreignKey: 'fundeeDripListId',
   });
   DripListSplitReceiverModel.belongsTo(DripListModel, {
     foreignKey: 'fundeeDripListId',
+  });
+}
+
+function defineEcosystemMainAccountsAssociations() {
+  // One-to-Many: An Ecosystem Main Account can fund multiple addresses.
+  EcosystemMainAccountModel.hasMany(AddressDriverSplitReceiverModel, {
+    foreignKey: 'funderEcosystemMainAccountId',
+  });
+  AddressDriverSplitReceiverModel.belongsTo(EcosystemMainAccountModel, {
+    foreignKey: 'funderEcosystemMainAccountId',
+  });
+
+  // One-to-Many: An Ecosystem Main Account can fund multiple projects.
+  EcosystemMainAccountModel.hasMany(RepoDriverSplitReceiverModel, {
+    foreignKey: 'funderEcosystemMainAccountId',
+  });
+  RepoDriverSplitReceiverModel.belongsTo(EcosystemMainAccountModel, {
+    foreignKey: 'funderEcosystemMainAccountId',
+  });
+
+  // One-to-Many: An Ecosystem Main Account can fund multiple Drip Lists.
+  EcosystemMainAccountModel.hasMany(DripListSplitReceiverModel, {
+    foreignKey: 'funderEcosystemMainAccountId',
+  });
+  DripListSplitReceiverModel.belongsTo(EcosystemMainAccountModel, {
+    foreignKey: 'funderEcosystemMainAccountId',
+  });
+
+  // One-to-Many: An Ecosystem Main Account can fund multiple Sub Lists.
+  EcosystemMainAccountModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'funderEcosystemMainAccountId',
+  });
+  SubListSplitReceiverModel.belongsTo(EcosystemMainAccountModel, {
+    foreignKey: 'funderEcosystemMainAccountId',
+  });
+}
+
+function defineSubListAssociations() {
+  // One-to-Many: A Sub List can fund multiple addresses.
+  SubListModel.hasMany(AddressDriverSplitReceiverModel, {
+    foreignKey: 'funderSubListId',
+  });
+  AddressDriverSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'funderSubListId',
+  });
+
+  // One-to-Many: A Sub List can fund multiple projects.
+  SubListModel.hasMany(RepoDriverSplitReceiverModel, {
+    foreignKey: 'funderSubListId',
+  });
+  RepoDriverSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'funderSubListId',
+  });
+
+  // One-to-Many: A Sub List can fund multiple Drip Lists.
+  SubListModel.hasMany(DripListSplitReceiverModel, {
+    foreignKey: 'funderSubListId',
+  });
+  DripListSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'funderSubListId',
+  });
+
+  // One-to-Many: A Sub List can fund multiple Sub Lists.
+  SubListModel.hasMany(SubListSplitReceiverModel, {
+    foreignKey: 'funderSubListId',
+  });
+  SubListSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'funderSubListId',
+  });
+
+  // One-to-One: A Sub List receiver represents/is a Sub List.
+  SubListModel.hasOne(SubListSplitReceiverModel, {
+    foreignKey: 'fundeeSubListId',
+  });
+  SubListSplitReceiverModel.belongsTo(SubListModel, {
+    foreignKey: 'fundeeSubListId',
   });
 }

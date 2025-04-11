@@ -6,7 +6,7 @@ import type { EventData } from '../../src/events/types';
 import GivenEventModel from '../../src/models/GivenEventModel';
 import LogManager from '../../src/core/LogManager';
 import GivenEventHandler from '../../src/eventHandlers/GivenEventHandler';
-import { toAccountId } from '../../src/utils/accountIdUtils';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { toAddress } from '../../src/utils/ethereumAddressUtils';
 import { toBigIntString } from '../../src/utils/bigintUtils';
 
@@ -51,12 +51,11 @@ describe('GivenEventHandler', () => {
   describe('_handle', () => {
     test('should create a new GivenEventModel', async () => {
       // Arrange
-      GivenEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      GivenEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'GivenEventTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
       LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
@@ -75,16 +74,10 @@ describe('GivenEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(GivenEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
-          accountId: toAccountId(rawAccountId),
-          receiver: toAccountId(rawReceiver),
+      expect(GivenEventModel.create).toHaveBeenCalledWith(
+        {
+          accountId: convertToAccountId(rawAccountId),
+          receiver: convertToAccountId(rawReceiver),
           erc20: toAddress(rawErc20),
           amt: toBigIntString(rawAmt.toString()),
           logIndex,
@@ -92,7 +85,10 @@ describe('GivenEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
     });
   });
 });

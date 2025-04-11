@@ -5,7 +5,7 @@ import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import StreamsSetEventModel from '../../src/models/StreamsSetEventModel';
 import LogManager from '../../src/core/LogManager';
-import { toAccountId } from '../../src/utils/accountIdUtils';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { StreamsSetEventHandler } from '../../src/eventHandlers';
 import { toBigIntString } from '../../src/utils/bigintUtils';
 
@@ -52,7 +52,7 @@ describe('StreamsSetEventHandler', () => {
   describe('_handle', () => {
     test('should create a new StreamsSetEventModel', async () => {
       // Arrange
-      StreamsSetEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      StreamsSetEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'StreamsSetTransactionHash',
           logIndex: 1,
@@ -83,15 +83,9 @@ describe('StreamsSetEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(StreamsSetEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
-          accountId: toAccountId(rawAccountId),
+      expect(StreamsSetEventModel.create).toHaveBeenCalledWith(
+        {
+          accountId: convertToAccountId(rawAccountId),
           erc20: rawErc20,
           receiversHash: rawReceiversHash,
           streamsHistoryHash: rawStreamsHistoryHash,
@@ -102,7 +96,10 @@ describe('StreamsSetEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
     });
   });
 });

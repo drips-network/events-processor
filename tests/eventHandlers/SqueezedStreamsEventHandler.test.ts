@@ -6,7 +6,7 @@ import type { EventData } from '../../src/events/types';
 import SqueezedStreamsEventModel from '../../src/models/SqueezedStreamsEventModel';
 import LogManager from '../../src/core/LogManager';
 import SqueezedStreamsEventHandler from '../../src/eventHandlers/SqueezedStreamsEventHandler';
-import { toAccountId } from '../../src/utils/accountIdUtils';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { toAddress } from '../../src/utils/ethereumAddressUtils';
 import { toBigIntString } from '../../src/utils/bigintUtils';
 
@@ -52,12 +52,11 @@ describe('SqueezedStreamsEventHandler', () => {
   describe('_handle', () => {
     test('should create a new SqueezedStreamsEventModel', async () => {
       // Arrange
-      SqueezedStreamsEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      SqueezedStreamsEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'SqueezedStreamsTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
       LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
@@ -82,17 +81,11 @@ describe('SqueezedStreamsEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(SqueezedStreamsEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
-          accountId: toAccountId(rawAccountId),
+      expect(SqueezedStreamsEventModel.create).toHaveBeenCalledWith(
+        {
+          accountId: convertToAccountId(rawAccountId),
           erc20: toAddress(rawErc20),
-          senderId: toAccountId(rawSenderId),
+          senderId: convertToAccountId(rawSenderId),
           amount: toBigIntString(rawAmt.toString()),
           streamsHistoryHashes: SqueezedStreamsEventModel.toStreamHistoryHashes(
             rawStreamsHistoryHashes,
@@ -102,7 +95,10 @@ describe('SqueezedStreamsEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
     });
   });
 });

@@ -5,9 +5,9 @@ import { dbConnection } from '../db/database';
 import EventHandlerBase from '../events/EventHandlerBase';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import StreamReceiverSeenEventModel from '../models/StreamReceiverSeenEventModel';
-import { toAccountId } from '../utils/accountIdUtils';
+import { convertToAccountId } from '../utils/accountIdUtils';
 import { toBigIntString } from '../utils/bigintUtils';
-import { getCurrentSplitsByReceiversHash } from '../utils/getCurrentSplits';
+import { getCurrentSplitsByReceiversHash } from './AccountMetadataEmittedEvent/receiversRepository';
 
 export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'StreamReceiverSeen(bytes32,uint256,uint256)'> {
   public eventSignatures = [
@@ -25,7 +25,7 @@ export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'St
     const [rawReceiversHash, rawAccountId, rawConfig] =
       args as StreamReceiverSeenEvent.OutputTuple;
 
-    const accountId = toAccountId(rawAccountId);
+    const accountId = convertToAccountId(rawAccountId);
     const config = toBigIntString(rawConfig.toString());
 
     LogManager.logRequestInfo(
@@ -41,28 +41,24 @@ export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'St
     await dbConnection.transaction(async (transaction) => {
       const logManager = new LogManager(requestId);
 
-      const [streamReceiverSeenEvent, isEventCreated] =
-        await StreamReceiverSeenEventModel.findOrCreate({
-          lock: true,
+      const streamReceiverSeenEvent = await StreamReceiverSeenEventModel.create(
+        {
+          receiversHash: rawReceiversHash,
+          accountId,
+          config,
+          logIndex,
+          blockNumber,
+          blockTimestamp,
+          transactionHash,
+        },
+        {
           transaction,
-          where: {
-            logIndex,
-            transactionHash,
-          },
-          defaults: {
-            receiversHash: rawReceiversHash,
-            accountId,
-            config,
-            logIndex,
-            blockNumber,
-            blockTimestamp,
-            transactionHash,
-          },
-        });
+        },
+      );
 
       logManager.appendFindOrCreateLog(
         StreamReceiverSeenEventModel,
-        isEventCreated,
+        true,
         `${streamReceiverSeenEvent.transactionHash}-${streamReceiverSeenEvent.logIndex}`,
       );
     });

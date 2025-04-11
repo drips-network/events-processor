@@ -7,14 +7,22 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
-import GitProjectModel from './GitProjectModel';
-import type { AddressDriverId, DripListId, ProjectId } from '../core/types';
+import ProjectModel from './ProjectModel';
+import type {
+  AddressDriverId,
+  ImmutableSplitsDriverId,
+  NftDriverId,
+  RepoDriverId,
+} from '../core/types';
 import DripListModel from './DripListModel';
+import EcosystemMainAccountModel from './EcosystemMainAccountModel';
+import SubListModel from './SubListModel';
 
 export enum AddressDriverSplitReceiverType {
   ProjectMaintainer = 'ProjectMaintainer',
   ProjectDependency = 'ProjectDependency',
   DripListDependency = 'DripListDependency',
+  EcosystemDependency = 'EcosystemDependency',
 }
 
 export default class AddressDriverSplitReceiverModel extends Model<
@@ -22,13 +30,15 @@ export default class AddressDriverSplitReceiverModel extends Model<
   InferCreationAttributes<AddressDriverSplitReceiverModel>
 > {
   public declare id: CreationOptional<number>; // Primary key
-  public declare funderProjectId: ProjectId | null; // Foreign key
-  public declare funderDripListId: DripListId | null; // Foreign key
+  public declare fundeeAccountId: AddressDriverId;
+  public declare fundeeAccountAddress: AddressLike;
+  public declare funderProjectId: RepoDriverId | null; // Foreign key
+  public declare funderDripListId: NftDriverId | null; // Foreign key
+  public declare funderEcosystemMainAccountId: NftDriverId | null; // Foreign key
+  public declare funderSubListId: ImmutableSplitsDriverId | null; // Foreign key
 
   public declare weight: number;
   public declare type: AddressDriverSplitReceiverType;
-  public declare fundeeAccountId: AddressDriverId;
-  public declare fundeeAccountAddress: AddressLike;
   public declare blockTimestamp: Date;
 
   public static initialize(sequelize: Sequelize): void {
@@ -51,7 +61,7 @@ export default class AddressDriverSplitReceiverModel extends Model<
           // Foreign key
           type: DataTypes.STRING,
           references: {
-            model: GitProjectModel,
+            model: ProjectModel,
             key: 'id',
           },
           allowNull: true,
@@ -61,6 +71,24 @@ export default class AddressDriverSplitReceiverModel extends Model<
           type: DataTypes.STRING,
           references: {
             model: DripListModel,
+            key: 'id',
+          },
+          allowNull: true,
+        },
+        funderEcosystemMainAccountId: {
+          // Foreign key
+          type: DataTypes.STRING,
+          references: {
+            model: EcosystemMainAccountModel,
+            key: 'id',
+          },
+          allowNull: true,
+        },
+        funderSubListId: {
+          // Foreign key
+          type: DataTypes.STRING,
+          references: {
+            model: SubListModel,
             key: 'id',
           },
           allowNull: true,
@@ -95,6 +123,14 @@ export default class AddressDriverSplitReceiverModel extends Model<
             name: `IX_AddressDriverSplitReceivers_funderDripListId`,
             where: {
               type: AddressDriverSplitReceiverType.DripListDependency,
+            },
+            unique: false,
+          },
+          {
+            fields: ['funderEcosystemMainAccountId'],
+            name: `IX_AddressDriverSplitReceivers_funderEcosystemId`,
+            where: {
+              type: AddressDriverSplitReceiverType.EcosystemDependency,
             },
             unique: false,
           },
