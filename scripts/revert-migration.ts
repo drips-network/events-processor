@@ -4,7 +4,7 @@ import { Sequelize } from 'sequelize';
 import { Umzug, SequelizeStorage } from 'umzug';
 import getSchema from '../src/utils/getSchema';
 
-export async function runMigrations(): Promise<void> {
+export async function revertLastMigration(): Promise<void> {
   const connectionString = process.env.POSTGRES_CONNECTION_STRING;
   if (!connectionString) {
     throw new Error(
@@ -31,16 +31,13 @@ export async function runMigrations(): Promise<void> {
   });
 
   try {
-    const migrations = await migrator.up();
+    const reverted = await migrator.down();
 
-    if (migrations.length > 0) {
-      const appliedNames = migrations.map((m) => m.name).join(', ');
-      console.info(
-        `✅ Applied ${migrations.length} migration${migrations.length > 1 ? 's' : ''}:\n  - ${appliedNames.split(', ').join('\n  - ')}`,
-      );
+    if (reverted.length) {
+      console.info(`🔁 Reverted migration: ${reverted[0]?.name}`);
     } else {
       console.info(
-        'No migrations were applied. The database is already up-to-date. If you expected migrations to be applied, ensure that you run "npm run build" before starting the server.',
+        'No migration was reverted. The database is already at the base state.',
       );
     }
   } finally {
@@ -48,8 +45,8 @@ export async function runMigrations(): Promise<void> {
   }
 }
 
-runMigrations().catch((error) => {
-  console.error(`❌ Migration error: ${error.message}`, {
+revertLastMigration().catch((error) => {
+  console.error(`❌ Migration revert error: ${error.message}`, {
     stack: error.stack,
     cause: (error as any).cause,
   });
