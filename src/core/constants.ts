@@ -10,6 +10,7 @@ export const SUPPORTED_NETWORKS = [
   'filecoin',
   'metis',
   'optimism',
+  'zksync-era-sepolia',
 ] as const;
 
 export const FORGES_MAP = {
