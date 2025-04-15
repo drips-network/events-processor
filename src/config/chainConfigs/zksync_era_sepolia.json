@@ -1,5 +1,5 @@
 {
-  "network": "zksync-era-sepolia",
+  "network": "zksync_era_sepolia",
   "block": 5023276,
   "contracts": {
     "drips": {
