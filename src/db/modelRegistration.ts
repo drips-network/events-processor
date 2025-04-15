@@ -4,13 +4,10 @@ import {
   AddressDriverSplitReceiverModel,
   DripListModel,
   DripListSplitReceiverModel,
-  ProjectModel,
-  OwnerUpdateRequestedEventModel,
-  OwnerUpdatedEventModel,
+  Project,
   RepoDriverSplitReceiverModel,
   TransferEventModel,
   GivenEventModel,
-  SplitsSetEventModel,
   StreamsSetEventModel,
   StreamReceiverSeenEventModel,
   _LastIndexedBlockModel,
@@ -38,18 +35,15 @@ export function registerModels(): void {
   registerModel(DripListModel);
   registerModel(GivenEventModel);
   registerModel(SplitEventModel);
-  registerModel(ProjectModel);
+  registerModel(Project);
   registerModel(EcosystemMainAccountModel);
   registerModel(TransferEventModel);
-  registerModel(SplitsSetEventModel);
   registerModel(StreamsSetEventModel);
-  registerModel(OwnerUpdatedEventModel);
   registerModel(SqueezedStreamsEventModel);
   registerModel(SubListSplitReceiverModel);
   registerModel(DripListSplitReceiverModel);
   registerModel(StreamReceiverSeenEventModel);
   registerModel(RepoDriverSplitReceiverModel);
-  registerModel(OwnerUpdateRequestedEventModel);
   registerModel(AddressDriverSplitReceiverModel);
   registerModel(AccountMetadataEmittedEventModel);
 }
