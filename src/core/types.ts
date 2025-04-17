@@ -1,9 +1,5 @@
 import type { Model, Sequelize } from 'sequelize';
-import type {
-  DRIPS_CONTRACTS,
-  FORGES_MAP,
-  SUPPORTED_NETWORKS,
-} from './constants';
+import type { DRIPS_CONTRACTS, SUPPORTED_NETWORKS } from './constants';
 
 export type KnownAny = any;
 
@@ -12,17 +8,20 @@ export type IpfsHash = string & { __brand: 'IpfsHash' };
 export type AddressDriverId = string & {
   __brand: 'AddressDriverId';
 };
-
 export type NftDriverId = string & { __brand: 'NftDriverId' };
 export type RepoDriverId = string & { __brand: 'RepoDriverId' };
 export type ImmutableSplitsDriverId = string & {
   __brand: 'ImmutableSplitsDriverId';
 };
+export type RepoDeadlineDriverId = string & {
+  __brand: 'RepoDeadlineDriverId';
+};
 export type AccountId =
   | AddressDriverId
   | NftDriverId
   | RepoDriverId
-  | ImmutableSplitsDriverId;
+  | ImmutableSplitsDriverId
+  | RepoDeadlineDriverId;
 
 export type Address = string & { __brand: 'Address' };
 
@@ -44,8 +43,6 @@ export type SupportedNetwork = (typeof SUPPORTED_NETWORKS)[number];
 
 export type DbSchema = SupportedNetwork & { __brand: 'DbSchema' };
 
-export type Forge = ValuesOf<typeof FORGES_MAP>;
-
 export type DripsContract = (typeof DRIPS_CONTRACTS)[number];
 
 export type ChainConfig = {
@@ -60,14 +57,8 @@ export type ChainConfig = {
 export type ModelStaticMembers = {
   new (): Model;
   initialize(sequelize: Sequelize): void;
+  defineAssociations?(): void;
 };
-
-// TODO: Remove this. There is no need to have this in the database.
-export enum DependencyType {
-  ProjectDependency = 'ProjectDependency',
-  DripListDependency = 'DripListDependency',
-  EcosystemDependency = 'EcosystemDependency',
-}
 
 export type StreamHistoryHashes = string & {
   __type: 'StreamHistoryHashes';

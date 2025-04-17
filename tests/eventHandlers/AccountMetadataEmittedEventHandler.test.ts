@@ -15,7 +15,7 @@ import {
 } from '../../src/utils/metadataUtils';
 import * as handleDripListMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleDripListMetadata';
 
-jest.mock('../../src/models/AccountMetadataEmittedEventModel');
+jest.mock('../../src/models/AccountMetadataEmittedEvent');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
 jest.mock('../../src/core/LogManager');
@@ -106,7 +106,7 @@ describe('AccountMetadataEmittedHandler', () => {
       expect(dbConnection.transaction).not.toHaveBeenCalled();
     });
 
-    test('should create a new AccountMetadataEmittedEventModel', async () => {
+    test('should create a new AccountMetadataEmittedEvent', async () => {
       // Arrange
       AccountMetadataEmittedEventModel.create = jest.fn().mockResolvedValue([
         {

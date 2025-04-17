@@ -10,7 +10,7 @@ import TransferEventModel from '../../src/models/TransferEventModel';
 import DripListModel from '../../src/models/DripListModel';
 
 jest.mock('../../src/models/TransferEventModel');
-jest.mock('../../src/models/DripListModel');
+jest.mock('../../src/models/DripList');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
 jest.mock('../../src/events/eventHandlerUtils');

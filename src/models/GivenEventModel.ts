@@ -16,16 +16,14 @@ export default class GivenEventModel
   >
   implements IEventModel
 {
-  public declare accountId: AccountId; // Sender of the Give
-  public declare receiver: AccountId;
-  public declare erc20: Address;
-  public declare amt: BigIntString;
-
-  // Common event log properties.
-  public declare logIndex: number;
-  public declare blockNumber: number;
-  public declare blockTimestamp: Date;
-  public declare transactionHash: string;
+  declare public accountId: AccountId; // Sender of the Give
+  declare public receiver: AccountId;
+  declare public erc20: Address;
+  declare public amt: BigIntString;
+  declare public logIndex: number;
+  declare public blockNumber: number;
+  declare public blockTimestamp: Date;
+  declare public transactionHash: string;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(

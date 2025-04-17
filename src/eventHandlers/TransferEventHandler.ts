@@ -13,6 +13,7 @@ import { dbConnection } from '../db/database';
 import { isLatestEvent } from '../utils/isLatestEvent';
 import appSettings from '../config/appSettings';
 import RecoverableError from '../utils/recoverableError';
+import type { Address } from '../core/types';
 
 export default class TransferEventHandler extends EventHandlerBase<'Transfer(address,address,uint256)'> {
   public eventSignatures = ['Transfer(address,address,uint256)' as const];
@@ -50,8 +51,8 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
       const transferEvent = await TransferEventModel.create(
         {
           tokenId,
-          to,
-          from,
+          to: to as Address,
+          from: from as Address,
           logIndex,
           blockNumber,
           blockTimestamp,
@@ -62,9 +63,8 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         },
       );
 
-      logManager.appendFindOrCreateLog(
+      logManager.appendCreateLog(
         TransferEventModel,
-        true,
         `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
       );
 
@@ -104,17 +104,17 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
       const entity = (dripList ?? ecosystemMainAccount)!;
       const entityModel = dripList ? DripListModel : EcosystemMainAccountModel;
 
-      entity.ownerAddress = to;
-      entity.previousOwnerAddress = from;
+      entity.ownerAddress = to as Address;
+      entity.previousOwnerAddress = from as Address;
       entity.ownerAccountId = await calcAccountId(to);
-      entity.creator = to; // TODO: https://github.com/drips-network/events-processor/issues/14
+      entity.creator = to as Address; // TODO: https://github.com/drips-network/events-processor/issues/14
       entity.isVisible =
         blockNumber > appSettings.visibilityThresholdBlockNumber
           ? from === ZeroAddress || from === appSettings.ecosystemDeployer
           : true;
       entity.isValid = true; // The entity is initialized with `false` when created during account metadata processing.
 
-      logManager.appendUpdateLog(entity, entityModel, entity.id);
+      logManager.appendUpdateLog(entity, entityModel, entity.accountId);
 
       await entity.save({ transaction });
 

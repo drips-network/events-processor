@@ -1,11 +1,10 @@
-import type { AddressLike } from 'ethers';
 import type {
   InferAttributes,
   InferCreationAttributes,
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import type { NftDriverId } from '../core/types';
+import type { Address, NftDriverId } from '../core/types';
 import getSchema from '../utils/getSchema';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../core/constants';
 import type { IEventModel } from '../events/types';
@@ -17,37 +16,35 @@ export default class TransferEventModel
   >
   implements IEventModel
 {
-  public declare tokenId: NftDriverId; // The `tokenId` from `Transfer` event.
-  public declare from: AddressLike;
-  public declare to: AddressLike;
-
-  // Common event log properties.
-  public declare logIndex: number;
-  public declare blockNumber: number;
-  public declare blockTimestamp: Date;
-  public declare transactionHash: string;
+  declare public tokenId: NftDriverId; // The `tokenId` from `Transfer` event.
+  declare public from: Address;
+  declare public to: Address;
+  declare public logIndex: number;
+  declare public blockNumber: number;
+  declare public blockTimestamp: Date;
+  declare public transactionHash: string;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
       {
         tokenId: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         from: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         to: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         ...COMMON_EVENT_INIT_ATTRIBUTES,
       },
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'TransferEvents',
+        tableName: 'transfer_events',
       },
     );
   }

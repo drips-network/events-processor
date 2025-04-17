@@ -59,6 +59,45 @@ export default class LogManager {
     return this;
   }
 
+  public appendCreateLog<T extends Model>(
+    type: { new (): T },
+    id: string,
+  ): this {
+    this._logs.push(
+      `Created a new ${LogManager.nameOfType(type)} with ID ${id}.`,
+    );
+
+    return this;
+  }
+
+  public appendUpsertLog<T extends Model>(
+    instance: T,
+    type: { new (): T },
+    id: string,
+    wasCreated: boolean,
+  ): this {
+    const action = wasCreated ? 'Created new' : 'Upserted existing';
+    const baseMessage = `${action} ${LogManager.nameOfType(type)} with ID ${id}.`;
+
+    if (wasCreated) {
+      this._logs.push(baseMessage);
+    } else {
+      const changes = LogManager.getChangedProperties(instance);
+
+      const formattedChanges =
+        changes && Object.keys(changes).length > 0
+          ? `\n\tChanged properties:\n${JSON.stringify(changes, null, 2)
+              .split('\n')
+              .map((line) => `\t  ${line}`)
+              .join('\n')}`
+          : `\n\tNo changes detected.`;
+
+      this._logs.push(`${baseMessage}${formattedChanges}`);
+    }
+
+    return this;
+  }
+
   public appendLog(log: string): this {
     this._logs.push(log);
 

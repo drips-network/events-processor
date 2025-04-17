@@ -1,15 +1,20 @@
 /* eslint-disable no-param-reassign */ // Mutating Sequelize model instance is intentional and safe here.
 import { type Transaction } from 'sequelize';
 import type { AnyVersion } from '@efstajas/versioned-parser';
-import { type z } from 'zod';
+import { ZeroAddress } from 'ethers';
 import { ProjectModel } from '../../../models';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
-import LogManager from '../../../core/LogManager';
-import { calculateProjectStatus } from '../../../utils/projectUtils';
-import type { IpfsHash, RepoDriverId } from '../../../core/types';
+import type LogManager from '../../../core/LogManager';
 import {
-  assertAddressDiverId,
+  calculateProjectStatus,
+  verifyProjectSources,
+} from '../../../utils/projectUtils';
+import type { Address, IpfsHash, RepoDriverId } from '../../../core/types';
+import {
+  assertIsAddressDiverId,
+  convertToAddressDriverId,
   convertToRepoDriverId,
+  getAddress,
   isAddressDriverId,
   isNftDriverId,
   isRepoDriverId,
@@ -17,18 +22,12 @@ import {
 import unreachableError from '../../../utils/unreachableError';
 import { getProjectMetadata } from '../../../utils/metadataUtils';
 import verifySplitsReceivers from '../verifySplitsReceivers';
-import verifyProjectSources from '../projectVerification';
+import { repoDriverContract } from '../../../core/contractClients';
+import type { ProjectName } from '../../../models/ProjectModel';
 import {
-  createAddressReceiver,
-  createDripListReceiver,
-  createProjectReceiver,
-  deleteExistingReceivers,
+  createSplitReceiver,
+  deleteExistingSplitReceivers,
 } from '../receiversRepository';
-import type {
-  addressDriverSplitReceiverSchema,
-  repoDriverSplitReceiverSchema,
-} from '../../../metadata/schemas/repo-driver/v2';
-import type { dripListSplitReceiverSchema } from '../../../metadata/schemas/nft-driver/v2';
 
 type Params = {
   ipfsHash: IpfsHash;
@@ -47,69 +46,90 @@ export default async function handleProjectMetadata({
 }: Params) {
   const metadata = await getProjectMetadata(ipfsHash);
 
-  const [areSplitsValid, onChainSplitsHash, calculatedSplitsHash] =
-    await verifySplitsReceivers(emitterAccountId, [
-      ...metadata.splits.dependencies,
-      ...metadata.splits.maintainers,
-    ]);
-
-  if (!areSplitsValid) {
+  if (metadata.describes.accountId !== emitterAccountId) {
     logManager.appendLog(
-      `Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: on-chain splits hash '${onChainSplitsHash}' does not match '${calculatedSplitsHash}' calculated from metadata.`,
+      `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: metadata describes account ID '${metadata.describes.accountId}' but metadata emitted by '${emitterAccountId}'.`,
     );
 
     return;
   }
 
-  const projects = metadata.splits.dependencies
+  const { isMatch, actualHash, onChainHash } = await verifySplitsReceivers(
+    emitterAccountId,
+    [...metadata.splits.dependencies, ...metadata.splits.maintainers],
+  );
+
+  if (!isMatch) {
+    logManager.appendLog(
+      `🚨 Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: on-chain splits hash '${onChainHash}' does not match '${actualHash}' calculated from metadata.`,
+    );
+
+    return;
+  }
+
+  const projectReceivers = metadata.splits.dependencies
     .flatMap((s) => ('type' in s && s.type === 'repoDriver' ? [s] : []))
     .filter((dep) => dep.type === 'repoDriver');
+  const { areProjectsValid, message } =
+    await verifyProjectSources(projectReceivers);
 
-  await verifyProjectSources(projects);
+  if (!areProjectsValid) {
+    logManager.appendLog(
+      `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: ${message}`,
+    );
 
-  await createProject({
+    return;
+  }
+
+  const onChainOwner = await repoDriverContract.ownerOf(emitterAccountId);
+  if (!onChainOwner || onChainOwner === ZeroAddress) {
+    logManager.appendLog(
+      `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: on-chain owner is not set.`,
+    );
+  }
+
+  // ✅ All checks passed, we can proceed with the processing.
+
+  await upsertProject({
     metadata,
     ipfsHash,
     logManager,
     transaction,
+    blockTimestamp,
+    onChainOwner: onChainOwner as Address,
   });
 
-  await deleteExistingReceivers({
-    for: {
-      accountId: emitterAccountId,
-      column: 'funderProjectId',
-    },
-    transaction,
-  });
+  deleteExistingSplitReceivers(emitterAccountId, transaction);
 
-  await setNewReceivers({
+  await createNewSplitReceivers({
     logManager,
     transaction,
     blockTimestamp,
     emitterAccountId,
-    receivers: metadata.splits,
+    splitReceivers: metadata.splits,
   });
 }
 
-async function createProject({
+async function upsertProject({
   ipfsHash,
   metadata,
   logManager,
   transaction,
+  onChainOwner,
+  blockTimestamp,
 }: {
   ipfsHash: IpfsHash;
+  blockTimestamp: Date;
   logManager: LogManager;
   transaction: Transaction;
+  onChainOwner: Address;
   metadata: AnyVersion<typeof repoDriverAccountMetadataParser>;
 }): Promise<void> {
   const {
     color,
-    source,
-    description,
+    source: { forge, ownerName, repoName, url },
     describes: { accountId },
   } = metadata;
-
-  const projectId = convertToRepoDriverId(accountId);
 
   function getEmoji(): string | null {
     if ('avatar' in metadata) {
@@ -127,47 +147,39 @@ async function createProject({
     return null;
   }
 
-  const projectProps = {
-    id: projectId,
-    color,
-    url: source.url,
-    description: description ?? null,
-    verificationStatus: calculateProjectStatus({
-      id: projectId,
+  const [project, isCreated] = await ProjectModel.upsert(
+    {
+      accountId: convertToRepoDriverId(accountId),
+      url,
+      forge,
+      emoji: getEmoji(),
       color,
-      ownerAddress: null,
-    }),
-    isVisible: 'isVisible' in metadata ? metadata.isVisible : true, // Projects without `isVisible` field (V4 and below) are considered visible by default.
-    lastProcessedIpfsHash: ipfsHash,
-    emoji: getEmoji(),
-    avatarCid: getAvatarCid(),
-  };
-
-  const [project, isCreated] = await ProjectModel.findOrCreate({
-    transaction,
-    lock: transaction.LOCK.UPDATE,
-    where: { id: projectId },
-    defaults: {
-      ...projectProps,
-      isValid: false, // Until the related `SplitsSet` is processed.
+      name: `${ownerName}/${repoName}` as ProjectName,
+      avatarCid: getAvatarCid(),
+      verificationStatus: calculateProjectStatus(onChainOwner),
+      isVisible: 'isVisible' in metadata ? metadata.isVisible : true, // Projects without `isVisible` field (V4 and below) are considered visible by default.
+      lastProcessedIpfsHash: ipfsHash,
+      ownerAddress: getAddress(onChainOwner),
+      ownerAccountId: convertToAddressDriverId(onChainOwner),
+      claimedAt: blockTimestamp,
     },
-  });
+    {
+      transaction,
+    },
+  );
 
-  if (isCreated) {
-    logManager.appendFindOrCreateLog(ProjectModel, true, project.id);
-  } else {
-    project.set(projectProps);
-
-    logManager.appendUpdateLog(project, ProjectModel, project.id);
-
-    await project.save({ transaction });
-  }
+  logManager.appendUpsertLog(
+    project,
+    ProjectModel,
+    project.accountId,
+    Boolean(isCreated),
+  );
 }
 
-async function setNewReceivers({
-  receivers,
+async function createNewSplitReceivers({
   logManager,
   transaction,
+  splitReceivers,
   blockTimestamp,
   emitterAccountId,
 }: {
@@ -175,91 +187,85 @@ async function setNewReceivers({
   logManager: LogManager;
   transaction: Transaction;
   emitterAccountId: RepoDriverId;
-  receivers: AnyVersion<typeof repoDriverAccountMetadataParser>['splits'];
+  splitReceivers: AnyVersion<typeof repoDriverAccountMetadataParser>['splits'];
 }) {
-  const { dependencies, maintainers } = receivers;
+  const { dependencies, maintainers } = splitReceivers;
 
-  const maintainerPromises = maintainers.map((maintainer) => {
-    assertAddressDiverId(maintainer.accountId);
+  const maintainerPromises = maintainers.map(async (maintainer) => {
+    assertIsAddressDiverId(maintainer.accountId);
 
-    return createAddressReceiver({
+    return createSplitReceiver({
       logManager,
       transaction,
       blockTimestamp,
-      metadataReceiver: maintainer as z.infer<
-        typeof addressDriverSplitReceiverSchema
-      >, // Safe to cast because we already checked the type of accountId.
-      funder: {
-        type: 'project',
-        dependencyType: 'maintainer',
-        accountId: emitterAccountId,
+      splitReceiverShape: {
+        senderAccountId: emitterAccountId,
+        senderAccountType: 'project',
+        receiverAccountId: maintainer.accountId,
+        receiverAccountType: 'address',
+        relationshipType: 'project_maintainer',
+        weight: maintainer.weight,
+        blockTimestamp,
       },
     });
   });
 
   const dependencyPromises = dependencies.map(async (dependency) => {
     if (isRepoDriverId(dependency.accountId)) {
-      return createProjectReceiver({
+      return createSplitReceiver({
         logManager,
         transaction,
         blockTimestamp,
-        metadataReceiver: dependency as z.infer<
-          typeof repoDriverSplitReceiverSchema
-        >, // Safe to cast because we already checked the type of accountId.
-        funder: {
-          type: 'project',
-          dependencyType: 'dependency',
-          accountId: emitterAccountId,
+        splitReceiverShape: {
+          senderAccountId: emitterAccountId,
+          senderAccountType: 'project',
+          receiverAccountId: dependency.accountId,
+          receiverAccountType: 'project',
+          relationshipType: 'project_dependency',
+          weight: dependency.weight,
+          blockTimestamp,
         },
       });
     }
 
     if (isAddressDriverId(dependency.accountId)) {
-      return createAddressReceiver({
+      return createSplitReceiver({
         logManager,
         transaction,
         blockTimestamp,
-        metadataReceiver: dependency as z.infer<
-          typeof addressDriverSplitReceiverSchema
-        >, // Safe to cast because we already checked the type of accountId.
-        funder: {
-          type: 'project',
-          dependencyType: 'dependency',
-          accountId: emitterAccountId,
+        splitReceiverShape: {
+          senderAccountId: emitterAccountId,
+          senderAccountType: 'project',
+          receiverAccountId: dependency.accountId,
+          receiverAccountType: 'address',
+          relationshipType: 'project_dependency',
+          weight: dependency.weight,
+          blockTimestamp,
         },
       });
     }
 
     if (isNftDriverId(dependency.accountId)) {
-      // NFT Driver is always represents a DripList receiver for Projects. Ecosystem Main Account receivers are not yet supported for projects.
-      return createDripListReceiver({
+      return createSplitReceiver({
         logManager,
         transaction,
         blockTimestamp,
-        metadataReceiver: dependency as z.infer<
-          typeof dripListSplitReceiverSchema
-        >, // Safe to cast because we already checked the type of accountId.,
-        funder: {
-          type: 'project',
-          dependencyType: 'dependency',
-          accountId: emitterAccountId,
+        splitReceiverShape: {
+          senderAccountId: emitterAccountId,
+          senderAccountType: 'project',
+          receiverAccountId: dependency.accountId,
+          receiverAccountType: 'drip_list',
+          relationshipType: 'project_dependency',
+          weight: dependency.weight,
+          blockTimestamp,
         },
       });
     }
 
     return unreachableError(
-      `Cannot process project dependency '${dependency.accountId}': unsupported Driver type.`,
+      `Unhandled Project Split Receiver type: ${(dependency as any).type}`,
     );
   });
 
-  const result = await Promise.all([
-    ...maintainerPromises,
-    ...dependencyPromises,
-  ]);
-
-  logManager.appendLog(
-    `Updated ${LogManager.nameOfType(ProjectModel)} with ID ${emitterAccountId} splits:\n${result
-      .map((p) => `  - ${JSON.stringify(p)}`)
-      .join('\n')}`,
-  );
+  await Promise.all([...maintainerPromises, ...dependencyPromises]);
 }

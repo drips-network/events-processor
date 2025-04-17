@@ -5,26 +5,30 @@ import type { AnyVersion } from '@efstajas/versioned-parser';
 import type LogManager from '../../../core/LogManager';
 import type { ImmutableSplitsDriverId, IpfsHash } from '../../../core/types';
 import { EcosystemMainAccountModel, SubListModel } from '../../../models';
-import { convertToNftDriverId } from '../../../utils/accountIdUtils';
 import { getImmutableSpitsDriverMetadata } from '../../../utils/metadataUtils';
 import unreachableError from '../../../utils/unreachableError';
 import verifySplitsReceivers from '../verifySplitsReceivers';
-import {
-  createProjectReceiver,
-  createSubListReceiver,
-  createDripListReceiver,
-  deleteExistingReceivers,
-  createAddressReceiver,
-} from '../receiversRepository';
 import type {
   addressDriverSplitReceiverSchema,
   repoDriverSplitReceiverSchema,
 } from '../../../metadata/schemas/repo-driver/v2';
 import type { subListSplitReceiverSchema } from '../../../metadata/schemas/immutable-splits-driver/v1';
 import type { dripListSplitReceiverSchema } from '../../../metadata/schemas/nft-driver/v2';
-import verifyProjectSources from '../projectVerification';
 import RecoverableError from '../../../utils/recoverableError';
 import type { immutableSplitsDriverMetadataParser } from '../../../metadata/schemas';
+import { verifyProjectSources } from '../../../utils/projectUtils';
+import {
+  createSplitReceiver,
+  deleteExistingSplitReceivers,
+} from '../receiversRepository';
+import { METADATA_RECEIVER_TYPE_TO_ACCOUNT_TYPE } from '../../../core/splitRules';
+import {
+  assertIsAddressDiverId,
+  assertIsImmutableSplitsDriverId,
+  assertIsNftDriverId,
+  assertIsRepoDriverId,
+  convertToAccountId,
+} from '../../../utils/accountIdUtils';
 
 type Params = {
   ipfsHash: IpfsHash;
@@ -43,62 +47,57 @@ export default async function handleSubListMetadata({
 }: Params) {
   const metadata = await getImmutableSpitsDriverMetadata(ipfsHash);
 
-  const [areSplitsValid, onChainSplitsHash, calculatedSplitsHash] =
-    await verifySplitsReceivers(emitterAccountId, metadata.recipients);
-
-  if (!areSplitsValid) {
+  if (
+    metadata.parent.type !== 'ecosystem' ||
+    metadata.root.type !== 'ecosystem'
+  ) {
     logManager.appendLog(
-      `Skipped Drip List ${emitterAccountId} metadata processing: on-chain splits hash '${onChainSplitsHash}' does not match hash '${calculatedSplitsHash}' calculated from metadata.`,
+      `🚨 Skipped Sub-List metadata processing: parent and root must be of type 'ecosystem'.`,
     );
 
     return;
   }
-  await verifyProjectSources(metadata.recipients);
+
+  const { isMatch, actualHash, onChainHash } = await verifySplitsReceivers(
+    emitterAccountId,
+    metadata.recipients,
+  );
+
+  if (!isMatch) {
+    logManager.appendLog(
+      `🚨 Skipped Sub-List metadata processing: on-chain splits hash '${onChainHash}' does not match '${actualHash}' calculated from metadata.`,
+    );
+
+    return;
+  }
+
+  const { areProjectsValid, message } = await verifyProjectSources(
+    metadata.recipients.filter((r) => r.type === 'repoDriver'),
+  );
+
+  if (!areProjectsValid) {
+    logManager.appendLog(
+      `🚨🕵️‍♂️ Skipped Sub-List metadata processing: ${message}`,
+    );
+
+    return;
+  }
 
   await validateRootAndParentExist(metadata, transaction);
 
-  const subListProps = {
-    id: emitterAccountId,
-    parentEcosystemMainAccountId:
-      metadata.parent.type === 'ecosystem'
-        ? convertToNftDriverId(metadata.parent.accountId)
-        : null,
-    rootEcosystemMainAccountId:
-      metadata.root.type === 'ecosystem'
-        ? convertToNftDriverId(metadata.root.accountId)
-        : null,
-    lastProcessedIpfsHash: ipfsHash,
-  };
+  // ✅ All checks passed, we can proceed with the processing.
 
-  const [subList, isCreated] = await SubListModel.findOrCreate({
+  await upsertSubList({
+    metadata,
+    ipfsHash,
+    logManager,
     transaction,
-    lock: transaction.LOCK.UPDATE,
-    where: { id: emitterAccountId },
-    defaults: {
-      ...subListProps,
-      isValid: false, // Until the related Sub List's metadata is processed.
-    },
+    emitterAccountId,
   });
 
-  if (isCreated) {
-    logManager.appendFindOrCreateLog(SubListModel, true, subList.id);
-  } else {
-    subList.set(subListProps);
+  deleteExistingSplitReceivers(emitterAccountId, transaction);
 
-    logManager.appendUpdateLog(subList, SubListModel, subList.id);
-
-    await subList.save({ transaction });
-  }
-
-  await deleteExistingReceivers({
-    for: {
-      accountId: emitterAccountId,
-      column: 'funderSubListId',
-    },
-    transaction,
-  });
-
-  await setNewReceivers({
+  await createNewSplitReceivers({
     logManager,
     transaction,
     blockTimestamp,
@@ -107,7 +106,44 @@ export default async function handleSubListMetadata({
   });
 }
 
-async function setNewReceivers({
+async function upsertSubList({
+  ipfsHash,
+  metadata,
+  logManager,
+  transaction,
+  emitterAccountId,
+}: {
+  ipfsHash: IpfsHash;
+  logManager: LogManager;
+  transaction: Transaction;
+  emitterAccountId: ImmutableSplitsDriverId;
+  metadata: AnyVersion<typeof immutableSplitsDriverMetadataParser>;
+}): Promise<void> {
+  const [subList, isCreated] = await SubListModel.upsert(
+    {
+      accountId: emitterAccountId,
+      parentAccountType:
+        METADATA_RECEIVER_TYPE_TO_ACCOUNT_TYPE[metadata.parent.type],
+      parentId: convertToAccountId(metadata.parent.accountId),
+      rootAccountType:
+        METADATA_RECEIVER_TYPE_TO_ACCOUNT_TYPE.ecosystem_main_account,
+      rootId: convertToAccountId(metadata.root.accountId),
+      lastProcessedIpfsHash: ipfsHash,
+    },
+    {
+      transaction,
+    },
+  );
+
+  logManager.appendUpsertLog(
+    subList,
+    SubListModel,
+    subList.accountId,
+    Boolean(isCreated),
+  );
+}
+
+async function createNewSplitReceivers({
   receivers,
   logManager,
   transaction,
@@ -128,56 +164,76 @@ async function setNewReceivers({
   const receiverPromises = receivers.map(async (receiver) => {
     switch (receiver.type) {
       case 'repoDriver':
-        return createProjectReceiver({
+        assertIsRepoDriverId(receiver.accountId);
+        return createSplitReceiver({
           logManager,
           transaction,
           blockTimestamp,
-          metadataReceiver: receiver,
-          funder: {
-            type: 'sub-list',
-            accountId: emitterAccountId,
+          splitReceiverShape: {
+            senderAccountId: emitterAccountId,
+            senderAccountType: 'sub_list',
+            receiverAccountId: receiver.accountId,
+            receiverAccountType: 'project',
+            relationshipType: 'sub_list_receiver',
+            weight: receiver.weight,
+            blockTimestamp,
           },
         });
 
       case 'subList':
-        return createSubListReceiver({
+        assertIsImmutableSplitsDriverId(receiver.accountId);
+        return createSplitReceiver({
           logManager,
           transaction,
           blockTimestamp,
-          metadataReceiver: receiver,
-          funder: {
-            type: 'sub-list',
-            accountId: emitterAccountId,
+          splitReceiverShape: {
+            senderAccountId: emitterAccountId,
+            senderAccountType: 'sub_list',
+            receiverAccountId: receiver.accountId,
+            receiverAccountType: 'sub_list',
+            relationshipType: 'sub_list_receiver',
+            weight: receiver.weight,
+            blockTimestamp,
           },
         });
 
       case 'dripList':
-        return createDripListReceiver({
+        assertIsNftDriverId(receiver.accountId);
+        return createSplitReceiver({
           logManager,
           transaction,
           blockTimestamp,
-          metadataReceiver: receiver,
-          funder: {
-            type: 'sub-list',
-            accountId: emitterAccountId,
+          splitReceiverShape: {
+            senderAccountId: emitterAccountId,
+            senderAccountType: 'sub_list',
+            receiverAccountId: receiver.accountId,
+            receiverAccountType: 'drip_list',
+            relationshipType: 'sub_list_receiver',
+            weight: receiver.weight,
+            blockTimestamp,
           },
         });
 
       case 'address':
-        return createAddressReceiver({
+        assertIsAddressDiverId(receiver.accountId);
+        return createSplitReceiver({
           logManager,
           transaction,
           blockTimestamp,
-          metadataReceiver: receiver,
-          funder: {
-            type: 'sub-list',
-            accountId: emitterAccountId,
+          splitReceiverShape: {
+            senderAccountId: emitterAccountId,
+            senderAccountType: 'sub_list',
+            receiverAccountId: receiver.accountId,
+            receiverAccountType: 'address',
+            relationshipType: 'sub_list_receiver',
+            weight: receiver.weight,
+            blockTimestamp,
           },
         });
 
       default:
         return unreachableError(
-          `Unhandled receiver type: ${(receiver as any).type}`,
+          `Unhandled Sub-List Receiver type: ${(receiver as any).type}`,
         );
     }
   });
@@ -189,13 +245,6 @@ async function validateRootAndParentExist(
   metadata: AnyVersion<typeof immutableSplitsDriverMetadataParser>,
   transaction: Transaction,
 ) {
-  if (
-    metadata.parent.type !== 'ecosystem' ||
-    metadata.root.type !== 'ecosystem'
-  ) {
-    throw new Error('Sub Lists are currently only supported in Ecosystems.');
-  }
-
   const root = await EcosystemMainAccountModel.findByPk(
     metadata.root.accountId,
     {
@@ -203,6 +252,7 @@ async function validateRootAndParentExist(
       lock: transaction.LOCK.UPDATE,
     },
   );
+
   if (!root) {
     throw new RecoverableError(
       `Root Ecosystem Main Account '${metadata.root.accountId}' not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,

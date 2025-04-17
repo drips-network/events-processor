@@ -1,11 +1,8 @@
 import type { ModelStaticMembers } from '../core/types';
 import {
   AccountMetadataEmittedEventModel,
-  AddressDriverSplitReceiverModel,
   DripListModel,
-  DripListSplitReceiverModel,
-  Project,
-  RepoDriverSplitReceiverModel,
+  ProjectModel,
   TransferEventModel,
   GivenEventModel,
   StreamsSetEventModel,
@@ -15,7 +12,6 @@ import {
   SqueezedStreamsEventModel,
   SubListModel,
   EcosystemMainAccountModel,
-  SubListSplitReceiverModel,
 } from '../models';
 
 const REGISTERED_MODELS: ModelStaticMembers[] = [];
@@ -35,15 +31,11 @@ export function registerModels(): void {
   registerModel(DripListModel);
   registerModel(GivenEventModel);
   registerModel(SplitEventModel);
-  registerModel(Project);
-  registerModel(EcosystemMainAccountModel);
+  registerModel(ProjectModel);
   registerModel(TransferEventModel);
   registerModel(StreamsSetEventModel);
+  registerModel(EcosystemMainAccountModel);
   registerModel(SqueezedStreamsEventModel);
-  registerModel(SubListSplitReceiverModel);
-  registerModel(DripListSplitReceiverModel);
   registerModel(StreamReceiverSeenEventModel);
-  registerModel(RepoDriverSplitReceiverModel);
-  registerModel(AddressDriverSplitReceiverModel);
   registerModel(AccountMetadataEmittedEventModel);
 }

@@ -1,115 +1,80 @@
 import type {
+  CreationOptional,
   InferAttributes,
   InferCreationAttributes,
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import type { NftDriverId, ImmutableSplitsDriverId } from '../core/types';
+import type { ImmutableSplitsDriverId, AccountId } from '../core/types';
 import getSchema from '../utils/getSchema';
+import type { AccountType } from '../core/splitRules';
 
 export default class SubListModel extends Model<
   InferAttributes<SubListModel>,
   InferCreationAttributes<SubListModel>
 > {
-  public declare id: ImmutableSplitsDriverId;
-  public declare parentDripListId: NftDriverId | null;
-  public declare parentEcosystemMainAccountId: NftDriverId | null;
-  public declare parentSubListId: ImmutableSplitsDriverId | null;
-  public declare rootDripListId: NftDriverId | null;
-  public declare rootEcosystemMainAccountId: NftDriverId | null;
-  public declare lastProcessedIpfsHash: string | null;
-  public declare isValid: boolean;
+  declare public accountId: ImmutableSplitsDriverId;
+  declare public parentId: AccountId;
+  declare public parentAccountType: AccountType;
+  declare public rootId: AccountId;
+  declare public rootAccountType: AccountType;
+  declare public lastProcessedIpfsHash: string;
+  declare public createdAt: CreationOptional<Date>;
+  declare public updatedAt: CreationOptional<Date>;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
       {
-        id: {
+        accountId: {
+          primaryKey: false,
           type: DataTypes.STRING,
-          primaryKey: true,
         },
-        parentDripListId: {
-          // Foreign key
+        parentId: {
+          allowNull: false,
           type: DataTypes.STRING,
-          allowNull: true,
-          references: {
-            model: 'DripLists',
-            key: 'id',
-          },
         },
-        parentEcosystemMainAccountId: {
-          // Foreign key
+        parentAccountType: {
+          allowNull: false,
           type: DataTypes.STRING,
-          allowNull: true,
-          references: {
-            model: 'EcosystemMainAccounts',
-            key: 'id',
-          },
         },
-        parentSubListId: {
-          // Foreign key
+        rootId: {
+          allowNull: false,
           type: DataTypes.STRING,
-          allowNull: true,
-          references: {
-            model: 'SubLists',
-            key: 'id',
-          },
         },
-        rootDripListId: {
-          // Foreign key
+        rootAccountType: {
           type: DataTypes.STRING,
-          allowNull: true,
-          references: {
-            model: 'DripLists',
-            key: 'id',
-          },
-        },
-        rootEcosystemMainAccountId: {
-          // Foreign key
-          type: DataTypes.STRING,
-          allowNull: true,
-          references: {
-            model: 'EcosystemMainAccounts',
-            key: 'id',
-          },
+          allowNull: false,
         },
         lastProcessedIpfsHash: {
           type: DataTypes.TEXT,
-          allowNull: true,
-        },
-        isValid: {
-          type: DataTypes.BOOLEAN,
           allowNull: false,
+        },
+        createdAt: {
+          allowNull: false,
+          type: DataTypes.DATE,
+        },
+        updatedAt: {
+          allowNull: false,
+          type: DataTypes.DATE,
         },
       },
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'SubLists',
+        tableName: 'sub_lists',
+        timestamps: true,
         indexes: [
           {
-            fields: ['parentDripListId'],
-            name: `IX_SubLists_parentDripListId`,
-            unique: false,
+            fields: ['accountId'],
+            name: 'idx_sub_lists_account_id',
           },
           {
-            fields: ['parentEcosystemMainAccountId'],
-            name: `IX_SubLists_parentEcosystemId`,
-            unique: false,
+            fields: ['parentId'],
+            name: 'idx_sub_lists_parent_id',
           },
           {
-            fields: ['parentSubListId'],
-            name: `IX_SubLists_parentSubListId`,
-            unique: false,
-          },
-          {
-            fields: ['rootDripListId'],
-            name: `IX_SubLists_rootDripListId`,
-            unique: false,
-          },
-          {
-            fields: ['rootEcosystemMainAccountId'],
-            name: `IX_SubLists_rootEcosystemId`,
-            unique: false,
+            fields: ['rootId'],
+            name: 'idx_sub_lists_root_id',
           },
         ],
       },

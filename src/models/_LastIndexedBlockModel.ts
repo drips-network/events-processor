@@ -1,4 +1,5 @@
 import type {
+  CreationOptional,
   InferAttributes,
   InferCreationAttributes,
   Sequelize,
@@ -10,27 +11,37 @@ export default class _LastIndexedBlockModel extends Model<
   InferAttributes<_LastIndexedBlockModel>,
   InferCreationAttributes<_LastIndexedBlockModel>
 > {
-  public declare blockNumber: bigint;
-  public declare id: number;
+  declare public blockNumber: bigint;
+  declare public id: number;
+  declare public createdAt: CreationOptional<Date>;
+  declare public updatedAt: CreationOptional<Date>;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
       {
         id: {
-          type: DataTypes.INTEGER,
-          autoIncrement: true,
           primaryKey: true,
+          autoIncrement: true,
+          type: DataTypes.INTEGER,
         },
         blockNumber: {
-          type: DataTypes.BIGINT,
-          allowNull: false,
           unique: true,
+          allowNull: false,
+          type: DataTypes.BIGINT,
+        },
+        createdAt: {
+          allowNull: false,
+          type: DataTypes.DATE,
+        },
+        updatedAt: {
+          allowNull: false,
+          type: DataTypes.DATE,
         },
       },
       {
         sequelize,
         schema: getSchema(),
-        tableName: '_LastIndexedBlock',
+        tableName: '_last_indexed_block',
       },
     );
   }

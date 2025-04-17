@@ -1,5 +1,5 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
-import type { AccountMetadataEmittedEvent } from '../../../contracts/CURRENT_NETWORK/Drips';
+import { toUtf8String } from 'ethers';
 import type { AccountId } from '../../core/types';
 import EventHandlerBase from '../../events/EventHandlerBase';
 import { DRIPS_APP_USER_METADATA_KEY } from '../../core/constants';
@@ -20,13 +20,14 @@ import {
 } from '../../utils/metadataUtils';
 import handleDripListMetadata from './handlers/handleDripListMetadata';
 import type EventHandlerRequest from '../../events/EventHandlerRequest';
-import { AccountMetadataEmittedEventModel } from '../../models';
 import { dbConnection } from '../../db/database';
 import handleEcosystemMainAccountMetadata from './handlers/handleEcosystemMainAccountMetadata';
 import handleSubListMetadata from './handlers/handleSubListMetadata';
 import type { nftDriverAccountMetadataParser } from '../../metadata/schemas';
-import { getCurrentSplitsByAccountId } from './receiversRepository';
+import { getCurrentSplitReceiversBySender } from './receiversRepository';
 import { isLatestEvent } from '../../utils/isLatestEvent';
+import type { AccountMetadataEmittedEvent } from '../../../contracts/CURRENT_NETWORK/Drips';
+import { AccountMetadataEmittedEventModel } from '../../models';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignatures = [
@@ -52,8 +53,8 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
     LogManager.logRequestInfo(
       [
         `📥 ${this.name} is processing ${eventSignature}:`,
-        `  - key:        ${key}`,
-        `  - value:      ${value} (IPFS hash: ${ipfsHash})`,
+        `  - key:        ${key} (decoded: ${toUtf8String(key)})`,
+        `  - value:      ${value} (decoded: ${ipfsHash})`,
         `  - accountId:  ${accountId}`,
         `  - logIndex:   ${logIndex}`,
         `  - txHash:     ${transactionHash}`,
@@ -72,7 +73,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
 
     if (!this._canProcessDriverType(accountId)) {
       LogManager.logRequestInfo(
-        `Skipping ${eventSignature} event: accountId '${accountId}' is not a Driver type that can be processed.`,
+        `Skipping ${eventSignature} event: accountId '${accountId}' is not of a Driver that can be processed.`,
         requestId,
       );
 
@@ -98,9 +99,8 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
           },
         );
 
-      logManager.appendFindOrCreateLog(
+      logManager.appendCreateLog(
         AccountMetadataEmittedEventModel,
-        true,
         `${accountMetadataEmittedEvent.transactionHash}-${accountMetadataEmittedEvent.logIndex}`,
       );
 
@@ -178,7 +178,9 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
     const [accountId] = args as AccountMetadataEmittedEvent.OutputTuple;
 
     return {
-      accountIdsToInvalidate: await getCurrentSplitsByAccountId(accountId),
+      accountIdsToInvalidate: await getCurrentSplitReceiversBySender(
+        convertToAccountId(accountId),
+      ),
     };
   }
 

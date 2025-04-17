@@ -7,7 +7,7 @@ import type EventHandlerRequest from '../events/EventHandlerRequest';
 import StreamReceiverSeenEventModel from '../models/StreamReceiverSeenEventModel';
 import { convertToAccountId } from '../utils/accountIdUtils';
 import { toBigIntString } from '../utils/bigintUtils';
-import { getCurrentSplitsByReceiversHash } from './AccountMetadataEmittedEvent/receiversRepository';
+import { getCurrentSplitReceiversByReceiversHash } from './AccountMetadataEmittedEvent/receiversRepository';
 
 export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'StreamReceiverSeen(bytes32,uint256,uint256)'> {
   public eventSignatures = [
@@ -77,7 +77,7 @@ export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'St
 
     return {
       accountIdsToInvalidate:
-        await getCurrentSplitsByReceiversHash(rawReceiversHash),
+        await getCurrentSplitReceiversByReceiversHash(rawReceiversHash),
     };
   }
 }
