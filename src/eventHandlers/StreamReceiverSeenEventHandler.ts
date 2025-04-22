@@ -1,4 +1,5 @@
 import type { StreamReceiverSeenEvent } from '../../contracts/CURRENT_NETWORK/Drips';
+import logger from '../core/logger';
 import LogManager from '../core/LogManager';
 import type { AccountId } from '../core/types';
 import { dbConnection } from '../db/database';
@@ -64,20 +65,29 @@ export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'St
     });
   }
 
-  public override async beforeHandle(
-    request: EventHandlerRequest<'StreamReceiverSeen(bytes32,uint256,uint256)'>,
-  ): Promise<{
+  public override async beforeHandle({
+    event: { args },
+    id: requestId,
+  }: EventHandlerRequest<'StreamReceiverSeen(bytes32,uint256,uint256)'>): Promise<{
     accountIdsToInvalidate: AccountId[];
   }> {
-    const {
-      event: { args },
-    } = request;
+    logger.info(
+      `[${requestId}] ${this.name} is gathering accountIds to invalidate...`,
+    );
 
     const [rawReceiversHash] = args as StreamReceiverSeenEvent.OutputTuple;
 
+    const accountIdsToInvalidate =
+      await getCurrentSplitReceiversByReceiversHash(rawReceiversHash);
+
+    logger.info(
+      `[${requestId}] ${this.name} account IDs to invalidate: ${accountIdsToInvalidate.join(
+        ', ',
+      )}`,
+    );
+
     return {
-      accountIdsToInvalidate:
-        await getCurrentSplitReceiversByReceiversHash(rawReceiversHash),
+      accountIdsToInvalidate,
     };
   }
 }

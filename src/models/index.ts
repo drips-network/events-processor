@@ -1,9 +1,9 @@
 export { default as SubListModel } from './SubListModel';
 export { default as ProjectModel } from './ProjectModel';
-export { default as SplitReceiver } from './SplitReceiver';
 export { default as DripListModel } from './DripListModel';
 export { default as GivenEventModel } from './GivenEventModel';
 export { default as SplitEventModel } from './SplitEventModel';
+export { default as SplitReceiverModel } from './SplitReceiverModel';
 export { default as TransferEventModel } from './TransferEventModel';
 export { default as StreamsSetEventModel } from './StreamsSetEventModel';
 export { default as _LastIndexedBlockModel } from './_LastIndexedBlockModel';

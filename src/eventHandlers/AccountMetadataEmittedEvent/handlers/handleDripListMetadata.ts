@@ -121,7 +121,7 @@ async function upsertDripList({
   transaction: Transaction;
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>;
 }) {
-  const [dripList, isCreated] = await DripListModel.upsert(
+  const [dripList] = await DripListModel.upsert(
     {
       accountId: convertToNftDriverId(metadata.describes.accountId),
       name: metadata.name ?? null,
@@ -144,12 +144,7 @@ async function upsertDripList({
     },
   );
 
-  logManager.appendUpsertLog(
-    dripList,
-    DripListModel,
-    dripList.accountId,
-    Boolean(isCreated),
-  );
+  logManager.appendUpsertLog(dripList, DripListModel, dripList.accountId);
 }
 
 async function createNewSplitReceivers({

@@ -12,7 +12,7 @@ import appSettings from '../config/appSettings';
 
 async function getLatestIndexedBlock() {
   const record = await _LastIndexedBlockModel.findOne({
-    order: [['blockNumber', 'DESC']],
+    order: [['block_number', 'DESC']],
   });
 
   return record?.blockNumber ? Number(record.blockNumber) : 0;

@@ -107,7 +107,7 @@ async function upsertEcosystemMainAccount({
   transaction: Transaction;
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>;
 }) {
-  const [dripList, isCreated] = await EcosystemMainAccountModel.upsert(
+  const [dripList] = await EcosystemMainAccountModel.upsert(
     {
       accountId: convertToNftDriverId(metadata.describes.accountId),
       name: metadata.name ?? null,
@@ -130,7 +130,6 @@ async function upsertEcosystemMainAccount({
     dripList,
     EcosystemMainAccountModel,
     dripList.accountId,
-    Boolean(isCreated),
   );
 }
 

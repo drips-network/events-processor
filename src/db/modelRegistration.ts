@@ -12,6 +12,7 @@ import {
   SqueezedStreamsEventModel,
   SubListModel,
   EcosystemMainAccountModel,
+  SplitReceiverModel,
 } from '../models';
 
 const REGISTERED_MODELS: ModelStaticMembers[] = [];
@@ -28,11 +29,12 @@ export function registerModels(): void {
   registerModel(_LastIndexedBlockModel);
 
   registerModel(SubListModel);
+  registerModel(ProjectModel);
   registerModel(DripListModel);
   registerModel(GivenEventModel);
   registerModel(SplitEventModel);
-  registerModel(ProjectModel);
   registerModel(TransferEventModel);
+  registerModel(SplitReceiverModel);
   registerModel(StreamsSetEventModel);
   registerModel(EcosystemMainAccountModel);
   registerModel(SqueezedStreamsEventModel);

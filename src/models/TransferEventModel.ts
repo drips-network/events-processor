@@ -45,6 +45,8 @@ export default class TransferEventModel
         sequelize,
         schema: getSchema(),
         tableName: 'transfer_events',
+        underscored: true,
+        timestamps: false,
       },
     );
   }

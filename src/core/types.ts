@@ -57,7 +57,6 @@ export type ChainConfig = {
 export type ModelStaticMembers = {
   new (): Model;
   initialize(sequelize: Sequelize): void;
-  defineAssociations?(): void;
 };
 
 export type StreamHistoryHashes = string & {

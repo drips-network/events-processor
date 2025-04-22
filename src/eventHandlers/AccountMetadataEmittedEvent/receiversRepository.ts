@@ -2,13 +2,13 @@ import { type Transaction } from 'sequelize';
 import type { AccountId } from '../../core/types';
 import type LogManager from '../../core/LogManager';
 import type { SplitReceiverShape } from '../../core/splitRules';
-import { SplitReceiver, StreamReceiverSeenEventModel } from '../../models';
+import { SplitReceiverModel, StreamReceiverSeenEventModel } from '../../models';
 
 export async function deleteExistingSplitReceivers(
   senderAccountId: AccountId,
   transaction: Transaction,
 ) {
-  await SplitReceiver.destroy({
+  await SplitReceiverModel.destroy({
     where: {
       senderAccountId,
     },
@@ -26,18 +26,18 @@ export async function createSplitReceiver({
   transaction: Transaction;
   splitReceiverShape: SplitReceiverShape;
 }) {
-  const splitReceiver = await SplitReceiver.create(
+  const splitReceiver = await SplitReceiverModel.create(
     { ...splitReceiverShape },
     { transaction },
   );
 
-  logManager.appendCreateLog(SplitReceiver, splitReceiver.id.toString());
+  logManager.appendCreateLog(SplitReceiverModel, splitReceiver.id.toString());
 }
 
 export async function getCurrentSplitReceiversBySender(
   senderAccountId: AccountId,
 ): Promise<AccountId[]> {
-  const splitReceivers = await SplitReceiver.findAll({
+  const splitReceivers = await SplitReceiverModel.findAll({
     where: {
       senderAccountId,
     },

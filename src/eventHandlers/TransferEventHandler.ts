@@ -125,13 +125,15 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
   override async afterHandle(context: {
     args: [from: string, to: string, tokenId: bigint];
     blockTimestamp: Date;
+    requestId: string;
   }): Promise<void> {
-    const { args, blockTimestamp } = context;
+    const { args, blockTimestamp, requestId } = context;
     const [from, to, tokenId] = args;
 
     await super.afterHandle({
       args: [tokenId, await calcAccountId(from), await calcAccountId(to)],
       blockTimestamp,
+      requestId,
     });
   }
 }

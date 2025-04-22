@@ -29,47 +29,45 @@ export default class GivenEventModel
     this.init(
       {
         accountId: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         receiver: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         erc20: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         amt: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         ...COMMON_EVENT_INIT_ATTRIBUTES,
       },
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'GivenEvents',
+        tableName: 'given_events',
+        underscored: true,
+        timestamps: false,
         indexes: [
           {
             fields: ['accountId'],
-            name: `IX_GivenEvents_accountId`,
-            unique: false,
+            name: `idx_given_events_accountId`,
           },
           {
             fields: ['receiver'],
-            name: `IX_GivenEvents_receiver`,
-            unique: false,
+            name: `idx_given_events_receiver`,
           },
           {
             fields: ['erc20'],
-            name: `IX_GivenEvents_erc20`,
-            unique: false,
+            name: `idx_given_events_erc20`,
           },
           {
             fields: ['transactionHash', 'logIndex'],
-            name: `IX_GivenEvents_transactionHash_logIndex`,
-            unique: false,
+            name: `idx_given_events_transactionHash_logIndex`,
           },
         ],
       },

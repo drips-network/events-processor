@@ -14,9 +14,9 @@ import {
   RELATIONSHIP_TYPES,
 } from '../core/splitRules';
 
-export default class SplitReceiver extends Model<
-  InferAttributes<SplitReceiver>,
-  InferCreationAttributes<SplitReceiver>
+export default class SplitReceiverModel extends Model<
+  InferAttributes<SplitReceiverModel>,
+  InferCreationAttributes<SplitReceiverModel>
 > {
   declare public id: CreationOptional<number>;
   declare public receiverAccountId: AccountId;
@@ -78,6 +78,7 @@ export default class SplitReceiver extends Model<
         sequelize,
         schema: getSchema(),
         tableName: 'split_receivers',
+        underscored: true,
         timestamps: true,
         indexes: [
           {

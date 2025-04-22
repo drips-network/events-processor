@@ -87,6 +87,7 @@ export default class DripListModel extends Model<
         sequelize,
         schema: getSchema(),
         tableName: 'drip_lists',
+        underscored: true,
         timestamps: true,
         indexes: [
           {

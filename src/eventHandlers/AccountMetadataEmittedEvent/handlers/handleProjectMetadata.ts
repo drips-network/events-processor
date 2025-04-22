@@ -147,7 +147,7 @@ async function upsertProject({
     return null;
   }
 
-  const [project, isCreated] = await ProjectModel.upsert(
+  const [project] = await ProjectModel.upsert(
     {
       accountId: convertToRepoDriverId(accountId),
       url,
@@ -168,12 +168,7 @@ async function upsertProject({
     },
   );
 
-  logManager.appendUpsertLog(
-    project,
-    ProjectModel,
-    project.accountId,
-    Boolean(isCreated),
-  );
+  logManager.appendUpsertLog(project, ProjectModel, project.accountId);
 }
 
 async function createNewSplitReceivers({

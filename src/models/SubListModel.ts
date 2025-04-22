@@ -62,6 +62,7 @@ export default class SubListModel extends Model<
         sequelize,
         schema: getSchema(),
         tableName: 'sub_lists',
+        underscored: true,
         timestamps: true,
         indexes: [
           {

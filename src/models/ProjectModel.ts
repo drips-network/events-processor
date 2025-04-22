@@ -113,6 +113,7 @@ export default class ProjectModel extends Model<
         sequelize,
         schema: getSchema(),
         tableName: 'projects',
+        underscored: true,
         timestamps: true,
         indexes: [
           {

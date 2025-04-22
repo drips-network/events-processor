@@ -28,6 +28,7 @@ import { getCurrentSplitReceiversBySender } from './receiversRepository';
 import { isLatestEvent } from '../../utils/isLatestEvent';
 import type { AccountMetadataEmittedEvent } from '../../../contracts/CURRENT_NETWORK/Drips';
 import { AccountMetadataEmittedEventModel } from '../../models';
+import logger from '../../core/logger';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignatures = [
@@ -53,8 +54,8 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
     LogManager.logRequestInfo(
       [
         `📥 ${this.name} is processing ${eventSignature}:`,
-        `  - key:        ${key} (decoded: ${toUtf8String(key)})`,
-        `  - value:      ${value} (decoded: ${ipfsHash})`,
+        `  - key:        ${toUtf8String(key)} (raw: ${key})`,
+        `  - value:      ${ipfsHash} (raw: ${value})`,
         `  - accountId:  ${accountId}`,
         `  - logIndex:   ${logIndex}`,
         `  - txHash:     ${transactionHash}`,
@@ -172,15 +173,28 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
 
   public override async beforeHandle({
     event: { args },
+    id: requestId,
   }: EventHandlerRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>): Promise<{
     accountIdsToInvalidate: AccountId[];
   }> {
+    logger.info(
+      `[${requestId}] ${this.name} is gathering accountIds to invalidate...`,
+    );
+
     const [accountId] = args as AccountMetadataEmittedEvent.OutputTuple;
 
+    const accountIdsToInvalidate = await getCurrentSplitReceiversBySender(
+      convertToAccountId(accountId),
+    );
+
+    logger.info(
+      `[${requestId}] ${this.name} account IDs to invalidate: ${accountIdsToInvalidate.join(
+        ', ',
+      )}`,
+    );
+
     return {
-      accountIdsToInvalidate: await getCurrentSplitReceiversBySender(
-        convertToAccountId(accountId),
-      ),
+      accountIdsToInvalidate,
     };
   }
 

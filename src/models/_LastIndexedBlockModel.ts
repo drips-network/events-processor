@@ -42,6 +42,7 @@ export default class _LastIndexedBlockModel extends Model<
         sequelize,
         schema: getSchema(),
         tableName: '_last_indexed_block',
+        underscored: true,
       },
     );
   }

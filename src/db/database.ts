@@ -30,7 +30,6 @@ export async function connectToDb(): Promise<void> {
 async function initializeEntities(): Promise<void> {
   logger.info('Initializing database schema...');
 
-  getRegisteredModels().map((Model) => Model.defineAssociations?.());
   getRegisteredModels().map((Model) => Model.initialize(dbConnection));
 
   logger.info('Database schema initialized.');

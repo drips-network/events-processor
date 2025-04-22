@@ -15,6 +15,9 @@ export async function runMigrations(): Promise<void> {
   const sequelize = new Sequelize(connectionString, {
     dialect: 'postgres',
     logging: false,
+    define: {
+      underscored: true,
+    },
   });
 
   const schema = getSchema();

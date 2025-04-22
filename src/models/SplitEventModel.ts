@@ -16,52 +16,51 @@ export default class SplitEventModel
   >
   implements IEventModel
 {
-  public declare accountId: AccountId;
-  public declare receiver: AccountId;
-  public declare erc20: Address;
-  public declare amt: BigIntString;
+  declare public accountId: AccountId;
+  declare public receiver: AccountId;
+  declare public erc20: Address;
+  declare public amt: BigIntString;
 
-  // Common event log properties.
-  public declare logIndex: number;
-  public declare blockNumber: number;
-  public declare blockTimestamp: Date;
-  public declare transactionHash: string;
+  declare public logIndex: number;
+  declare public blockNumber: number;
+  declare public blockTimestamp: Date;
+  declare public transactionHash: string;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
       {
         accountId: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         receiver: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         erc20: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         amt: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         ...COMMON_EVENT_INIT_ATTRIBUTES,
       },
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'SplitEvents',
+        tableName: 'split_events',
+        underscored: true,
+        timestamps: false,
         indexes: [
           {
             fields: ['receiver'],
-            name: `IX_SplitEvents_receiver`,
-            unique: false,
+            name: `idx_split_events_receiver`,
           },
           {
             fields: ['accountId', 'receiver'],
-            name: `IX_SplitEvents_accountId_receiver`,
-            unique: false,
+            name: `idx_split_events_accountId_receiver`,
           },
         ],
       },

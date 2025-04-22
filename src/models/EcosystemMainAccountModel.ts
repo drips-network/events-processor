@@ -81,6 +81,7 @@ export default class EcosystemMainAccountModel extends Model<
         sequelize,
         schema: getSchema(),
         tableName: 'ecosystem_main_accounts',
+        underscored: true,
         timestamps: true,
         indexes: [
           {

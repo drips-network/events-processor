@@ -119,7 +119,7 @@ async function upsertSubList({
   emitterAccountId: ImmutableSplitsDriverId;
   metadata: AnyVersion<typeof immutableSplitsDriverMetadataParser>;
 }): Promise<void> {
-  const [subList, isCreated] = await SubListModel.upsert(
+  const [subList] = await SubListModel.upsert(
     {
       accountId: emitterAccountId,
       parentAccountType:
@@ -135,12 +135,7 @@ async function upsertSubList({
     },
   );
 
-  logManager.appendUpsertLog(
-    subList,
-    SubListModel,
-    subList.accountId,
-    Boolean(isCreated),
-  );
+  logManager.appendUpsertLog(subList, SubListModel, subList.accountId);
 }
 
 async function createNewSplitReceivers({
