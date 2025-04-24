@@ -4,7 +4,7 @@ import type { AnyVersion } from '@efstajas/versioned-parser';
 import { ZeroAddress } from 'ethers';
 import { ProjectModel } from '../../../models';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
-import type LogManager from '../../../core/LogManager';
+import type ScopedLogger from '../../../core/ScopedLogger';
 import {
   calculateProjectStatus,
   verifyProjectSources,
@@ -32,14 +32,14 @@ import {
 type Params = {
   ipfsHash: IpfsHash;
   blockTimestamp: Date;
-  logManager: LogManager;
+  scopedLogger: ScopedLogger;
   transaction: Transaction;
   emitterAccountId: RepoDriverId;
 };
 
 export default async function handleProjectMetadata({
   ipfsHash,
-  logManager,
+  scopedLogger,
   transaction,
   blockTimestamp,
   emitterAccountId,
@@ -47,7 +47,7 @@ export default async function handleProjectMetadata({
   const metadata = await getProjectMetadata(ipfsHash);
 
   if (metadata.describes.accountId !== emitterAccountId) {
-    logManager.appendLog(
+    scopedLogger.bufferMessage(
       `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: metadata describes account ID '${metadata.describes.accountId}' but metadata emitted by '${emitterAccountId}'.`,
     );
 
@@ -60,7 +60,7 @@ export default async function handleProjectMetadata({
   );
 
   if (!isMatch) {
-    logManager.appendLog(
+    scopedLogger.bufferMessage(
       `🚨 Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: on-chain splits hash '${onChainHash}' does not match '${actualHash}' calculated from metadata.`,
     );
 
@@ -74,7 +74,7 @@ export default async function handleProjectMetadata({
     await verifyProjectSources(projectReceivers);
 
   if (!areProjectsValid) {
-    logManager.appendLog(
+    scopedLogger.bufferMessage(
       `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: ${message}`,
     );
 
@@ -83,7 +83,7 @@ export default async function handleProjectMetadata({
 
   const onChainOwner = await repoDriverContract.ownerOf(emitterAccountId);
   if (!onChainOwner || onChainOwner === ZeroAddress) {
-    logManager.appendLog(
+    scopedLogger.bufferMessage(
       `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: on-chain owner is not set.`,
     );
   }
@@ -93,7 +93,7 @@ export default async function handleProjectMetadata({
   await upsertProject({
     metadata,
     ipfsHash,
-    logManager,
+    scopedLogger,
     transaction,
     blockTimestamp,
     onChainOwner: onChainOwner as Address,
@@ -102,7 +102,7 @@ export default async function handleProjectMetadata({
   deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
-    logManager,
+    scopedLogger,
     transaction,
     blockTimestamp,
     emitterAccountId,
@@ -113,14 +113,14 @@ export default async function handleProjectMetadata({
 async function upsertProject({
   ipfsHash,
   metadata,
-  logManager,
+  scopedLogger,
   transaction,
   onChainOwner,
   blockTimestamp,
 }: {
   ipfsHash: IpfsHash;
   blockTimestamp: Date;
-  logManager: LogManager;
+  scopedLogger: ScopedLogger;
   transaction: Transaction;
   onChainOwner: Address;
   metadata: AnyVersion<typeof repoDriverAccountMetadataParser>;
@@ -128,7 +128,7 @@ async function upsertProject({
   const {
     color,
     source: { forge, ownerName, repoName, url },
-    describes: { accountId },
+    describes,
   } = metadata;
 
   function getEmoji(): string | null {
@@ -147,39 +147,54 @@ async function upsertProject({
     return null;
   }
 
-  const [project] = await ProjectModel.upsert(
-    {
-      accountId: convertToRepoDriverId(accountId),
-      url,
-      forge,
-      emoji: getEmoji(),
-      color,
-      name: `${ownerName}/${repoName}` as ProjectName,
-      avatarCid: getAvatarCid(),
-      verificationStatus: calculateProjectStatus(onChainOwner),
-      isVisible: 'isVisible' in metadata ? metadata.isVisible : true, // Projects without `isVisible` field (V4 and below) are considered visible by default.
-      lastProcessedIpfsHash: ipfsHash,
-      ownerAddress: getAddress(onChainOwner),
-      ownerAccountId: convertToAddressDriverId(onChainOwner),
-      claimedAt: blockTimestamp,
-    },
-    {
-      transaction,
-    },
-  );
+  const accountId = convertToRepoDriverId(describes.accountId);
 
-  logManager.appendUpsertLog(project, ProjectModel, project.accountId);
+  const values = {
+    accountId,
+    url,
+    forge,
+    emoji: getEmoji(),
+    color,
+    name: `${ownerName}/${repoName}` as ProjectName,
+    avatarCid: getAvatarCid(),
+    verificationStatus: calculateProjectStatus(onChainOwner),
+    isVisible: 'isVisible' in metadata ? metadata.isVisible : true, // Projects without `isVisible` field (V4 and below) are considered visible by default.
+    lastProcessedIpfsHash: ipfsHash,
+    ownerAddress: getAddress(onChainOwner),
+    ownerAccountId: convertToAddressDriverId(onChainOwner),
+    claimedAt: blockTimestamp,
+  };
+  const [project, isCreation] = await ProjectModel.findOrCreate({
+    where: { accountId },
+    defaults: values,
+  });
+
+  if (!isCreation) {
+    scopedLogger.bufferUpdate({
+      type: ProjectModel,
+      input: project,
+      id: project.accountId,
+    });
+
+    await project.update(values, { transaction });
+  } else {
+    scopedLogger.bufferCreation({
+      type: ProjectModel,
+      input: project,
+      id: project.accountId,
+    });
+  }
 }
 
 async function createNewSplitReceivers({
-  logManager,
+  scopedLogger,
   transaction,
   splitReceivers,
   blockTimestamp,
   emitterAccountId,
 }: {
   blockTimestamp: Date;
-  logManager: LogManager;
+  scopedLogger: ScopedLogger;
   transaction: Transaction;
   emitterAccountId: RepoDriverId;
   splitReceivers: AnyVersion<typeof repoDriverAccountMetadataParser>['splits'];
@@ -190,7 +205,7 @@ async function createNewSplitReceivers({
     assertIsAddressDiverId(maintainer.accountId);
 
     return createSplitReceiver({
-      logManager,
+      scopedLogger,
       transaction,
       blockTimestamp,
       splitReceiverShape: {
@@ -208,7 +223,7 @@ async function createNewSplitReceivers({
   const dependencyPromises = dependencies.map(async (dependency) => {
     if (isRepoDriverId(dependency.accountId)) {
       return createSplitReceiver({
-        logManager,
+        scopedLogger,
         transaction,
         blockTimestamp,
         splitReceiverShape: {
@@ -225,7 +240,7 @@ async function createNewSplitReceivers({
 
     if (isAddressDriverId(dependency.accountId)) {
       return createSplitReceiver({
-        logManager,
+        scopedLogger,
         transaction,
         blockTimestamp,
         splitReceiverShape: {
@@ -242,7 +257,7 @@ async function createNewSplitReceivers({
 
     if (isNftDriverId(dependency.accountId)) {
       return createSplitReceiver({
-        logManager,
+        scopedLogger,
         transaction,
         blockTimestamp,
         splitReceiverShape: {

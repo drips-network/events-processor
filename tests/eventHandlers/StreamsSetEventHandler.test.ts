@@ -4,7 +4,7 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import StreamsSetEventModel from '../../src/models/StreamsSetEventModel';
-import LogManager from '../../src/core/LogManager';
+import ScopedLogger from '../../src/core/ScopedLogger';
 import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { StreamsSetEventHandler } from '../../src/eventHandlers';
 import { toBigIntString } from '../../src/utils/bigintUtils';
@@ -12,7 +12,7 @@ import { toBigIntString } from '../../src/utils/bigintUtils';
 jest.mock('../../src/models/StreamsSetEventModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
-jest.mock('../../src/core/LogManager');
+jest.mock('../../src/core/ScopedLogger');
 
 describe('StreamsSetEventHandler', () => {
   let mockDbTransaction: {};
@@ -60,7 +60,7 @@ describe('StreamsSetEventHandler', () => {
         true,
       ]);
 
-      LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
+      ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
 
       // Act
       await handler['_handle'](mockRequest);

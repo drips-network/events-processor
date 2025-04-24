@@ -34,7 +34,7 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
     if (!result.ok) {
       if (result.error instanceof BaseError) {
         logger.error(
-          `[${request.id}] ${this.name} failed to process event: ${result.error.message}`,
+          `[${request.id}] ${this.name} failed to process event: ${JSON.stringify(result.error, null, 2)}`,
         );
       }
 

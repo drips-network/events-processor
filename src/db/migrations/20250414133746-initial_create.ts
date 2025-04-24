@@ -35,11 +35,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
   await queryInterface.sequelize.query(`
     CREATE TYPE ${schema}.project_verification_status AS ENUM (
       'claimed',
-      'owner_update_requested',
-      'owner_updated',
-      'unclaimed',
-      'pending_owner',
-      'pending_metadata'
+      'unclaimed'
     );
   `);
 
@@ -453,21 +449,21 @@ async function createSubListsEventsTable(
         primaryKey: true,
         type: DataTypes.STRING,
       },
+      parentAccountId: {
+        allowNull: false,
+        type: DataTypes.STRING,
+      },
       parentAccountType: {
         allowNull: false,
         type: literal(`${schema}.account_type`).val as unknown as DataType,
       },
-      parentId: {
+      rootAccountId: {
         allowNull: false,
         type: DataTypes.STRING,
       },
       rootAccountType: {
         allowNull: false,
         type: literal(`${schema}.account_type`).val as unknown as DataType,
-      },
-      rootId: {
-        allowNull: false,
-        type: DataTypes.STRING,
       },
       lastProcessedIpfsHash: {
         allowNull: false,
@@ -499,9 +495,9 @@ async function createSubListsEventsTable(
       schema,
       tableName: `sub_lists`,
     },
-    transformFieldArrayToSnakeCase(['parentId']),
+    transformFieldArrayToSnakeCase(['parentAccountId']),
     {
-      name: 'idx_sub_lists_parent_id',
+      name: 'idx_sub_lists_parent_account_id',
     },
   );
   await queryInterface.addIndex(
@@ -509,9 +505,9 @@ async function createSubListsEventsTable(
       schema,
       tableName: `sub_lists`,
     },
-    transformFieldArrayToSnakeCase(['rootId']),
+    transformFieldArrayToSnakeCase(['rootAccountId']),
     {
-      name: 'idx_sub_lists_root_id',
+      name: 'idx_sub_lists_root_account_id',
     },
   );
 }
@@ -622,10 +618,6 @@ async function createEcosystemMainAccountsTable(
       name: {
         allowNull: true,
         type: DataTypes.STRING,
-      },
-      latestVotingRoundId: {
-        allowNull: true,
-        type: DataTypes.UUID,
       },
       description: {
         allowNull: true,

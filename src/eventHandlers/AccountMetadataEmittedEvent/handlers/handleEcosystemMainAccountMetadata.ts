@@ -1,7 +1,7 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { z } from 'zod';
-import type LogManager from '../../../core/LogManager';
+import type ScopedLogger from '../../../core/ScopedLogger';
 import type { IpfsHash, NftDriverId } from '../../../core/types';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import verifySplitsReceivers from '../verifySplitsReceivers';
@@ -25,7 +25,7 @@ type Params = {
   ipfsHash: IpfsHash;
   blockNumber: number;
   blockTimestamp: Date;
-  logManager: LogManager;
+  scopedLogger: ScopedLogger;
   transaction: Transaction;
   emitterAccountId: NftDriverId;
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>;
@@ -34,7 +34,7 @@ type Params = {
 export default async function handleEcosystemMainAccountMetadata({
   ipfsHash,
   metadata,
-  logManager,
+  scopedLogger,
   blockNumber,
   transaction,
   blockTimestamp,
@@ -43,7 +43,7 @@ export default async function handleEcosystemMainAccountMetadata({
   validateMetadata(metadata);
 
   if (metadata.describes.accountId !== emitterAccountId) {
-    logManager.appendLog(
+    scopedLogger.bufferMessage(
       `🚨🕵️‍♂️ Skipped Ecosystem Main Account ${emitterAccountId} metadata processing: metadata describes account ID '${metadata.describes.accountId}' but metadata emitted by '${emitterAccountId}'.`,
     );
 
@@ -56,7 +56,7 @@ export default async function handleEcosystemMainAccountMetadata({
   );
 
   if (!isMatch) {
-    logManager.appendLog(
+    scopedLogger.bufferMessage(
       `Skipped Ecosystem Main Account ${emitterAccountId} metadata processing: on-chain splits hash '${onChainHash}' does not match hash '${actualHash}' calculated from metadata.`,
     );
 
@@ -68,7 +68,7 @@ export default async function handleEcosystemMainAccountMetadata({
   );
 
   if (!areProjectsValid) {
-    logManager.appendLog(
+    scopedLogger.bufferMessage(
       `🚨🕵️‍♂️ Skipped Ecosystem Main Account ${emitterAccountId} metadata processing: ${message}`,
     );
   }
@@ -78,7 +78,7 @@ export default async function handleEcosystemMainAccountMetadata({
   await upsertEcosystemMainAccount({
     ipfsHash,
     metadata,
-    logManager,
+    scopedLogger,
     blockNumber,
     transaction,
   });
@@ -86,7 +86,7 @@ export default async function handleEcosystemMainAccountMetadata({
   deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
-    logManager,
+    scopedLogger,
     transaction,
     blockTimestamp,
     emitterAccountId,
@@ -97,51 +97,67 @@ export default async function handleEcosystemMainAccountMetadata({
 async function upsertEcosystemMainAccount({
   ipfsHash,
   metadata,
-  logManager,
+  scopedLogger,
   blockNumber,
   transaction,
 }: {
   ipfsHash: IpfsHash;
   blockNumber: number;
-  logManager: LogManager;
+  scopedLogger: ScopedLogger;
   transaction: Transaction;
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>;
 }) {
-  const [dripList] = await EcosystemMainAccountModel.upsert(
-    {
-      accountId: convertToNftDriverId(metadata.describes.accountId),
-      name: metadata.name ?? null,
-      description:
-        'description' in metadata ? metadata.description || null : null,
-      lastProcessedIpfsHash: ipfsHash,
-      isVisible:
-        blockNumber > appSettings.visibilityThresholdBlockNumber &&
-        'isVisible' in metadata
-          ? metadata.isVisible
-          : true,
-      isValid: false, // Until the `Transfer` event is processed.
-    },
-    {
-      transaction,
-    },
-  );
+  const accountId = convertToNftDriverId(metadata.describes.accountId);
 
-  logManager.appendUpsertLog(
-    dripList,
-    EcosystemMainAccountModel,
-    dripList.accountId,
-  );
+  const values = {
+    accountId,
+    name: metadata.name ?? null,
+    description:
+      'description' in metadata ? metadata.description || null : null,
+    lastProcessedIpfsHash: ipfsHash,
+    isVisible:
+      blockNumber > appSettings.visibilityThresholdBlockNumber &&
+      'isVisible' in metadata
+        ? metadata.isVisible
+        : true,
+  };
+
+  const [ecosystemMainAccount, isCreation] =
+    await EcosystemMainAccountModel.findOrCreate({
+      where: { accountId },
+      defaults: {
+        ...values,
+        isValid: false, // Until the `Transfer` event is processed.
+      },
+      transaction,
+    });
+
+  if (!isCreation) {
+    scopedLogger.bufferUpdate({
+      input: ecosystemMainAccount,
+      id: ecosystemMainAccount.accountId,
+      type: EcosystemMainAccountModel,
+    });
+
+    await ecosystemMainAccount.update(values, { transaction });
+  } else {
+    scopedLogger.bufferCreation({
+      input: ecosystemMainAccount,
+      id: ecosystemMainAccount.accountId,
+      type: EcosystemMainAccountModel,
+    });
+  }
 }
 
 async function createNewSplitReceivers({
   splitReceivers,
-  logManager,
+  scopedLogger,
   transaction,
   blockTimestamp,
   emitterAccountId,
 }: {
   blockTimestamp: Date;
-  logManager: LogManager;
+  scopedLogger: ScopedLogger;
   transaction: Transaction;
   emitterAccountId: NftDriverId;
   splitReceivers: (
@@ -154,7 +170,7 @@ async function createNewSplitReceivers({
       case 'repoDriver':
         assertIsRepoDriverId(receiver.accountId);
         return createSplitReceiver({
-          logManager,
+          scopedLogger,
           transaction,
           blockTimestamp,
           splitReceiverShape: {
@@ -171,7 +187,7 @@ async function createNewSplitReceivers({
       case 'subList':
         assertIsImmutableSplitsDriverId(receiver.accountId);
         return createSplitReceiver({
-          logManager,
+          scopedLogger,
           transaction,
           blockTimestamp,
           splitReceiverShape: {

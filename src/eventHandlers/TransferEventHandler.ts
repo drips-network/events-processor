@@ -1,7 +1,7 @@
 import { ZeroAddress } from 'ethers';
 import type { TransferEvent } from '../../contracts/CURRENT_NETWORK/NftDriver';
 import EventHandlerBase from '../events/EventHandlerBase';
-import LogManager from '../core/LogManager';
+import ScopedLogger from '../core/ScopedLogger';
 import { calcAccountId, convertToNftDriverId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import {
@@ -31,7 +31,9 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
   }: EventHandlerRequest<'Transfer(address,address,uint256)'>): Promise<void> {
     const [from, to, rawTokenId] = args as TransferEvent.OutputTuple;
 
-    LogManager.logRequestInfo(
+    const scopedLogger = new ScopedLogger(this.name, requestId);
+
+    scopedLogger.log(
       [
         `📥 ${this.name} is processing ${eventSignature}:`,
         `  - from:       ${from}`,
@@ -40,12 +42,9 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         `  - logIndex:   ${logIndex}`,
         `  - txHash:     ${transactionHash}`,
       ].join('\n'),
-      requestId,
     );
 
     await dbConnection.transaction(async (transaction) => {
-      const logManager = new LogManager(requestId);
-
       const tokenId = convertToNftDriverId(rawTokenId);
 
       const transferEvent = await TransferEventModel.create(
@@ -63,10 +62,11 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         },
       );
 
-      logManager.appendCreateLog(
-        TransferEventModel,
-        `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
-      );
+      scopedLogger.bufferCreation({
+        type: TransferEventModel,
+        input: transferEvent,
+        id: `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
+      });
 
       // Only process if this is the latest event.
       if (
@@ -77,7 +77,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
           transaction,
         ))
       ) {
-        logManager.logAllInfo(this.name);
+        scopedLogger.flush();
 
         return;
       }
@@ -114,11 +114,15 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
           : true;
       entity.isValid = true; // The entity is initialized with `false` when created during account metadata processing.
 
-      logManager.appendUpdateLog(entity, entityModel, entity.accountId);
+      scopedLogger.bufferUpdate({
+        input: entity,
+        type: entityModel,
+        id: entity.accountId,
+      });
 
       await entity.save({ transaction });
 
-      logManager.logAllInfo(this.name);
+      scopedLogger.flush();
     });
   }
 

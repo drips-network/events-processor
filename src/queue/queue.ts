@@ -36,7 +36,7 @@ eventProcessingQueue.on('job failed', (job, err) => {
 });
 
 eventProcessingQueue.on('job retrying', (job, err) => {
-  logger.info(`♻️ [${job}] failed (will be retried): '${err.message}`);
+  logger.info(`♻️ [${job}] failed (will be retried): ${err.message}`);
 });
 
 export default eventProcessingQueue;

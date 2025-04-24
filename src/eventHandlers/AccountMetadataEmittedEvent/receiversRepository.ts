@@ -1,6 +1,6 @@
 import { type Transaction } from 'sequelize';
 import type { AccountId } from '../../core/types';
-import type LogManager from '../../core/LogManager';
+import type ScopedLogger from '../../core/ScopedLogger';
 import type { SplitReceiverShape } from '../../core/splitRules';
 import { SplitReceiverModel, StreamReceiverSeenEventModel } from '../../models';
 
@@ -17,12 +17,12 @@ export async function deleteExistingSplitReceivers(
 }
 
 export async function createSplitReceiver({
-  logManager,
+  scopedLogger,
   transaction,
   splitReceiverShape,
 }: {
   blockTimestamp: Date;
-  logManager: LogManager;
+  scopedLogger: ScopedLogger;
   transaction: Transaction;
   splitReceiverShape: SplitReceiverShape;
 }) {
@@ -31,7 +31,11 @@ export async function createSplitReceiver({
     { transaction },
   );
 
-  logManager.appendCreateLog(SplitReceiverModel, splitReceiver.id.toString());
+  scopedLogger.bufferCreation({
+    input: splitReceiver,
+    type: SplitReceiverModel,
+    id: splitReceiver.id.toString(),
+  });
 }
 
 export async function getCurrentSplitReceiversBySender(

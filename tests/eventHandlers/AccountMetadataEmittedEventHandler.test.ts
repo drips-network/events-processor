@@ -1,5 +1,6 @@
 /* eslint-disable dot-notation */
 import { randomUUID } from 'crypto';
+import { hexlify, toUtf8Bytes } from 'ethers';
 import { AccountMetadataEmittedEventHandler } from '../../src/eventHandlers';
 import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import type { EventData } from '../../src/events/types';
@@ -15,10 +16,10 @@ import {
 } from '../../src/utils/metadataUtils';
 import * as handleDripListMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleDripListMetadata';
 
-jest.mock('../../src/models/AccountMetadataEmittedEvent');
+jest.mock('../../src/models/AccountMetadataEmittedEventModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
-jest.mock('../../src/core/LogManager');
+jest.mock('../../src/core/ScopedLogger');
 jest.mock('../../src/events/eventHandlerUtils');
 jest.mock(
   '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleProjectMetadata',
@@ -71,7 +72,7 @@ describe('AccountMetadataEmittedHandler', () => {
         event: {
           args: [
             80920745289880686872077472087501508459438916877610571750365932290048n,
-            'key',
+            hexlify(toUtf8Bytes('key')),
             '0x516d65444e625169575257666333395844754d354d69796337725755465156666b706d5a7675723965757767584a',
           ],
           logIndex: 1,
@@ -166,7 +167,7 @@ describe('AccountMetadataEmittedHandler', () => {
 
       // Assert
       expect(handleProjectMetadata.default).toHaveBeenCalledWith({
-        logManager: expect.anything(),
+        scopedLogger: expect.anything(),
         emitterAccountId: convertToAccountId(mockRequest.event.args[0]),
         transaction: mockDbTransaction,
         ipfsHash: convertToIpfsHash(mockRequest.event.args[2]),
@@ -215,7 +216,7 @@ describe('AccountMetadataEmittedHandler', () => {
       expect(handleDripListMetadata.default).toHaveBeenCalledWith({
         ipfsHash: convertToIpfsHash(request.event.args[2]),
         metadata: mockMetadata,
-        logManager: expect.anything(),
+        scopedLogger: expect.anything(),
         transaction: mockDbTransaction,
         blockTimestamp: request.event.blockTimestamp,
         blockNumber: request.event.blockNumber,

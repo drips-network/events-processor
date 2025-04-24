@@ -1,5 +1,5 @@
 import EventHandlerBase from '../events/EventHandlerBase';
-import LogManager from '../core/LogManager';
+import ScopedLogger from '../core/ScopedLogger';
 import { convertToAccountId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import { dbConnection } from '../db/database';
@@ -36,7 +36,9 @@ export default class SqueezedStreamsEventHandler extends EventHandlerBase<'Squee
     const streamsHistoryHashes =
       SqueezedStreamsEventModel.toStreamHistoryHashes(rawStreamsHistoryHashes);
 
-    LogManager.logRequestInfo(
+    const scopedLogger = new ScopedLogger(this.name, requestId);
+
+    scopedLogger.log(
       `📥 ${this.name} is processing the following ${request.event.eventSignature}:
       \r\t - accountId:            ${accountId}
       \r\t - erc20:                ${erc20}
@@ -45,12 +47,9 @@ export default class SqueezedStreamsEventHandler extends EventHandlerBase<'Squee
       \r\t - streamsHistoryHashes: ${streamsHistoryHashes}
       \r\t - logIndex:             ${logIndex}
       \r\t - tx hash:              ${transactionHash}`,
-      requestId,
     );
 
     await dbConnection.transaction(async (transaction) => {
-      const logManager = new LogManager(requestId);
-
       const transferEvent = await SqueezedStreamsEventModel.create(
         {
           accountId,
@@ -66,13 +65,13 @@ export default class SqueezedStreamsEventHandler extends EventHandlerBase<'Squee
         { transaction },
       );
 
-      logManager.appendFindOrCreateLog(
-        SqueezedStreamsEventModel,
-        true,
-        `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
-      );
+      scopedLogger.bufferCreation({
+        input: transferEvent,
+        type: SqueezedStreamsEventModel,
+        id: `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
+      });
 
-      logManager.logAllInfo(this.name);
+      scopedLogger.flush();
     });
   }
 }

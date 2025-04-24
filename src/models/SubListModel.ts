@@ -14,9 +14,9 @@ export default class SubListModel extends Model<
   InferCreationAttributes<SubListModel>
 > {
   declare public accountId: ImmutableSplitsDriverId;
-  declare public parentId: AccountId;
+  declare public parentAccountId: AccountId;
   declare public parentAccountType: AccountType;
-  declare public rootId: AccountId;
+  declare public rootAccountId: AccountId;
   declare public rootAccountType: AccountType;
   declare public lastProcessedIpfsHash: string;
   declare public createdAt: CreationOptional<Date>;
@@ -26,10 +26,10 @@ export default class SubListModel extends Model<
     this.init(
       {
         accountId: {
-          primaryKey: false,
+          primaryKey: true,
           type: DataTypes.STRING,
         },
-        parentId: {
+        parentAccountId: {
           allowNull: false,
           type: DataTypes.STRING,
         },
@@ -37,7 +37,7 @@ export default class SubListModel extends Model<
           allowNull: false,
           type: DataTypes.STRING,
         },
-        rootId: {
+        rootAccountId: {
           allowNull: false,
           type: DataTypes.STRING,
         },

@@ -9,14 +9,7 @@ import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
 import type { AddressDriverId, RepoDriverId } from '../core/types';
 
-export const PROJECT_VERIFICATION_STATUSES = [
-  'claimed',
-  'owner_update_requested',
-  'owner_updated',
-  'unclaimed',
-  'pending_owner',
-  'pending_metadata',
-] as const;
+export const PROJECT_VERIFICATION_STATUSES = ['claimed', 'unclaimed'] as const;
 export type ProjectVerificationStatus =
   (typeof PROJECT_VERIFICATION_STATUSES)[number];
 

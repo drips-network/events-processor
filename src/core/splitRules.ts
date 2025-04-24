@@ -62,22 +62,22 @@ const SPLIT_RULES = Object.freeze([
   {
     senderAccountType: 'sub_list',
     receiverAccountType: 'address',
-    relationshipType: 'sub_list_receiver',
+    relationshipType: 'sub_list_link',
   },
   {
     senderAccountType: 'sub_list',
     receiverAccountType: 'drip_list',
-    relationshipType: 'sub_list_receiver',
+    relationshipType: 'sub_list_link',
   },
   {
     senderAccountType: 'sub_list',
     receiverAccountType: 'project',
-    relationshipType: 'sub_list_receiver',
+    relationshipType: 'sub_list_link',
   },
   {
     senderAccountType: 'sub_list',
     receiverAccountType: 'sub_list',
-    relationshipType: 'sub_list_receiver',
+    relationshipType: 'sub_list_link',
   },
 ] as const);
 

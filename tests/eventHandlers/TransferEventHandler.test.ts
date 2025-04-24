@@ -5,17 +5,17 @@ import { TransferEventHandler } from '../../src/eventHandlers';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import { convertToNftDriverId } from '../../src/utils/accountIdUtils';
-import LogManager from '../../src/core/LogManager';
+import ScopedLogger from '../../src/core/ScopedLogger';
 import TransferEventModel from '../../src/models/TransferEventModel';
 import DripListModel from '../../src/models/DripListModel';
 
 jest.mock('../../src/models/TransferEventModel');
-jest.mock('../../src/models/DripList');
+jest.mock('../../src/models/DripListModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
 jest.mock('../../src/events/eventHandlerUtils');
 jest.mock('../../src/utils/accountIdUtils');
-jest.mock('../../src/core/LogManager');
+jest.mock('../../src/core/ScopedLogger');
 jest.mock('../../src/utils/isLatestEvent');
 
 describe('TransferEventHandler', () => {
@@ -64,7 +64,7 @@ describe('TransferEventHandler', () => {
         .fn()
         .mockResolvedValue([{ save: jest.fn() }, true]);
 
-      LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
+      ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
 
       // Act
       await handler['_handle'](mockRequest);

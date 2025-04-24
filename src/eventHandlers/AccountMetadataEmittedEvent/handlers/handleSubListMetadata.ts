@@ -2,7 +2,7 @@
 import type { Transaction } from 'sequelize';
 import type { z } from 'zod';
 import type { AnyVersion } from '@efstajas/versioned-parser';
-import type LogManager from '../../../core/LogManager';
+import type ScopedLogger from '../../../core/ScopedLogger';
 import type { ImmutableSplitsDriverId, IpfsHash } from '../../../core/types';
 import { EcosystemMainAccountModel, SubListModel } from '../../../models';
 import { getImmutableSpitsDriverMetadata } from '../../../utils/metadataUtils';
@@ -28,19 +28,20 @@ import {
   assertIsNftDriverId,
   assertIsRepoDriverId,
   convertToAccountId,
+  convertToImmutableSplitsDriverId,
 } from '../../../utils/accountIdUtils';
 
 type Params = {
   ipfsHash: IpfsHash;
   blockTimestamp: Date;
-  logManager: LogManager;
+  scopedLogger: ScopedLogger;
   emitterAccountId: ImmutableSplitsDriverId;
   transaction: Transaction;
 };
 
 export default async function handleSubListMetadata({
   ipfsHash,
-  logManager,
+  scopedLogger,
   transaction,
   blockTimestamp,
   emitterAccountId,
@@ -51,7 +52,7 @@ export default async function handleSubListMetadata({
     metadata.parent.type !== 'ecosystem' ||
     metadata.root.type !== 'ecosystem'
   ) {
-    logManager.appendLog(
+    scopedLogger.bufferMessage(
       `🚨 Skipped Sub-List metadata processing: parent and root must be of type 'ecosystem'.`,
     );
 
@@ -64,7 +65,7 @@ export default async function handleSubListMetadata({
   );
 
   if (!isMatch) {
-    logManager.appendLog(
+    scopedLogger.bufferMessage(
       `🚨 Skipped Sub-List metadata processing: on-chain splits hash '${onChainHash}' does not match '${actualHash}' calculated from metadata.`,
     );
 
@@ -76,7 +77,7 @@ export default async function handleSubListMetadata({
   );
 
   if (!areProjectsValid) {
-    logManager.appendLog(
+    scopedLogger.bufferMessage(
       `🚨🕵️‍♂️ Skipped Sub-List metadata processing: ${message}`,
     );
 
@@ -90,7 +91,7 @@ export default async function handleSubListMetadata({
   await upsertSubList({
     metadata,
     ipfsHash,
-    logManager,
+    scopedLogger,
     transaction,
     emitterAccountId,
   });
@@ -98,7 +99,7 @@ export default async function handleSubListMetadata({
   deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
-    logManager,
+    scopedLogger,
     transaction,
     blockTimestamp,
     emitterAccountId,
@@ -109,44 +110,60 @@ export default async function handleSubListMetadata({
 async function upsertSubList({
   ipfsHash,
   metadata,
-  logManager,
+  scopedLogger,
   transaction,
   emitterAccountId,
 }: {
   ipfsHash: IpfsHash;
-  logManager: LogManager;
+  scopedLogger: ScopedLogger;
   transaction: Transaction;
   emitterAccountId: ImmutableSplitsDriverId;
   metadata: AnyVersion<typeof immutableSplitsDriverMetadataParser>;
 }): Promise<void> {
-  const [subList] = await SubListModel.upsert(
-    {
-      accountId: emitterAccountId,
-      parentAccountType:
-        METADATA_RECEIVER_TYPE_TO_ACCOUNT_TYPE[metadata.parent.type],
-      parentId: convertToAccountId(metadata.parent.accountId),
-      rootAccountType:
-        METADATA_RECEIVER_TYPE_TO_ACCOUNT_TYPE.ecosystem_main_account,
-      rootId: convertToAccountId(metadata.root.accountId),
-      lastProcessedIpfsHash: ipfsHash,
-    },
-    {
-      transaction,
-    },
-  );
+  const values = {
+    accountId: emitterAccountId,
+    parentAccountType:
+      METADATA_RECEIVER_TYPE_TO_ACCOUNT_TYPE[metadata.parent.type],
+    parentAccountId: convertToAccountId(metadata.parent.accountId),
+    rootAccountType: METADATA_RECEIVER_TYPE_TO_ACCOUNT_TYPE[metadata.root.type],
+    rootAccountId: convertToAccountId(metadata.root.accountId),
+    lastProcessedIpfsHash: ipfsHash,
+  };
 
-  logManager.appendUpsertLog(subList, SubListModel, subList.accountId);
+  const accountId = convertToImmutableSplitsDriverId(emitterAccountId);
+
+  const [subList, isCreation] = await SubListModel.findOrCreate({
+    where: { accountId },
+    transaction,
+    defaults: values,
+  });
+
+  if (!isCreation) {
+    scopedLogger.bufferUpdate({
+      input: subList,
+      type: SubListModel,
+      id: subList.accountId,
+    });
+
+    await subList.update(values, { transaction });
+  } else {
+    scopedLogger.bufferCreation({
+      input: subList,
+      type: SubListModel,
+      id: subList.accountId,
+    });
+  }
 }
 
 async function createNewSplitReceivers({
   receivers,
-  logManager,
+  scopedLogger,
   transaction,
   blockTimestamp,
   emitterAccountId,
 }: {
   blockTimestamp: Date;
-  logManager: LogManager;
+  scopedLogger: ScopedLogger;
   transaction: Transaction;
   emitterAccountId: ImmutableSplitsDriverId;
   receivers: (
@@ -161,7 +178,7 @@ async function createNewSplitReceivers({
       case 'repoDriver':
         assertIsRepoDriverId(receiver.accountId);
         return createSplitReceiver({
-          logManager,
+          scopedLogger,
           transaction,
           blockTimestamp,
           splitReceiverShape: {
@@ -169,7 +186,7 @@ async function createNewSplitReceivers({
             senderAccountType: 'sub_list',
             receiverAccountId: receiver.accountId,
             receiverAccountType: 'project',
-            relationshipType: 'sub_list_receiver',
+            relationshipType: 'sub_list_link',
             weight: receiver.weight,
             blockTimestamp,
           },
@@ -178,7 +195,7 @@ async function createNewSplitReceivers({
       case 'subList':
         assertIsImmutableSplitsDriverId(receiver.accountId);
         return createSplitReceiver({
-          logManager,
+          scopedLogger,
           transaction,
           blockTimestamp,
           splitReceiverShape: {
@@ -186,7 +203,7 @@ async function createNewSplitReceivers({
             senderAccountType: 'sub_list',
             receiverAccountId: receiver.accountId,
             receiverAccountType: 'sub_list',
-            relationshipType: 'sub_list_receiver',
+            relationshipType: 'sub_list_link',
             weight: receiver.weight,
             blockTimestamp,
           },
@@ -195,7 +212,7 @@ async function createNewSplitReceivers({
       case 'dripList':
         assertIsNftDriverId(receiver.accountId);
         return createSplitReceiver({
-          logManager,
+          scopedLogger,
           transaction,
           blockTimestamp,
           splitReceiverShape: {
@@ -203,7 +220,7 @@ async function createNewSplitReceivers({
             senderAccountType: 'sub_list',
             receiverAccountId: receiver.accountId,
             receiverAccountType: 'drip_list',
-            relationshipType: 'sub_list_receiver',
+            relationshipType: 'sub_list_link',
             weight: receiver.weight,
             blockTimestamp,
           },
@@ -212,7 +229,7 @@ async function createNewSplitReceivers({
       case 'address':
         assertIsAddressDiverId(receiver.accountId);
         return createSplitReceiver({
-          logManager,
+          scopedLogger,
           transaction,
           blockTimestamp,
           splitReceiverShape: {
@@ -220,7 +237,7 @@ async function createNewSplitReceivers({
             senderAccountType: 'sub_list',
             receiverAccountId: receiver.accountId,
             receiverAccountType: 'address',
-            relationshipType: 'sub_list_receiver',
+            relationshipType: 'sub_list_link',
             weight: receiver.weight,
             blockTimestamp,
           },

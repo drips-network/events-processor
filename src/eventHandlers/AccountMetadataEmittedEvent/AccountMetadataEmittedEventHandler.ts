@@ -4,7 +4,6 @@ import type { AccountId } from '../../core/types';
 import EventHandlerBase from '../../events/EventHandlerBase';
 import { DRIPS_APP_USER_METADATA_KEY } from '../../core/constants';
 import handleProjectMetadata from './handlers/handleProjectMetadata';
-import LogManager from '../../core/LogManager';
 import {
   isImmutableSplitsDriverId,
   isNftDriverId,
@@ -28,7 +27,7 @@ import { getCurrentSplitReceiversBySender } from './receiversRepository';
 import { isLatestEvent } from '../../utils/isLatestEvent';
 import type { AccountMetadataEmittedEvent } from '../../../contracts/CURRENT_NETWORK/Drips';
 import { AccountMetadataEmittedEventModel } from '../../models';
-import logger from '../../core/logger';
+import ScopedLogger from '../../core/ScopedLogger';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignatures = [
@@ -51,7 +50,9 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
 
     const ipfsHash = convertToIpfsHash(value);
 
-    LogManager.logRequestInfo(
+    const scopedLogger = new ScopedLogger(this.name, requestId);
+
+    scopedLogger.log(
       [
         `📥 ${this.name} is processing ${eventSignature}:`,
         `  - key:        ${toUtf8String(key)} (raw: ${key})`,
@@ -60,30 +61,25 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         `  - logIndex:   ${logIndex}`,
         `  - txHash:     ${transactionHash}`,
       ].join('\n'),
-      requestId,
     );
 
     if (!this._isEmittedByTheDripsApp(key)) {
-      LogManager.logRequestInfo(
+      scopedLogger.log(
         `Skipping ${eventSignature} event: key '${key}' not emitted by the Drips App.`,
-        requestId,
       );
 
       return;
     }
 
     if (!this._canProcessDriverType(accountId)) {
-      LogManager.logRequestInfo(
+      scopedLogger.log(
         `Skipping ${eventSignature} event: accountId '${accountId}' is not of a Driver that can be processed.`,
-        requestId,
       );
 
       return;
     }
 
     await dbConnection.transaction(async (transaction) => {
-      const logManager = new LogManager(requestId);
-
       const accountMetadataEmittedEvent =
         await AccountMetadataEmittedEventModel.create(
           {
@@ -100,10 +96,11 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
           },
         );
 
-      logManager.appendCreateLog(
-        AccountMetadataEmittedEventModel,
-        `${accountMetadataEmittedEvent.transactionHash}-${accountMetadataEmittedEvent.logIndex}`,
-      );
+      scopedLogger.bufferCreation({
+        type: AccountMetadataEmittedEventModel,
+        input: accountMetadataEmittedEvent,
+        id: `${accountMetadataEmittedEvent.transactionHash}-${accountMetadataEmittedEvent.logIndex}`,
+      });
 
       // Only process metadata if this is the latest event.
       if (
@@ -122,7 +119,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       if (isRepoDriverId(accountId)) {
         await handleProjectMetadata({
           ipfsHash,
-          logManager,
+          scopedLogger,
           transaction,
           blockTimestamp,
           emitterAccountId: convertToRepoDriverId(accountId),
@@ -136,7 +133,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
           await handleDripListMetadata({
             ipfsHash,
             metadata,
-            logManager,
+            scopedLogger,
             transaction,
             blockNumber,
             blockTimestamp,
@@ -148,7 +145,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
           await handleEcosystemMainAccountMetadata({
             ipfsHash,
             metadata,
-            logManager,
+            scopedLogger,
             transaction,
             blockNumber,
             blockTimestamp,
@@ -160,14 +157,14 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       if (isImmutableSplitsDriverId(accountId)) {
         await handleSubListMetadata({
           ipfsHash,
-          logManager,
+          scopedLogger,
           transaction,
           blockTimestamp,
           emitterAccountId: convertToImmutableSplitsDriverId(accountId),
         });
       }
 
-      logManager.logAllInfo(this.name);
+      scopedLogger.flush();
     });
   }
 
@@ -177,18 +174,17 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
   }: EventHandlerRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>): Promise<{
     accountIdsToInvalidate: AccountId[];
   }> {
-    logger.info(
-      `[${requestId}] ${this.name} is gathering accountIds to invalidate...`,
-    );
+    const scopedLogger = new ScopedLogger(this.name, requestId);
+
+    scopedLogger.log(`${this.name} is gathering accountIds to invalidate...`);
 
     const [accountId] = args as AccountMetadataEmittedEvent.OutputTuple;
 
     const accountIdsToInvalidate = await getCurrentSplitReceiversBySender(
       convertToAccountId(accountId),
     );
-
-    logger.info(
-      `[${requestId}] ${this.name} account IDs to invalidate: ${accountIdsToInvalidate.join(
+    scopedLogger.log(
+      `${this.name} account IDs to invalidate: ${accountIdsToInvalidate.join(
         ', ',
       )}`,
     );
