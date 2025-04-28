@@ -79,9 +79,11 @@ export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'St
       await getCurrentSplitReceiversByReceiversHash(rawReceiversHash);
 
     scopedLogger.log(
-      `${this.name} account IDs to invalidate: ${accountIdsToInvalidate.join(
-        ', ',
-      )}`,
+      `${this.name} account IDs to invalidate: ${
+        accountIdsToInvalidate.length
+          ? accountIdsToInvalidate.join(', ')
+          : 'none'
+      }`,
     );
 
     return {

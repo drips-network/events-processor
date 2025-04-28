@@ -127,7 +127,7 @@ async function upsertEcosystemMainAccount({
       where: { accountId },
       defaults: {
         ...values,
-        isValid: false, // Until the `Transfer` event is processed.
+        isValid: false, // Until the `SetSplits` event is processed.
       },
       transaction,
     });

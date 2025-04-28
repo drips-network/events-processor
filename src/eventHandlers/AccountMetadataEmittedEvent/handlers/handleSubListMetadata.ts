@@ -135,7 +135,10 @@ async function upsertSubList({
   const [subList, isCreation] = await SubListModel.findOrCreate({
     where: { accountId },
     transaction,
-    defaults: values,
+    defaults: {
+      ...values,
+      isValid: false, // Until the `SetSplits` event is processed.
+    },
   });
 
   if (!isCreation) {

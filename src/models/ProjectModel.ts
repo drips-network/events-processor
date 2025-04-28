@@ -30,6 +30,7 @@ export default class ProjectModel extends Model<
   declare public name: ProjectName;
   declare public avatarCid: string | null;
   declare public verificationStatus: ProjectVerificationStatus;
+  declare public isValid: boolean;
   declare public isVisible: boolean;
   declare public lastProcessedIpfsHash: string;
   declare public ownerAddress: AddressLike;
@@ -44,6 +45,10 @@ export default class ProjectModel extends Model<
         accountId: {
           primaryKey: true,
           type: DataTypes.STRING,
+        },
+        isValid: {
+          allowNull: false,
+          type: DataTypes.BOOLEAN,
         },
         name: {
           allowNull: false,

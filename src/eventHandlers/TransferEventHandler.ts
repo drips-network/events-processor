@@ -14,6 +14,7 @@ import { isLatestEvent } from '../utils/isLatestEvent';
 import appSettings from '../config/appSettings';
 import RecoverableError from '../utils/recoverableError';
 import type { Address } from '../core/types';
+import { nftDriverContract } from '../core/contractClients';
 
 export default class TransferEventHandler extends EventHandlerBase<'Transfer(address,address,uint256)'> {
   public eventSignatures = ['Transfer(address,address,uint256)' as const];
@@ -44,9 +45,20 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
       ].join('\n'),
     );
 
-    await dbConnection.transaction(async (transaction) => {
-      const tokenId = convertToNftDriverId(rawTokenId);
+    const tokenId = convertToNftDriverId(rawTokenId);
 
+    const onChainOwner = await nftDriverContract.ownerOf(tokenId);
+    if (to !== onChainOwner) {
+      scopedLogger.bufferMessage(
+        `🚨🕵️‍♂️ Skipped Drip List or Ecosystem Main Account ${tokenId} TransferEvent processing: on-chain owner '${onChainOwner}' does not match event 'to' '${to}'.`,
+      );
+
+      scopedLogger.flush();
+
+      return;
+    }
+
+    await dbConnection.transaction(async (transaction) => {
       const transferEvent = await TransferEventModel.create(
         {
           tokenId,
@@ -112,7 +124,6 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         blockNumber > appSettings.visibilityThresholdBlockNumber
           ? from === ZeroAddress || from === appSettings.ecosystemDeployer
           : true;
-      entity.isValid = true; // The entity is initialized with `false` when created during account metadata processing.
 
       scopedLogger.bufferUpdate({
         input: entity,

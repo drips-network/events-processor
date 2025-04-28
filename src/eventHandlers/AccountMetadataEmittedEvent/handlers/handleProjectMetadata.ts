@@ -82,10 +82,13 @@ export default async function handleProjectMetadata({
   }
 
   const onChainOwner = await repoDriverContract.ownerOf(emitterAccountId);
+  // If on-chain owner is still unset, it likely means the first `OwnerUpdateRequested` and `OwnerUpdated` events were not emitted (yet?). No need to process the metadata.
   if (!onChainOwner || onChainOwner === ZeroAddress) {
     scopedLogger.bufferMessage(
       `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: on-chain owner is not set.`,
     );
+
+    return;
   }
 
   // ✅ All checks passed, we can proceed with the processing.
@@ -164,9 +167,13 @@ async function upsertProject({
     ownerAccountId: convertToAddressDriverId(onChainOwner),
     claimedAt: blockTimestamp,
   };
+
   const [project, isCreation] = await ProjectModel.findOrCreate({
     where: { accountId },
-    defaults: values,
+    defaults: {
+      ...values,
+      isValid: false, // Until the `SplitsSet` event is processed.
+    },
   });
 
   if (!isCreation) {

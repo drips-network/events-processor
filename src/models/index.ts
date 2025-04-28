@@ -5,6 +5,7 @@ export { default as GivenEventModel } from './GivenEventModel';
 export { default as SplitEventModel } from './SplitEventModel';
 export { default as SplitReceiverModel } from './SplitReceiverModel';
 export { default as TransferEventModel } from './TransferEventModel';
+export { default as SplitsSetEventModel } from './SplitsSetEventModel';
 export { default as StreamsSetEventModel } from './StreamsSetEventModel';
 export { default as _LastIndexedBlockModel } from './_LastIndexedBlockModel';
 export { default as SqueezedStreamsEventModel } from './SqueezedStreamsEventModel';

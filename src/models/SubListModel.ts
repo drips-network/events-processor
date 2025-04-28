@@ -19,6 +19,7 @@ export default class SubListModel extends Model<
   declare public rootAccountId: AccountId;
   declare public rootAccountType: AccountType;
   declare public lastProcessedIpfsHash: string;
+  declare public isValid: boolean;
   declare public createdAt: CreationOptional<Date>;
   declare public updatedAt: CreationOptional<Date>;
 
@@ -28,6 +29,10 @@ export default class SubListModel extends Model<
         accountId: {
           primaryKey: true,
           type: DataTypes.STRING,
+        },
+        isValid: {
+          allowNull: false,
+          type: DataTypes.BOOLEAN,
         },
         parentAccountId: {
           allowNull: false,

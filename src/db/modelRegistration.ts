@@ -14,6 +14,7 @@ import {
   EcosystemMainAccountModel,
   SplitReceiverModel,
 } from '../models';
+import SplitsSetEventModel from '../models/SplitsSetEventModel';
 
 const REGISTERED_MODELS: ModelStaticMembers[] = [];
 
@@ -35,6 +36,7 @@ export function registerModels(): void {
   registerModel(SplitEventModel);
   registerModel(TransferEventModel);
   registerModel(SplitReceiverModel);
+  registerModel(SplitsSetEventModel);
   registerModel(StreamsSetEventModel);
   registerModel(EcosystemMainAccountModel);
   registerModel(SqueezedStreamsEventModel);

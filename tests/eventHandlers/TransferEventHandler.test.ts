@@ -8,6 +8,7 @@ import { convertToNftDriverId } from '../../src/utils/accountIdUtils';
 import ScopedLogger from '../../src/core/ScopedLogger';
 import TransferEventModel from '../../src/models/TransferEventModel';
 import DripListModel from '../../src/models/DripListModel';
+import * as contractClients from '../../src/core/contractClients';
 
 jest.mock('../../src/models/TransferEventModel');
 jest.mock('../../src/models/DripListModel');
@@ -17,6 +18,7 @@ jest.mock('../../src/events/eventHandlerUtils');
 jest.mock('../../src/utils/accountIdUtils');
 jest.mock('../../src/core/ScopedLogger');
 jest.mock('../../src/utils/isLatestEvent');
+jest.mock('../../src/core/contractClients');
 
 describe('TransferEventHandler', () => {
   let mockDbTransaction: {};
@@ -65,6 +67,10 @@ describe('TransferEventHandler', () => {
         .mockResolvedValue([{ save: jest.fn() }, true]);
 
       ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
+
+      contractClients.nftDriverContract.ownerOf = jest
+        .fn()
+        .mockResolvedValue(mockRequest.event.args[1]) as any;
 
       // Act
       await handler['_handle'](mockRequest);

@@ -1,0 +1,92 @@
+/* eslint-disable dot-notation */
+import { randomUUID } from 'crypto';
+import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
+import { dbConnection } from '../../src/db/database';
+import type { EventData } from '../../src/events/types';
+import SplitsSetEventModel from '../../src/models/SplitsSetEventModel';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
+import SplitsSetEventHandler from '../../src/eventHandlers/SplitsSetEvent/SplitsSetEventHandler';
+import ScopedLogger from '../../src/core/ScopedLogger';
+import setIsValidFlag from '../../src/eventHandlers/SplitsSetEvent/setIsValidFlag';
+
+jest.mock('../../src/models/SplitsSetEventModel');
+jest.mock('../../src/db/database');
+jest.mock('bee-queue');
+jest.mock('../../src/core/ScopedLogger');
+jest.mock('../../src/eventHandlers/SplitsSetEvent/setIsValidFlag');
+
+describe('SplitsSetEventHandler', () => {
+  let mockDbTransaction: {};
+  let handler: SplitsSetEventHandler;
+  let mockRequest: EventHandlerRequest<'SplitsSet(uint256,bytes32)'>;
+
+  beforeAll(() => {
+    jest.clearAllMocks();
+
+    handler = new SplitsSetEventHandler();
+
+    mockRequest = {
+      id: randomUUID(),
+      event: {
+        args: [
+          80920745289880686872077472087501508459438916877610571750365932290048n,
+          'receiversHash',
+        ],
+        logIndex: 1,
+        blockNumber: 1,
+        blockTimestamp: new Date(),
+        transactionHash: 'requestTransactionHash',
+      } as EventData<'SplitsSet(uint256,bytes32)'>,
+    };
+
+    mockDbTransaction = {};
+
+    dbConnection.transaction = jest
+      .fn()
+      .mockImplementation((callback) => callback(mockDbTransaction));
+  });
+
+  describe('_handle', () => {
+    test('should create a new SplitsSetEventModel', async () => {
+      // Arrange
+      SplitsSetEventModel.create = jest.fn().mockResolvedValue([
+        {
+          transactionHash: 'SplitsSetTransactionHash',
+          logIndex: 1,
+        },
+      ]);
+
+      ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
+
+      // Act
+      await handler['_handle'](mockRequest);
+
+      // Assert
+      const {
+        event: {
+          args: [rawAccountId, rawReceiversHash],
+          logIndex,
+          blockNumber,
+          blockTimestamp,
+          transactionHash,
+        },
+      } = mockRequest;
+
+      expect(SplitsSetEventModel.create).toHaveBeenCalledWith(
+        {
+          accountId: convertToAccountId(rawAccountId),
+          receiversHash: rawReceiversHash,
+          logIndex,
+          blockNumber,
+          blockTimestamp,
+          transactionHash,
+        },
+        {
+          transaction: mockDbTransaction,
+        },
+      );
+
+      expect(setIsValidFlag).toHaveBeenCalled();
+    });
+  });
+});

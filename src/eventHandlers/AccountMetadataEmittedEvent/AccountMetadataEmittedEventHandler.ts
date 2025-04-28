@@ -183,10 +183,13 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
     const accountIdsToInvalidate = await getCurrentSplitReceiversBySender(
       convertToAccountId(accountId),
     );
+
     scopedLogger.log(
-      `${this.name} account IDs to invalidate: ${accountIdsToInvalidate.join(
-        ', ',
-      )}`,
+      `${this.name} account IDs to invalidate: ${
+        accountIdsToInvalidate.length > 0
+          ? accountIdsToInvalidate.join(', ')
+          : 'none'
+      }`,
     );
 
     return {

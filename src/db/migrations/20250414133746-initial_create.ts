@@ -59,6 +59,47 @@ export async function up({ context: sequelize }: any): Promise<void> {
   await createSqueezedStreamsEventsTable(queryInterface, schema);
   await createStreamReceiverSeenEventsTable(queryInterface, schema);
   await createStreamsSetEventsTable(queryInterface, schema);
+  await createSplitsSetEventsTable(queryInterface, schema);
+}
+
+async function createSplitsSetEventsTable(
+  queryInterface: QueryInterface,
+  schema: DbSchema,
+) {
+  await queryInterface.createTable(
+    {
+      schema,
+      tableName: `splits_set_events`,
+    },
+    transformFieldNamesToSnakeCase({
+      accountId: {
+        allowNull: false,
+        type: DataTypes.STRING,
+      },
+      receiversHash: {
+        allowNull: false,
+        type: DataTypes.STRING,
+      },
+      transactionHash: {
+        primaryKey: true,
+        allowNull: false,
+        type: DataTypes.STRING,
+      },
+      logIndex: {
+        primaryKey: true,
+        allowNull: false,
+        type: DataTypes.INTEGER,
+      },
+      blockNumber: {
+        allowNull: false,
+        type: DataTypes.INTEGER,
+      },
+      blockTimestamp: {
+        allowNull: false,
+        type: DataTypes.DATE,
+      },
+    }),
+  );
 }
 
 async function createStreamsSetEventsTable(
@@ -449,6 +490,10 @@ async function createSubListsEventsTable(
         primaryKey: true,
         type: DataTypes.STRING,
       },
+      isValid: {
+        allowNull: false,
+        type: DataTypes.BOOLEAN,
+      },
       parentAccountId: {
         allowNull: false,
         type: DataTypes.STRING,
@@ -675,6 +720,10 @@ async function createProjectsTable(
       accountId: {
         primaryKey: true,
         type: DataTypes.STRING,
+      },
+      isValid: {
+        allowNull: false,
+        type: DataTypes.BOOLEAN,
       },
       name: {
         allowNull: false,
@@ -947,6 +996,10 @@ export async function down({ context: sequelize }: any): Promise<void> {
   const schema = getSchema();
   const queryInterface: QueryInterface = sequelize.getQueryInterface();
 
+  await queryInterface.dropTable({
+    schema,
+    tableName: `split_set_events`,
+  });
   await queryInterface.dropTable({
     schema,
     tableName: `streams_set_events`,

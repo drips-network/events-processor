@@ -144,7 +144,7 @@ async function upsertDripList({
     where: { accountId },
     defaults: {
       ...values,
-      isValid: false, // Until the `Transfer` event is processed.
+      isValid: false, // Until the `SplitsSet` event is processed.
     },
     transaction,
   });
