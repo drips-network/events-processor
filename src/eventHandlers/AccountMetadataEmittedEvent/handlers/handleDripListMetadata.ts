@@ -2,19 +2,12 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { UUID } from 'crypto';
-import type { z } from 'zod';
 import type { IpfsHash, NftDriverId } from '../../../core/types';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import type ScopedLogger from '../../../core/ScopedLogger';
 import unreachableError from '../../../utils/unreachableError';
 import verifySplitsReceivers from '../verifySplitsReceivers';
 import appSettings from '../../../config/appSettings';
-import type { dripListSplitReceiverSchema } from '../../../metadata/schemas/nft-driver/v2';
-import type {
-  repoDriverSplitReceiverSchema,
-  addressDriverSplitReceiverSchema,
-} from '../../../metadata/schemas/repo-driver/v2';
-import type { subListSplitReceiverSchema } from '../../../metadata/schemas/immutable-splits-driver/v1';
 import {
   createSplitReceiver,
   deleteExistingSplitReceivers,
@@ -76,7 +69,7 @@ export default async function handleDripListMetadata({
   }
 
   const { areProjectsValid, message } = await verifyProjectSources(
-    splitReceivers.filter((r) => r.type === 'repoDriver'),
+    splitReceivers.filter((splitReceiver) => 'source' in splitReceiver),
   );
 
   if (!areProjectsValid) {
@@ -104,7 +97,7 @@ export default async function handleDripListMetadata({
     transaction,
     blockTimestamp,
     emitterAccountId,
-    splitReceivers,
+    metadata,
   });
 }
 
@@ -167,7 +160,7 @@ async function upsertDripList({
 }
 
 async function createNewSplitReceivers({
-  splitReceivers,
+  metadata,
   scopedLogger,
   transaction,
   blockTimestamp,
@@ -177,13 +170,40 @@ async function createNewSplitReceivers({
   scopedLogger: ScopedLogger;
   transaction: Transaction;
   emitterAccountId: NftDriverId;
-  splitReceivers: (
-    | z.infer<typeof repoDriverSplitReceiverSchema>
-    | z.infer<typeof subListSplitReceiverSchema>
-    | z.infer<typeof addressDriverSplitReceiverSchema>
-    | z.infer<typeof dripListSplitReceiverSchema>
-  )[];
+  metadata: AnyVersion<typeof nftDriverAccountMetadataParser>;
 }) {
+  const rawReceivers =
+    // eslint-disable-next-line no-nested-ternary
+    'recipients' in metadata
+      ? (metadata.recipients ?? [])
+      : 'projects' in metadata
+        ? (metadata.projects ?? [])
+        : [];
+
+  // 2. Upgrade legacy payloads so that *every* receiver object has a `type`.
+  //    – v2+ entries already expose `type`.
+  //    – v1 repo receivers carry a `source` property.
+  const splitReceivers = rawReceivers.map((receiver: any) => {
+    if ('type' in receiver) {
+      return receiver; // v6 or v2–v5.
+    }
+
+    // v1 without `type`.
+    if ('source' in receiver) {
+      // Legacy repo driver receiver.
+      return { ...receiver, type: 'repoDriver' } as const;
+    }
+
+    // Legacy address receiver.
+    return { ...receiver, type: 'address' } as const;
+  });
+
+  // Nothing to persist.
+  if (splitReceivers.length === 0) {
+    return;
+  }
+
+  // 3. Persist receivers.
   const receiverPromises = splitReceivers.map(async (receiver) => {
     switch (receiver.type) {
       case 'repoDriver':
@@ -236,6 +256,7 @@ async function createNewSplitReceivers({
             blockTimestamp,
           },
         });
+
       default:
         return unreachableError(
           `Unhandled Drip List Split Receiver type: ${(receiver as any).type}`,
@@ -248,29 +269,11 @@ async function createNewSplitReceivers({
 
 function validateMetadata(
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
-): asserts metadata is Extract<
-  typeof metadata,
-  | {
-      type: 'dripList';
-      recipients: (
-        | z.infer<typeof repoDriverSplitReceiverSchema>
-        | z.infer<typeof subListSplitReceiverSchema>
-        | z.infer<typeof addressDriverSplitReceiverSchema>
-        | z.infer<typeof dripListSplitReceiverSchema>
-      )[];
-    }
-  | {
-      projects: (
-        | z.infer<typeof repoDriverSplitReceiverSchema>
-        | z.infer<typeof addressDriverSplitReceiverSchema>
-        | z.infer<typeof dripListSplitReceiverSchema>
-      )[];
-    }
-> {
-  const isCurrent = 'recipients' in metadata && metadata.type === 'dripList';
-  const isLegacy = 'projects' in metadata;
+) {
+  const isV6 = 'recipients' in metadata && metadata.type === 'dripList';
+  const isV5AndBelow = 'projects' in metadata;
 
-  if (!isCurrent && !isLegacy) {
+  if (!isV6 && !isV5AndBelow) {
     throw new Error('Invalid Drip List metadata schema.');
   }
 }
