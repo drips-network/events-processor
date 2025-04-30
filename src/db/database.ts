@@ -9,6 +9,11 @@ export const dbConnection = new Sequelize(
     dialect: 'postgres',
     logging: false,
     timezone: 'UTC',
+    pool: {
+      max: 15,
+      acquire: 30000,
+      idle: 10000,
+    },
   },
 );
 
