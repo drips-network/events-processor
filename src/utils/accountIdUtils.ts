@@ -1,7 +1,7 @@
 /* eslint-disable no-bitwise */
-import { ethers, type AddressLike } from 'ethers';
 import type {
   AccountId,
+  Address,
   AddressDriverId,
   DripsContract,
   ImmutableSplitsDriverId,
@@ -177,7 +177,7 @@ export function assertIsImmutableSplitsDriverId(
   }
 }
 
-export async function calcAccountId(owner: AddressLike): Promise<AccountId> {
+export async function calcAccountId(owner: Address): Promise<AccountId> {
   return (
     await addressDriverContract.calcAccountId(owner as string)
   ).toString() as AccountId;
@@ -214,40 +214,4 @@ export function assertIsAccountId(
       `Failed to assert: '${accountId}' is not a valid account ID.`,
     );
   }
-}
-
-export function getAddress(accountId: string): AddressLike {
-  let accountIdBigInt: bigint;
-
-  try {
-    accountIdBigInt = BigInt(accountId);
-  } catch {
-    throw new Error(
-      `Failed to get address: '${accountId}' is not a valid bigint string.`,
-    );
-  }
-
-  if (accountIdBigInt < 0n || accountIdBigInt > 2n ** 256n - 1n) {
-    throw new Error(
-      `Failed to get address: '${accountId}' is not a valid positive number within the range of a uint256.`,
-    );
-  }
-
-  if (getContractNameFromAccountId(accountId) !== 'addressDriver') {
-    // Mid 64 bits after first 32 (128-191) must be zero
-    const mid64Mask = ((1n << 64n) - 1n) << 160n;
-
-    if ((accountIdBigInt & mid64Mask) !== 0n) {
-      throw new Error(
-        `Failed to get address: '${accountId}' is not a valid AddressDriver ID. The first 64 (after first 32) bits must be 0.`,
-      );
-    }
-  }
-
-  const addressMask = (1n << 160n) - 1n;
-  const addressBigInt = accountIdBigInt & addressMask;
-
-  // Convert to hex, pad to 20 bytes (40 hex chars), and checksum it
-  const hex = `0x${addressBigInt.toString(16).padStart(40, '0')}`;
-  return ethers.getAddress(hex);
 }

@@ -14,7 +14,6 @@ import {
   assertIsAddressDiverId,
   convertToAddressDriverId,
   convertToRepoDriverId,
-  getAddress,
   isAddressDriverId,
   isNftDriverId,
   isRepoDriverId,
@@ -22,7 +21,10 @@ import {
 import unreachableError from '../../../utils/unreachableError';
 import { getProjectMetadata } from '../../../utils/metadataUtils';
 import verifySplitsReceivers from '../verifySplitsReceivers';
-import { repoDriverContract } from '../../../core/contractClients';
+import {
+  addressDriverContract,
+  repoDriverContract,
+} from '../../../core/contractClients';
 import type { ProjectName } from '../../../models/ProjectModel';
 import {
   createSplitReceiver,
@@ -67,9 +69,9 @@ export default async function handleProjectMetadata({
     return;
   }
 
-  const projectReceivers = metadata.splits.dependencies
-    .flatMap((s) => ('type' in s && s.type === 'repoDriver' ? [s] : []))
-    .filter((dep) => dep.type === 'repoDriver');
+  const projectReceivers = metadata.splits.dependencies.flatMap((s) =>
+    'source' in s ? [s] : [],
+  );
   const { areProjectsValid, message } =
     await verifyProjectSources(projectReceivers);
 
@@ -163,8 +165,10 @@ async function upsertProject({
     verificationStatus: calculateProjectStatus(onChainOwner),
     isVisible: 'isVisible' in metadata ? metadata.isVisible : true, // Projects without `isVisible` field (V4 and below) are considered visible by default.
     lastProcessedIpfsHash: ipfsHash,
-    ownerAddress: getAddress(onChainOwner),
-    ownerAccountId: convertToAddressDriverId(onChainOwner),
+    ownerAddress: onChainOwner,
+    ownerAccountId: convertToAddressDriverId(
+      (await addressDriverContract.calcAccountId(onChainOwner)).toString(),
+    ),
     claimedAt: blockTimestamp,
   };
 

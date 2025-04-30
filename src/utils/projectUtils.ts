@@ -3,7 +3,8 @@ import type { z } from 'zod';
 import unreachableError from './unreachableError';
 import type { Forge, ProjectVerificationStatus } from '../models/ProjectModel';
 import { repoDriverContract } from '../core/contractClients';
-import type { repoDriverSplitReceiverSchema } from '../metadata/schemas/repo-driver/v2';
+import type { sourceSchema } from '../metadata/schemas/common/sources';
+import { assertIsRepoDriverId } from './accountIdUtils';
 
 export function convertForgeToNumber(forge: Forge) {
   switch (forge) {
@@ -29,7 +30,10 @@ export function calculateProjectStatus(
 }
 
 export async function verifyProjectSources(
-  projectReceivers: z.infer<typeof repoDriverSplitReceiverSchema>[],
+  projectReceivers: {
+    accountId: string;
+    source: z.infer<typeof sourceSchema>;
+  }[],
 ): Promise<{
   areProjectsValid: boolean;
   message?: string;
@@ -40,6 +44,8 @@ export async function verifyProjectSources(
     accountId,
     source: { forge, ownerName, repoName },
   } of projectReceivers) {
+    assertIsRepoDriverId(accountId);
+
     const calculatedAccountId = await repoDriverContract.calcAccountId(
       convertForgeToNumber(forge),
       hexlify(toUtf8Bytes(`${ownerName}/${repoName}`)),
