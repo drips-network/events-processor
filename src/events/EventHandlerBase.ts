@@ -20,7 +20,7 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
   protected abstract _handle(request: EventHandlerRequest<T>): Promise<void>;
 
   public async createJob(request: EventHandlerRequest<T>): Promise<void> {
-    await saveEventProcessingJob(request, request.event.eventSignature);
+    await saveEventProcessingJob(request);
   }
 
   /**

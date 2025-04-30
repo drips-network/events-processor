@@ -1,5 +1,3 @@
-/* eslint-disable no-dupe-class-members */
-import type { UUID } from 'crypto';
 import type { Model } from 'sequelize';
 import logger from './logger';
 
@@ -12,10 +10,10 @@ export type ChangedProperties = {
  */
 export default class ScopedLogger {
   private readonly _handler: string;
-  private readonly _requestId: UUID;
+  private readonly _requestId: string;
   private readonly _buffer: string[] = [];
 
-  constructor(handler: string, requestId: UUID) {
+  constructor(handler: string, requestId: string) {
     this._handler = handler;
     this._requestId = requestId;
   }

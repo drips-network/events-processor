@@ -86,14 +86,19 @@ export default async function poll(
           );
 
           await handler?.createJob(
-            new EventHandlerRequest<typeof signature>({
-              logIndex: log.index,
-              blockNumber: log.blockNumber,
-              blockTimestamp: new Date((await log.getBlock()).timestamp * 1000),
-              transactionHash: log.transactionHash,
-              args: parsedLog.args as KnownAny,
-              eventSignature: signature,
-            }),
+            new EventHandlerRequest<typeof signature>(
+              {
+                logIndex: log.index,
+                blockNumber: log.blockNumber,
+                blockTimestamp: new Date(
+                  (await log.getBlock()).timestamp * 1000,
+                ),
+                transactionHash: log.transactionHash,
+                args: parsedLog.args as KnownAny,
+                eventSignature: signature,
+              },
+              `${log.blockNumber}-${log.transactionHash}-${log.index}`,
+            ),
           );
         }
       }),
