@@ -24,7 +24,6 @@ import handleEcosystemMainAccountMetadata from './handlers/handleEcosystemMainAc
 import handleSubListMetadata from './handlers/handleSubListMetadata';
 import type { nftDriverAccountMetadataParser } from '../../metadata/schemas';
 import { getCurrentSplitReceiversBySender } from './receiversRepository';
-import { isLatestEvent } from '../../utils/isLatestEvent';
 import type { AccountMetadataEmittedEvent } from '../../../contracts/CURRENT_NETWORK/Drips';
 import { AccountMetadataEmittedEventModel } from '../../models';
 import ScopedLogger from '../../core/ScopedLogger';
@@ -101,20 +100,6 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         input: accountMetadataEmittedEvent,
         id: `${accountMetadataEmittedEvent.transactionHash}-${accountMetadataEmittedEvent.logIndex}`,
       });
-
-      // Only process metadata if this is the latest event.
-      if (
-        !(await isLatestEvent(
-          accountMetadataEmittedEvent,
-          AccountMetadataEmittedEventModel,
-          {
-            accountId: convertToAccountId(accountId),
-          },
-          transaction,
-        ))
-      ) {
-        return;
-      }
 
       if (isRepoDriverId(accountId)) {
         await handleProjectMetadata({

@@ -17,7 +17,6 @@ jest.mock('bee-queue');
 jest.mock('../../src/events/eventHandlerUtils');
 jest.mock('../../src/utils/accountIdUtils');
 jest.mock('../../src/core/ScopedLogger');
-jest.mock('../../src/utils/isLatestEvent');
 jest.mock('../../src/core/contractClients');
 
 describe('TransferEventHandler', () => {
@@ -45,7 +44,9 @@ describe('TransferEventHandler', () => {
       } as EventData<'Transfer(address,address,uint256)'>,
     };
 
-    mockDbTransaction = {};
+    mockDbTransaction = {
+      LOCK: { UPDATE: jest.fn() },
+    };
 
     dbConnection.transaction = jest
       .fn()
@@ -62,9 +63,7 @@ describe('TransferEventHandler', () => {
         },
       ]);
 
-      DripListModel.findOne = jest
-        .fn()
-        .mockResolvedValue([{ save: jest.fn() }, true]);
+      DripListModel.findByPk = jest.fn().mockResolvedValue({ save: jest.fn() });
 
       ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
 

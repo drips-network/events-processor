@@ -6,7 +6,6 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import type { EventData } from '../../src/events/types';
 import { dbConnection } from '../../src/db/database';
 import AccountMetadataEmittedEventModel from '../../src/models/AccountMetadataEmittedEventModel';
-import { isLatestEvent } from '../../src/utils/isLatestEvent';
 import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { DRIPS_APP_USER_METADATA_KEY } from '../../src/core/constants';
 import * as handleProjectMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleProjectMetadata';
@@ -27,7 +26,6 @@ jest.mock(
 jest.mock(
   '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleDripListMetadata',
 );
-jest.mock('../../src/utils/isLatestEvent');
 jest.mock('../../src/utils/metadataUtils');
 
 describe('AccountMetadataEmittedHandler', () => {
@@ -116,8 +114,6 @@ describe('AccountMetadataEmittedHandler', () => {
         },
       ]);
 
-      (isLatestEvent as jest.Mock).mockResolvedValue(false);
-
       // Act
       await handler['_handle'](mockRequest);
 
@@ -158,8 +154,6 @@ describe('AccountMetadataEmittedHandler', () => {
         true,
       ]);
 
-      (isLatestEvent as jest.Mock).mockResolvedValue(true);
-
       (handleProjectMetadata.default as jest.Mock) = jest.fn();
 
       // Act
@@ -184,8 +178,6 @@ describe('AccountMetadataEmittedHandler', () => {
         },
         true,
       ]);
-
-      (isLatestEvent as jest.Mock).mockResolvedValue(true);
 
       (handleDripListMetadata.default as jest.Mock) = jest.fn();
 

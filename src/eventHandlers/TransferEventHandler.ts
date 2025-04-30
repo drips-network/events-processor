@@ -10,7 +10,6 @@ import {
   TransferEventModel,
 } from '../models';
 import { dbConnection } from '../db/database';
-import { isLatestEvent } from '../utils/isLatestEvent';
 import appSettings from '../config/appSettings';
 import RecoverableError from '../utils/recoverableError';
 import type { Address } from '../core/types';
@@ -77,20 +76,6 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         input: transferEvent,
         id: `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
       });
-
-      // Only process if this is the latest event.
-      if (
-        !(await isLatestEvent(
-          transferEvent,
-          TransferEventModel,
-          { tokenId },
-          transaction,
-        ))
-      ) {
-        scopedLogger.flush();
-
-        return;
-      }
 
       const dripList = await DripListModel.findByPk(tokenId, {
         transaction,
