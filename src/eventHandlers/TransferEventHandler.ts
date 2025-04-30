@@ -53,8 +53,6 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         `🚨🕵️‍♂️ Skipped Drip List or Ecosystem Main Account ${tokenId} TransferEvent processing: on-chain owner '${onChainOwner}' does not match event 'to' '${to}'.`,
       );
 
-      scopedLogger.flush();
-
       return;
     }
 
@@ -118,12 +116,17 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
 
       entity.ownerAddress = to as Address;
       entity.previousOwnerAddress = from as Address;
-      entity.ownerAccountId = await calcAccountId(to);
+      entity.ownerAccountId = await calcAccountId(to as Address);
       entity.creator = to as Address; // TODO: https://github.com/drips-network/events-processor/issues/14
-      entity.isVisible =
-        blockNumber > appSettings.visibilityThresholdBlockNumber
-          ? from === ZeroAddress || from === appSettings.ecosystemDeployer
-          : true;
+
+      const isAboveThreshold =
+        blockNumber > appSettings.visibilityThresholdBlockNumber;
+      const isMint = from === ZeroAddress;
+
+      // Only re-compute vi visibility on real transfers. Mints are handled by metadata.
+      if (!isMint) {
+        entity.isVisible = !isAboveThreshold;
+      }
 
       scopedLogger.bufferUpdate({
         input: entity,
@@ -146,7 +149,11 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
     const [from, to, tokenId] = args;
 
     await super.afterHandle({
-      args: [tokenId, await calcAccountId(from), await calcAccountId(to)],
+      args: [
+        tokenId,
+        await calcAccountId(from as Address),
+        await calcAccountId(to as Address),
+      ],
       blockTimestamp,
       requestId,
     });

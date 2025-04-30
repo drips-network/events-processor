@@ -46,7 +46,7 @@ export default async function setIsValidFlag(
 
     if (!project) {
       throw new RecoverableError(
-        `Failed to set 'isValid' flag for Project: Project '${accountId}' not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
+        `Failed to set 'isValid' flag for Project: Project '${accountId}' not found. Likely waiting on 'AccountMetadataEmitted' event to be processed. Retrying, but if this persists, it is a real error.`,
       );
     }
 
@@ -54,7 +54,7 @@ export default async function setIsValidFlag(
     const dbOwner = project.ownerAddress; // populated from metadata.
     if (onChainOwner !== dbOwner) {
       throw new RecoverableError(
-        `On-chain owner ${onChainOwner} does not match DB owner ${dbOwner} for Project '${accountId}'. Likely waiting on latest 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
+        `On-chain owner ${onChainOwner} does not match DB owner ${dbOwner} for Project '${accountId}'. Likely waiting on latest 'AccountMetadataEmitted' event to be processed. Retrying, but if this persists, it is a real error.`,
       );
     }
 
