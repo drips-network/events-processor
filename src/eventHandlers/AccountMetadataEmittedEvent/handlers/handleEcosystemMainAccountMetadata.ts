@@ -1,8 +1,9 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { z } from 'zod';
+import { ZeroAddress } from 'ethers';
 import type ScopedLogger from '../../../core/ScopedLogger';
-import type { IpfsHash, NftDriverId } from '../../../core/types';
+import type { Address, IpfsHash, NftDriverId } from '../../../core/types';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import verifySplitsReceivers from '../verifySplitsReceivers';
 import type { repoDriverSplitReceiverSchema } from '../../../metadata/schemas/repo-driver/v2';
@@ -11,6 +12,7 @@ import { verifyProjectSources } from '../../../utils/projectUtils';
 import {
   assertIsImmutableSplitsDriverId,
   assertIsRepoDriverId,
+  calcAccountId,
   convertToNftDriverId,
 } from '../../../utils/accountIdUtils';
 import { EcosystemMainAccountModel } from '../../../models';
@@ -20,9 +22,15 @@ import {
   deleteExistingSplitReceivers,
 } from '../receiversRepository';
 import unreachableError from '../../../utils/unreachableError';
+import { nftDriverContract } from '../../../core/contractClients';
+import {
+  decodeVersion,
+  makeVersion,
+} from '../../../utils/lastProcessedVersion';
 
 type Params = {
   ipfsHash: IpfsHash;
+  logIndex: number;
   blockNumber: number;
   blockTimestamp: Date;
   scopedLogger: ScopedLogger;
@@ -33,6 +41,7 @@ type Params = {
 
 export default async function handleEcosystemMainAccountMetadata({
   ipfsHash,
+  logIndex,
   metadata,
   scopedLogger,
   blockNumber,
@@ -77,6 +86,7 @@ export default async function handleEcosystemMainAccountMetadata({
 
   await upsertEcosystemMainAccount({
     ipfsHash,
+    logIndex,
     metadata,
     scopedLogger,
     blockNumber,
@@ -96,11 +106,13 @@ export default async function handleEcosystemMainAccountMetadata({
 
 async function upsertEcosystemMainAccount({
   ipfsHash,
+  logIndex,
   metadata,
   scopedLogger,
   blockNumber,
   transaction,
 }: {
+  logIndex: number;
   ipfsHash: IpfsHash;
   blockNumber: number;
   scopedLogger: ScopedLogger;
@@ -109,17 +121,22 @@ async function upsertEcosystemMainAccount({
 }) {
   const accountId = convertToNftDriverId(metadata.describes.accountId);
 
+  const onChainOwner = (await nftDriverContract.ownerOf(accountId)) as Address;
+
   const values = {
     accountId,
     name: metadata.name ?? null,
     description:
       'description' in metadata ? metadata.description || null : null,
+    ownerAddress: onChainOwner,
+    ownerAccountId: await calcAccountId(onChainOwner),
     lastProcessedIpfsHash: ipfsHash,
     isVisible:
       blockNumber > appSettings.visibilityThresholdBlockNumber &&
       'isVisible' in metadata
         ? metadata.isVisible
         : true,
+    lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
   };
 
   const [ecosystemMainAccount, isCreation] =
@@ -128,11 +145,24 @@ async function upsertEcosystemMainAccount({
       defaults: {
         ...values,
         isValid: false, // Until the `SetSplits` event is processed.
+        previousOwnerAddress: ZeroAddress as Address,
       },
       transaction,
     });
 
   if (!isCreation) {
+    const newVersion = makeVersion(blockNumber, logIndex);
+    const storedVersion = BigInt(ecosystemMainAccount.lastProcessedVersion);
+    const { blockNumber: sb, logIndex: sl } = decodeVersion(storedVersion);
+
+    if (newVersion <= storedVersion) {
+      scopedLogger.log(
+        `Skipped Drip List ${accountId} stale 'AccountMetadata' event (${blockNumber}:${logIndex} ≤ lastProcessed ${sb}:${sl}).`,
+      );
+
+      return;
+    }
+
     scopedLogger.bufferUpdate({
       input: ecosystemMainAccount,
       id: ecosystemMainAccount.accountId,

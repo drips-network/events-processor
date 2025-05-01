@@ -130,6 +130,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         if (this._isEcosystemMainAccountMetadata(metadata)) {
           await handleEcosystemMainAccountMetadata({
             ipfsHash,
+            logIndex,
             metadata,
             scopedLogger,
             transaction,

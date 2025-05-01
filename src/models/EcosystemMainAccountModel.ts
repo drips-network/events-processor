@@ -17,11 +17,12 @@ export default class EcosystemMainAccountModel extends Model<
   declare public name: string | null;
   declare public creator: Address | null;
   declare public description: string | null;
-  declare public ownerAddress: Address | null;
-  declare public ownerAccountId: AccountId | null;
-  declare public previousOwnerAddress: Address | null;
+  declare public ownerAddress: Address;
+  declare public ownerAccountId: AccountId;
+  declare public previousOwnerAddress: Address;
   declare public isVisible: boolean;
   declare public lastProcessedIpfsHash: string;
+  declare public lastProcessedVersion: string;
   declare public createdAt: CreationOptional<Date>;
   declare public updatedAt: CreationOptional<Date>;
 
@@ -37,11 +38,11 @@ export default class EcosystemMainAccountModel extends Model<
           type: DataTypes.BOOLEAN,
         },
         ownerAddress: {
-          allowNull: true,
+          allowNull: false,
           type: DataTypes.STRING,
         },
         ownerAccountId: {
-          allowNull: true,
+          allowNull: false,
           type: DataTypes.STRING,
         },
         name: {
@@ -57,7 +58,7 @@ export default class EcosystemMainAccountModel extends Model<
           type: DataTypes.STRING,
         },
         previousOwnerAddress: {
-          allowNull: true,
+          allowNull: false,
           type: DataTypes.STRING,
         },
         isVisible: {
@@ -67,6 +68,10 @@ export default class EcosystemMainAccountModel extends Model<
         lastProcessedIpfsHash: {
           allowNull: false,
           type: DataTypes.TEXT,
+        },
+        lastProcessedVersion: {
+          allowNull: false,
+          type: DataTypes.BIGINT,
         },
         createdAt: {
           allowNull: false,

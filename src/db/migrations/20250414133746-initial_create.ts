@@ -657,11 +657,11 @@ async function createEcosystemMainAccountsTable(
         type: DataTypes.BOOLEAN,
       },
       ownerAddress: {
-        allowNull: true,
+        allowNull: false,
         type: DataTypes.STRING,
       },
       ownerAccountId: {
-        allowNull: true,
+        allowNull: false,
         type: DataTypes.STRING,
       },
       name: {
@@ -677,7 +677,7 @@ async function createEcosystemMainAccountsTable(
         type: DataTypes.STRING,
       },
       previousOwnerAddress: {
-        allowNull: true,
+        allowNull: false,
         type: DataTypes.STRING,
       },
       isVisible: {
