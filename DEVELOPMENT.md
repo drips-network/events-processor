@@ -69,7 +69,7 @@ This runs all the above steps in one go.
 To undo the most recently applied migration:
 
 ```bash
-npm run db:revert-last-migration
+npm run db:revert-migration
 ```
 
 > ⚠️ Make sure the project is built before running this script, as it uses the compiled .js files under dist.

@@ -29,7 +29,11 @@ export async function runMigrations(): Promise<void> {
       glob: './dist/src/db/migrations/*.js', // Migrations must be built before running.
     },
     context: sequelize,
-    storage: new SequelizeStorage({ sequelize, schema }),
+    storage: new SequelizeStorage({
+      sequelize,
+      schema,
+      tableName: 'sequelize_meta',
+    }),
     logger: console,
   });
 
