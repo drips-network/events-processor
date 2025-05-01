@@ -3,7 +3,12 @@ import type { Transaction } from 'sequelize';
 import type { z } from 'zod';
 import { ZeroAddress } from 'ethers';
 import type ScopedLogger from '../../../core/ScopedLogger';
-import type { Address, IpfsHash, NftDriverId } from '../../../core/types';
+import type {
+  Address,
+  AddressDriverId,
+  IpfsHash,
+  NftDriverId,
+} from '../../../core/types';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import verifySplitsReceivers from '../verifySplitsReceivers';
 import type { repoDriverSplitReceiverSchema } from '../../../metadata/schemas/repo-driver/v2';
@@ -12,7 +17,6 @@ import { verifyProjectSources } from '../../../utils/projectUtils';
 import {
   assertIsImmutableSplitsDriverId,
   assertIsRepoDriverId,
-  calcAccountId,
   convertToNftDriverId,
 } from '../../../utils/accountIdUtils';
 import { EcosystemMainAccountModel } from '../../../models';
@@ -22,7 +26,10 @@ import {
   deleteExistingSplitReceivers,
 } from '../receiversRepository';
 import unreachableError from '../../../utils/unreachableError';
-import { nftDriverContract } from '../../../core/contractClients';
+import {
+  addressDriverContract,
+  nftDriverContract,
+} from '../../../core/contractClients';
 import {
   decodeVersion,
   makeVersion,
@@ -129,7 +136,9 @@ async function upsertEcosystemMainAccount({
     description:
       'description' in metadata ? metadata.description || null : null,
     ownerAddress: onChainOwner,
-    ownerAccountId: await calcAccountId(onChainOwner),
+    ownerAccountId: (
+      await addressDriverContract.calcAccountId(onChainOwner)
+    ).toString() as AddressDriverId,
     lastProcessedIpfsHash: ipfsHash,
     isVisible:
       blockNumber > appSettings.visibilityThresholdBlockNumber &&

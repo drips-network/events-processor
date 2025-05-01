@@ -3,7 +3,12 @@ import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { UUID } from 'crypto';
 import { ZeroAddress } from 'ethers';
-import type { Address, IpfsHash, NftDriverId } from '../../../core/types';
+import type {
+  Address,
+  AddressDriverId,
+  IpfsHash,
+  NftDriverId,
+} from '../../../core/types';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import type ScopedLogger from '../../../core/ScopedLogger';
 import unreachableError from '../../../utils/unreachableError';
@@ -19,14 +24,16 @@ import {
   assertIsAddressDiverId,
   assertIsNftDriverId,
   assertIsRepoDriverId,
-  calcAccountId,
   convertToNftDriverId,
 } from '../../../utils/accountIdUtils';
 import {
   decodeVersion,
   makeVersion,
 } from '../../../utils/lastProcessedVersion';
-import { nftDriverContract } from '../../../core/contractClients';
+import {
+  addressDriverContract,
+  nftDriverContract,
+} from '../../../core/contractClients';
 
 type Params = {
   ipfsHash: IpfsHash;
@@ -136,7 +143,9 @@ async function upsertDripList({
     description:
       'description' in metadata ? metadata.description || null : null,
     ownerAddress: onChainOwner,
-    ownerAccountId: await calcAccountId(onChainOwner),
+    ownerAccountId: (
+      await addressDriverContract.calcAccountId(onChainOwner)
+    ).toString() as AddressDriverId,
     latestVotingRoundId:
       'latestVotingRoundId' in metadata
         ? (metadata.latestVotingRoundId as UUID) || null

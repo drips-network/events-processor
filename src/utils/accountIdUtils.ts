@@ -1,14 +1,12 @@
 /* eslint-disable no-bitwise */
 import type {
   AccountId,
-  Address,
   AddressDriverId,
   DripsContract,
   ImmutableSplitsDriverId,
   NftDriverId,
   RepoDriverId,
 } from '../core/types';
-import { addressDriverContract } from '../core/contractClients';
 
 export function getContractNameFromAccountId(id: string): DripsContract {
   if (Number.isNaN(Number(id))) {
@@ -175,12 +173,6 @@ export function assertIsImmutableSplitsDriverId(
       `Failed to assert: '${id}' is not a valid ImmutableSplitsDriver ID.`,
     );
   }
-}
-
-export async function calcAccountId(owner: Address): Promise<AccountId> {
-  return (
-    await addressDriverContract.calcAccountId(owner as string)
-  ).toString() as AccountId;
 }
 
 // Account ID

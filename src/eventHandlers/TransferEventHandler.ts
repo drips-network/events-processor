@@ -2,7 +2,7 @@ import { ZeroAddress } from 'ethers';
 import type { TransferEvent } from '../../contracts/CURRENT_NETWORK/NftDriver';
 import EventHandlerBase from '../events/EventHandlerBase';
 import ScopedLogger from '../core/ScopedLogger';
-import { calcAccountId, convertToNftDriverId } from '../utils/accountIdUtils';
+import { convertToNftDriverId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import {
   DripListModel,
@@ -11,8 +11,11 @@ import {
 } from '../models';
 import { dbConnection } from '../db/database';
 import RecoverableError from '../utils/recoverableError';
-import type { Address } from '../core/types';
-import { nftDriverContract } from '../core/contractClients';
+import type { Address, AddressDriverId } from '../core/types';
+import {
+  addressDriverContract,
+  nftDriverContract,
+} from '../core/contractClients';
 import { decodeVersion, makeVersion } from '../utils/lastProcessedVersion';
 import unreachableError from '../utils/unreachableError';
 import appSettings from '../config/appSettings';
@@ -70,7 +73,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
 
       if (!entity) {
         throw new RecoverableError(
-          `Drip List or Ecosystem Main Account '${tokenId}' not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
+          `Cannot process 'Transfer' event for Drip List or Ecosystem Main Account ${tokenId}: entity not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
         );
       }
       if (dripList && ecosystemMain) {
@@ -113,7 +116,9 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
 
         entity.creator = onChainOwner; // Equal to `to`.
         entity.ownerAddress = onChainOwner; // Equal to `to`.
-        entity.ownerAccountId = await calcAccountId(onChainOwner);
+        entity.ownerAccountId = (
+          await addressDriverContract.calcAccountId(onChainOwner)
+        ).toString() as AddressDriverId;
         entity.previousOwnerAddress = ZeroAddress as Address;
 
         scopedLogger.bufferUpdate({
@@ -164,7 +169,9 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
       entity.previousOwnerAddress = actualPrev;
 
       entity.ownerAddress = onChainOwner; // Equal to `to`.
-      entity.ownerAccountId = await calcAccountId(onChainOwner); // Equal to `to`.
+      entity.ownerAccountId = (
+        await addressDriverContract.calcAccountId(onChainOwner)
+      ).toString() as AddressDriverId; // Equal to `to`.
 
       entity.isVisible = !(
         blockNumber > appSettings.visibilityThresholdBlockNumber
@@ -193,8 +200,12 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
     await super.afterHandle({
       args: [
         tokenId,
-        await calcAccountId(from as Address),
-        await calcAccountId(to as Address),
+        (
+          await addressDriverContract.calcAccountId(from)
+        ).toString() as AddressDriverId,
+        (
+          await addressDriverContract.calcAccountId(to)
+        ).toString() as AddressDriverId,
       ],
       blockTimestamp: context.blockTimestamp,
       requestId: context.requestId,
