@@ -2,7 +2,8 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { UUID } from 'crypto';
-import type { IpfsHash, NftDriverId } from '../../../core/types';
+import { ZeroAddress } from 'ethers';
+import type { Address, IpfsHash, NftDriverId } from '../../../core/types';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import type ScopedLogger from '../../../core/ScopedLogger';
 import unreachableError from '../../../utils/unreachableError';
@@ -18,11 +19,18 @@ import {
   assertIsAddressDiverId,
   assertIsNftDriverId,
   assertIsRepoDriverId,
+  calcAccountId,
   convertToNftDriverId,
 } from '../../../utils/accountIdUtils';
+import {
+  decodeVersion,
+  makeVersion,
+} from '../../../utils/lastProcessedVersion';
+import { nftDriverContract } from '../../../core/contractClients';
 
 type Params = {
   ipfsHash: IpfsHash;
+  logIndex: number;
   blockNumber: number;
   blockTimestamp: Date;
   scopedLogger: ScopedLogger;
@@ -33,6 +41,7 @@ type Params = {
 
 export default async function handleDripListMetadata({
   ipfsHash,
+  logIndex,
   metadata,
   scopedLogger,
   blockNumber,
@@ -84,6 +93,7 @@ export default async function handleDripListMetadata({
 
   await upsertDripList({
     ipfsHash,
+    logIndex,
     metadata,
     scopedLogger,
     blockNumber,
@@ -93,21 +103,23 @@ export default async function handleDripListMetadata({
   deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
-    scopedLogger,
+    metadata,
     transaction,
+    scopedLogger,
     blockTimestamp,
     emitterAccountId,
-    metadata,
   });
 }
 
 async function upsertDripList({
   ipfsHash,
+  logIndex,
   metadata,
   scopedLogger,
   blockNumber,
   transaction,
 }: {
+  logIndex: number;
   ipfsHash: IpfsHash;
   blockNumber: number;
   scopedLogger: ScopedLogger;
@@ -116,11 +128,15 @@ async function upsertDripList({
 }) {
   const accountId = convertToNftDriverId(metadata.describes.accountId);
 
+  const onChainOwner = (await nftDriverContract.ownerOf(accountId)) as Address;
+
   const values = {
     accountId,
     name: metadata.name ?? null,
     description:
       'description' in metadata ? metadata.description || null : null,
+    ownerAddress: onChainOwner,
+    ownerAccountId: await calcAccountId(onChainOwner),
     latestVotingRoundId:
       'latestVotingRoundId' in metadata
         ? (metadata.latestVotingRoundId as UUID) || null
@@ -131,6 +147,7 @@ async function upsertDripList({
       'isVisible' in metadata
         ? metadata.isVisible
         : true,
+    lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
   };
 
   const [dripList, isCreation] = await DripListModel.findOrCreate({
@@ -138,11 +155,24 @@ async function upsertDripList({
     defaults: {
       ...values,
       isValid: false, // Until the `SplitsSet` event is processed.
+      previousOwnerAddress: ZeroAddress as Address,
     },
     transaction,
   });
 
   if (!isCreation) {
+    const newVersion = makeVersion(blockNumber, logIndex);
+    const storedVersion = BigInt(dripList.lastProcessedVersion);
+    const { blockNumber: sb, logIndex: sl } = decodeVersion(storedVersion);
+
+    if (newVersion <= storedVersion) {
+      scopedLogger.log(
+        `Skipped Drip List ${accountId} stale 'AccountMetadata' event (${blockNumber}:${logIndex} ≤ lastProcessed ${sb}:${sl}).`,
+      );
+
+      return;
+    }
+
     scopedLogger.bufferUpdate({
       id: accountId,
       type: DripListModel,

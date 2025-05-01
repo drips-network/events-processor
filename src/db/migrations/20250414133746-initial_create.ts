@@ -576,11 +576,11 @@ async function createDripListsTable(
         type: DataTypes.BOOLEAN,
       },
       ownerAddress: {
-        allowNull: true,
+        allowNull: false,
         type: DataTypes.STRING,
       },
       ownerAccountId: {
-        allowNull: true,
+        allowNull: false,
         type: DataTypes.STRING,
       },
       name: {
@@ -600,7 +600,7 @@ async function createDripListsTable(
         type: DataTypes.STRING,
       },
       previousOwnerAddress: {
-        allowNull: true,
+        allowNull: false,
         type: DataTypes.STRING,
       },
       isVisible: {
@@ -610,6 +610,10 @@ async function createDripListsTable(
       lastProcessedIpfsHash: {
         allowNull: false,
         type: DataTypes.TEXT,
+      },
+      lastProcessedVersion: {
+        allowNull: false,
+        type: DataTypes.BIGINT,
       },
       createdAt: {
         allowNull: false,
@@ -683,6 +687,10 @@ async function createEcosystemMainAccountsTable(
       lastProcessedIpfsHash: {
         allowNull: false,
         type: DataTypes.TEXT,
+      },
+      lastProcessedVersion: {
+        allowNull: false,
+        type: DataTypes.BIGINT,
       },
       createdAt: {
         allowNull: false,

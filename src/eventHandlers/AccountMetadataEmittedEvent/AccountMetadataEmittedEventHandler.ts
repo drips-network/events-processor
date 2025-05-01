@@ -117,6 +117,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         if (this._isDripListMetadata(metadata)) {
           await handleDripListMetadata({
             ipfsHash,
+            logIndex,
             metadata,
             scopedLogger,
             transaction,

@@ -209,6 +209,7 @@ describe('AccountMetadataEmittedHandler', () => {
         ipfsHash: convertToIpfsHash(request.event.args[2]),
         metadata: mockMetadata,
         scopedLogger: expect.anything(),
+        logIndex: request.event.logIndex,
         transaction: mockDbTransaction,
         blockTimestamp: request.event.blockTimestamp,
         blockNumber: request.event.blockNumber,

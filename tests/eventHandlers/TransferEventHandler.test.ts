@@ -63,7 +63,9 @@ describe('TransferEventHandler', () => {
         },
       ]);
 
-      DripListModel.findByPk = jest.fn().mockResolvedValue({ save: jest.fn() });
+      DripListModel.findByPk = jest
+        .fn()
+        .mockResolvedValue({ save: jest.fn(), lastProcessedVersion: '0' });
 
       ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
 

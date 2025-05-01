@@ -10,10 +10,12 @@ import {
   TransferEventModel,
 } from '../models';
 import { dbConnection } from '../db/database';
-import appSettings from '../config/appSettings';
 import RecoverableError from '../utils/recoverableError';
 import type { Address } from '../core/types';
 import { nftDriverContract } from '../core/contractClients';
+import { decodeVersion, makeVersion } from '../utils/lastProcessedVersion';
+import unreachableError from '../utils/unreachableError';
+import appSettings from '../config/appSettings';
 
 export default class TransferEventHandler extends EventHandlerBase<'Transfer(address,address,uint256)'> {
   public eventSignatures = ['Transfer(address,address,uint256)' as const];
@@ -30,7 +32,7 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
     },
   }: EventHandlerRequest<'Transfer(address,address,uint256)'>): Promise<void> {
     const [from, to, rawTokenId] = args as TransferEvent.OutputTuple;
-
+    const tokenId = convertToNftDriverId(rawTokenId);
     const scopedLogger = new ScopedLogger(this.name, requestId);
 
     scopedLogger.log(
@@ -44,18 +46,100 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
       ].join('\n'),
     );
 
-    const tokenId = convertToNftDriverId(rawTokenId);
-
-    const onChainOwner = await nftDriverContract.ownerOf(tokenId);
+    const onChainOwner = (await nftDriverContract.ownerOf(tokenId)) as Address;
     if (to !== onChainOwner) {
-      scopedLogger.bufferMessage(
-        `🚨🕵️‍♂️ Skipped Drip List or Ecosystem Main Account ${tokenId} TransferEvent processing: on-chain owner '${onChainOwner}' does not match event 'to' '${to}'.`,
+      scopedLogger.log(
+        `Skipped Drip List or Ecosystem Main Account ${tokenId} 'Transfer' event processing: on-chain owner '${onChainOwner}' does not match event 'to' '${to}'.`,
       );
 
       return;
     }
 
     await dbConnection.transaction(async (transaction) => {
+      const dripList = await DripListModel.findByPk(tokenId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      const ecosystemMain = await EcosystemMainAccountModel.findByPk(tokenId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      const entity = dripList ?? ecosystemMain!;
+      const Model = dripList ? DripListModel : EcosystemMainAccountModel;
+
+      if (!entity) {
+        throw new RecoverableError(
+          `Drip List or Ecosystem Main Account '${tokenId}' not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
+        );
+      }
+      if (dripList && ecosystemMain) {
+        unreachableError(
+          `Invariant violation: both Drip List and Ecosystem Main Account found for token '${tokenId}'.`,
+        );
+      }
+
+      const newVersion = makeVersion(blockNumber, logIndex);
+      const storedVersion = BigInt(entity.lastProcessedVersion);
+      const { blockNumber: sb, logIndex: sl } = decodeVersion(storedVersion);
+      const isMint = from === ZeroAddress;
+
+      // Always set the `creator` from a mint event.
+      if (isMint) {
+        if (entity.creator) {
+          unreachableError(
+            `Invariant violation: mint for ${Model.name} ${tokenId} but 'creator' already set to '${entity.creator}'.`,
+          );
+        }
+
+        const transferEvent = await TransferEventModel.create(
+          {
+            tokenId,
+            to: to as Address,
+            from: from as Address,
+            logIndex,
+            blockNumber,
+            blockTimestamp,
+            transactionHash,
+          },
+          { transaction },
+        );
+
+        scopedLogger.bufferCreation({
+          input: transferEvent,
+          type: TransferEventModel,
+          id: `${transactionHash}-${logIndex}`,
+        });
+
+        entity.creator = onChainOwner; // Equal to `to`.
+        entity.ownerAddress = onChainOwner; // Equal to `to`.
+        entity.ownerAccountId = await calcAccountId(onChainOwner);
+        entity.previousOwnerAddress = ZeroAddress as Address;
+
+        scopedLogger.bufferUpdate({
+          type: Model,
+          id: entity.accountId,
+          input: entity,
+        });
+
+        await entity.save({ transaction });
+
+        scopedLogger.flush();
+
+        return;
+      }
+
+      // Staleness guard: skip if not strictly newer.
+      if (newVersion <= storedVersion) {
+        scopedLogger.log(
+          `Skipped Drip List or Ecosystem Main Account ${tokenId} stale 'Transfer' event (${blockNumber}:${logIndex} ≤ lastProcessed ${sb}:${sl}).`,
+        );
+
+        scopedLogger.flush();
+
+        return;
+      }
+
       const transferEvent = await TransferEventModel.create(
         {
           tokenId,
@@ -66,57 +150,32 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
           blockTimestamp,
           transactionHash,
         },
-        {
-          transaction,
-        },
+        { transaction },
       );
 
       scopedLogger.bufferCreation({
         type: TransferEventModel,
+        id: `${transactionHash}-${logIndex}`,
         input: transferEvent,
-        id: `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
       });
 
-      const dripList = await DripListModel.findByPk(tokenId, {
-        transaction,
-        lock: transaction.LOCK.UPDATE,
-      });
+      // Normal update.
+      const actualPrev = entity.ownerAddress ?? (from as Address);
+      entity.previousOwnerAddress = actualPrev;
 
-      const ecosystemMainAccount = await EcosystemMainAccountModel.findByPk(
-        tokenId,
-        {
-          transaction,
-          lock: transaction.LOCK.UPDATE,
-        },
+      entity.ownerAddress = onChainOwner; // Equal to `to`.
+      entity.ownerAccountId = await calcAccountId(onChainOwner); // Equal to `to`.
+
+      entity.isVisible = !(
+        blockNumber > appSettings.visibilityThresholdBlockNumber
       );
 
-      if (!dripList && !ecosystemMainAccount) {
-        throw new RecoverableError(
-          `Drip List or Ecosystem Main Account '${tokenId}' not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
-        );
-      }
-
-      const entity = (dripList ?? ecosystemMainAccount)!;
-      const entityModel = dripList ? DripListModel : EcosystemMainAccountModel;
-
-      entity.ownerAddress = to as Address;
-      entity.previousOwnerAddress = from as Address;
-      entity.ownerAccountId = await calcAccountId(to as Address);
-      entity.creator = to as Address; // TODO: https://github.com/drips-network/events-processor/issues/14
-
-      const isAboveThreshold =
-        blockNumber > appSettings.visibilityThresholdBlockNumber;
-      const isMint = from === ZeroAddress;
-
-      // Only re-compute vi visibility on real transfers. Mints are handled by metadata.
-      if (!isMint) {
-        entity.isVisible = !isAboveThreshold;
-      }
+      entity.lastProcessedVersion = newVersion.toString();
 
       scopedLogger.bufferUpdate({
-        input: entity,
-        type: entityModel,
+        type: Model,
         id: entity.accountId,
+        input: entity,
       });
 
       await entity.save({ transaction });
@@ -130,17 +189,15 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
     blockTimestamp: Date;
     requestId: string;
   }): Promise<void> {
-    const { args, blockTimestamp, requestId } = context;
-    const [from, to, tokenId] = args;
-
+    const [from, to, tokenId] = context.args;
     await super.afterHandle({
       args: [
         tokenId,
         await calcAccountId(from as Address),
         await calcAccountId(to as Address),
       ],
-      blockTimestamp,
-      requestId,
+      blockTimestamp: context.blockTimestamp,
+      requestId: context.requestId,
     });
   }
 }

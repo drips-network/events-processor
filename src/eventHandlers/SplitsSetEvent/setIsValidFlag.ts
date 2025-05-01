@@ -21,6 +21,7 @@ import {
 } from '../../models';
 import type SplitsSetEventModel from '../../models/SplitsSetEventModel';
 import type ScopedLogger from '../../core/ScopedLogger';
+import unreachableError from '../../utils/unreachableError';
 
 export default async function setIsValidFlag(
   { accountId, receiversHash: eventReceiversHash }: SplitsSetEventModel,
@@ -79,15 +80,12 @@ export default async function setIsValidFlag(
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
+    const ecosystemMain = await EcosystemMainAccountModel.findByPk(accountId, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
 
-    const ecosystem = dripList
-      ? null
-      : await EcosystemMainAccountModel.findByPk(accountId, {
-          transaction,
-          lock: transaction.LOCK.UPDATE,
-        });
-
-    const entity = dripList ?? ecosystem;
+    const entity = dripList ?? ecosystemMain!;
     const Model = dripList ? DripListModel : EcosystemMainAccountModel;
 
     if (!entity) {
@@ -95,12 +93,17 @@ export default async function setIsValidFlag(
         `Failed to set 'isValid' flag for ${Model.name}: ${Model.name} '${accountId}' not found.`,
       );
     }
+    if (dripList && ecosystemMain) {
+      unreachableError(
+        `Invariant violation: both Drip List and Ecosystem Main Account found for token '${accountId}'.`,
+      );
+    }
 
     const onChainOwner = await nftDriverContract.ownerOf(accountId);
-    const dbOwner = entity.ownerAddress; // populated from metadata.
+    const dbOwner = entity.ownerAddress;
     if (onChainOwner !== dbOwner) {
       throw new RecoverableError(
-        `On-chain owner ${onChainOwner} does not match DB owner ${dbOwner} for ${Model.name} '${accountId}'. Likely waiting on latest 'Transfer' event to be processed. Retrying, but if this persists, it is a real error.`,
+        `On-chain owner ${onChainOwner} does not match DB owner ${dbOwner} for ${Model.name} '${accountId}'. Likely waiting on another event to be processed. Retrying, but if this persists, it is a real error.`,
       );
     }
 
