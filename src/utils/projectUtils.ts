@@ -1,10 +1,11 @@
-import { hexlify, toUtf8Bytes, ZeroAddress, type AddressLike } from 'ethers';
+import { hexlify, toUtf8Bytes, ZeroAddress } from 'ethers';
 import type { z } from 'zod';
 import unreachableError from './unreachableError';
 import type { Forge, ProjectVerificationStatus } from '../models/ProjectModel';
 import { repoDriverContract } from '../core/contractClients';
 import type { sourceSchema } from '../metadata/schemas/common/sources';
 import { assertIsRepoDriverId } from './accountIdUtils';
+import type { Address } from '../core/types';
 
 export function convertForgeToNumber(forge: Forge) {
   switch (forge) {
@@ -20,7 +21,7 @@ export function convertForgeToNumber(forge: Forge) {
 }
 
 export function calculateProjectStatus(
-  owner: AddressLike | null,
+  owner: Address | null,
 ): ProjectVerificationStatus {
   if (!owner || owner === ZeroAddress) {
     return 'unclaimed';

@@ -32,7 +32,7 @@ export default async function saveEventProcessingJob<T extends EventSignature>(
       }),
     })
     .setId(request.id)
-    .retries(10)
-    .backoff('exponential', 500)
+    .retries(15)
+    .backoff('fixed', 30000)
     .save();
 }
