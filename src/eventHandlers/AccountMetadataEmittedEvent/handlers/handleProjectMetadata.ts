@@ -1,7 +1,6 @@
 /* eslint-disable no-param-reassign */ // Mutating Sequelize model instance is intentional and safe here.
 import { type Transaction } from 'sequelize';
 import type { AnyVersion } from '@efstajas/versioned-parser';
-import { ZeroAddress } from 'ethers';
 import { ProjectModel } from '../../../models';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
 import type ScopedLogger from '../../../core/ScopedLogger';
@@ -9,7 +8,12 @@ import {
   calculateProjectStatus,
   verifyProjectSources,
 } from '../../../utils/projectUtils';
-import type { Address, IpfsHash, RepoDriverId } from '../../../core/types';
+import type {
+  Address,
+  AddressDriverId,
+  IpfsHash,
+  RepoDriverId,
+} from '../../../core/types';
 import {
   assertIsAddressDiverId,
   convertToAddressDriverId,
@@ -30,9 +34,15 @@ import {
   createSplitReceiver,
   deleteExistingSplitReceivers,
 } from '../receiversRepository';
+import {
+  decodeVersion,
+  makeVersion,
+} from '../../../utils/lastProcessedVersion';
 
 type Params = {
+  logIndex: number;
   ipfsHash: IpfsHash;
+  blockNumber: number;
   blockTimestamp: Date;
   scopedLogger: ScopedLogger;
   transaction: Transaction;
@@ -41,6 +51,8 @@ type Params = {
 
 export default async function handleProjectMetadata({
   ipfsHash,
+  logIndex,
+  blockNumber,
   scopedLogger,
   transaction,
   blockTimestamp,
@@ -83,25 +95,16 @@ export default async function handleProjectMetadata({
     return;
   }
 
-  const onChainOwner = await repoDriverContract.ownerOf(emitterAccountId);
-  // If on-chain owner is still unset, it likely means the first `OwnerUpdateRequested` and `OwnerUpdated` events were not emitted (yet?). No need to process the metadata.
-  if (!onChainOwner || onChainOwner === ZeroAddress) {
-    scopedLogger.bufferMessage(
-      `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: on-chain owner is not set.`,
-    );
-
-    return;
-  }
-
   // ✅ All checks passed, we can proceed with the processing.
 
   await upsertProject({
+    logIndex,
     metadata,
     ipfsHash,
+    blockNumber,
     scopedLogger,
     transaction,
     blockTimestamp,
-    onChainOwner: onChainOwner as Address,
   });
 
   deleteExistingSplitReceivers(emitterAccountId, transaction);
@@ -117,17 +120,19 @@ export default async function handleProjectMetadata({
 
 async function upsertProject({
   ipfsHash,
+  logIndex,
   metadata,
+  blockNumber,
   scopedLogger,
   transaction,
-  onChainOwner,
   blockTimestamp,
 }: {
+  logIndex: number;
   ipfsHash: IpfsHash;
+  blockNumber: number;
   blockTimestamp: Date;
-  scopedLogger: ScopedLogger;
   transaction: Transaction;
-  onChainOwner: Address;
+  scopedLogger: ScopedLogger;
   metadata: AnyVersion<typeof repoDriverAccountMetadataParser>;
 }): Promise<void> {
   const {
@@ -153,6 +158,7 @@ async function upsertProject({
   }
 
   const accountId = convertToRepoDriverId(describes.accountId);
+  const onChainOwner = (await repoDriverContract.ownerOf(accountId)) as Address;
 
   const values = {
     accountId,
@@ -168,11 +174,14 @@ async function upsertProject({
     ownerAddress: onChainOwner,
     ownerAccountId: convertToAddressDriverId(
       (await addressDriverContract.calcAccountId(onChainOwner)).toString(),
-    ),
+    ) as AddressDriverId,
     claimedAt: blockTimestamp,
+    lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
   };
 
   const [project, isCreation] = await ProjectModel.findOrCreate({
+    transaction,
+    lock: transaction.LOCK.UPDATE,
     where: { accountId },
     defaults: {
       ...values,
@@ -181,6 +190,18 @@ async function upsertProject({
   });
 
   if (!isCreation) {
+    const newVersion = makeVersion(blockNumber, logIndex);
+    const storedVersion = BigInt(project.lastProcessedVersion);
+    const { blockNumber: sb, logIndex: sl } = decodeVersion(storedVersion);
+
+    if (newVersion <= storedVersion) {
+      scopedLogger.log(
+        `Skipped Project ${accountId} stale 'AccountMetadata' event (${blockNumber}:${logIndex} ≤ lastProcessed ${sb}:${sl}).`,
+      );
+
+      return;
+    }
+
     scopedLogger.bufferUpdate({
       type: ProjectModel,
       input: project,

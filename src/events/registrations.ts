@@ -7,6 +7,7 @@ import {
   StreamsSetEventHandler,
   SqueezedStreamsEventHandler,
 } from '../eventHandlers';
+import OwnerUpdatedEventHandler from '../eventHandlers/OwnerUpdatedEventHandler';
 import SplitsSetEventHandler from '../eventHandlers/SplitsSetEvent/SplitsSetEventHandler';
 import { registerEventHandler } from './eventHandlerUtils';
 
@@ -42,5 +43,9 @@ export function registerEventHandlers(): void {
   registerEventHandler<'SqueezedStreams(uint256,address,uint256,uint128,bytes32[])'>(
     'SqueezedStreams(uint256,address,uint256,uint128,bytes32[])',
     SqueezedStreamsEventHandler,
+  );
+  registerEventHandler<'OwnerUpdated(uint256,address)'>(
+    'OwnerUpdated(uint256,address)',
+    OwnerUpdatedEventHandler,
   );
 }

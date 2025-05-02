@@ -97,7 +97,7 @@ export default async function poll(
                 args: parsedLog.args as KnownAny,
                 eventSignature: signature,
               },
-              `${log.blockNumber}-${log.transactionHash}-${log.index}`,
+              `${log.blockNumber}:${log.transactionHash}:${log.index}`,
             ),
           );
         }

@@ -36,6 +36,7 @@ export default class ProjectModel extends Model<
   declare public ownerAddress: AddressLike;
   declare public ownerAccountId: AddressDriverId;
   declare public claimedAt: Date;
+  declare public lastProcessedVersion: string;
   declare public createdAt: CreationOptional<Date>;
   declare public updatedAt: CreationOptional<Date>;
 
@@ -93,6 +94,10 @@ export default class ProjectModel extends Model<
         lastProcessedIpfsHash: {
           allowNull: false,
           type: DataTypes.TEXT,
+        },
+        lastProcessedVersion: {
+          allowNull: false,
+          type: DataTypes.STRING,
         },
         claimedAt: {
           allowNull: false,
