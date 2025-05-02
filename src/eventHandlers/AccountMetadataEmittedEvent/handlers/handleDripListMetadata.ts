@@ -160,13 +160,14 @@ async function upsertDripList({
   };
 
   const [dripList, isCreation] = await DripListModel.findOrCreate({
+    transaction,
+    lock: transaction.LOCK.UPDATE,
     where: { accountId },
     defaults: {
       ...values,
       isValid: false, // Until the `SplitsSet` event is processed.
       previousOwnerAddress: ZeroAddress as Address,
     },
-    transaction,
   });
 
   if (!isCreation) {

@@ -133,8 +133,9 @@ async function upsertSubList({
   const accountId = convertToImmutableSplitsDriverId(emitterAccountId);
 
   const [subList, isCreation] = await SubListModel.findOrCreate({
-    where: { accountId },
     transaction,
+    lock: transaction.LOCK.UPDATE,
+    where: { accountId },
     defaults: {
       ...values,
       isValid: false, // Until the `SetSplits` event is processed.
