@@ -13,6 +13,7 @@ import {
   SubListModel,
   EcosystemMainAccountModel,
   SplitReceiverModel,
+  OwnerUpdatedEventModel,
 } from '../models';
 import SplitsSetEventModel from '../models/SplitsSetEventModel';
 
@@ -38,6 +39,7 @@ export function registerModels(): void {
   registerModel(SplitReceiverModel);
   registerModel(SplitsSetEventModel);
   registerModel(StreamsSetEventModel);
+  registerModel(OwnerUpdatedEventModel);
   registerModel(EcosystemMainAccountModel);
   registerModel(SqueezedStreamsEventModel);
   registerModel(StreamReceiverSeenEventModel);

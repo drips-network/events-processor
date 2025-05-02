@@ -60,6 +60,47 @@ export async function up({ context: sequelize }: any): Promise<void> {
   await createStreamReceiverSeenEventsTable(queryInterface, schema);
   await createStreamsSetEventsTable(queryInterface, schema);
   await createSplitsSetEventsTable(queryInterface, schema);
+  await createOwnerUpdatedEventsTable(queryInterface, schema);
+}
+
+async function createOwnerUpdatedEventsTable(
+  queryInterface: QueryInterface,
+  schema: DbSchema,
+) {
+  await queryInterface.createTable(
+    {
+      schema,
+      tableName: `owner_updated_events`,
+    },
+    transformFieldNamesToSnakeCase({
+      owner: {
+        allowNull: false,
+        type: DataTypes.STRING,
+      },
+      accountId: {
+        allowNull: false,
+        type: DataTypes.STRING,
+      },
+      transactionHash: {
+        primaryKey: true,
+        allowNull: false,
+        type: DataTypes.STRING,
+      },
+      logIndex: {
+        primaryKey: true,
+        allowNull: false,
+        type: DataTypes.INTEGER,
+      },
+      blockNumber: {
+        allowNull: false,
+        type: DataTypes.INTEGER,
+      },
+      blockTimestamp: {
+        allowNull: false,
+        type: DataTypes.DATE,
+      },
+    }),
+  );
 }
 
 async function createSplitsSetEventsTable(
@@ -782,6 +823,10 @@ async function createProjectsTable(
         allowNull: false,
         type: DataTypes.DATE,
       },
+      lastProcessedVersion: {
+        allowNull: false,
+        type: DataTypes.BIGINT,
+      },
       createdAt: {
         allowNull: false,
         type: DataTypes.DATE,
@@ -1006,7 +1051,11 @@ export async function down({ context: sequelize }: any): Promise<void> {
 
   await queryInterface.dropTable({
     schema,
-    tableName: `split_set_events`,
+    tableName: `owner_updated_events`,
+  });
+  await queryInterface.dropTable({
+    schema,
+    tableName: `splits_set_events`,
   });
   await queryInterface.dropTable({
     schema,

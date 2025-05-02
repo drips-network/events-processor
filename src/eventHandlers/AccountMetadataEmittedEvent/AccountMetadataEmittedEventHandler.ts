@@ -103,7 +103,9 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
 
       if (isRepoDriverId(accountId)) {
         await handleProjectMetadata({
+          logIndex,
           ipfsHash,
+          blockNumber,
           scopedLogger,
           transaction,
           blockTimestamp,
@@ -125,9 +127,7 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
             blockTimestamp,
             emitterAccountId: convertToNftDriverId(accountId),
           });
-        }
-
-        if (this._isEcosystemMainAccountMetadata(metadata)) {
+        } else if (this._isEcosystemMainAccountMetadata(metadata)) {
           await handleEcosystemMainAccountMetadata({
             ipfsHash,
             logIndex,

@@ -8,6 +8,7 @@ export { default as TransferEventModel } from './TransferEventModel';
 export { default as SplitsSetEventModel } from './SplitsSetEventModel';
 export { default as StreamsSetEventModel } from './StreamsSetEventModel';
 export { default as _LastIndexedBlockModel } from './_LastIndexedBlockModel';
+export { default as OwnerUpdatedEventModel } from './OwnerUpdatedEventModel';
 export { default as SqueezedStreamsEventModel } from './SqueezedStreamsEventModel';
 export { default as EcosystemMainAccountModel } from './EcosystemMainAccountModel';
 export { default as StreamReceiverSeenEventModel } from './StreamReceiverSeenEventModel';
