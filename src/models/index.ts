@@ -7,7 +7,7 @@ export { default as SplitReceiverModel } from './SplitReceiverModel';
 export { default as TransferEventModel } from './TransferEventModel';
 export { default as SplitsSetEventModel } from './SplitsSetEventModel';
 export { default as StreamsSetEventModel } from './StreamsSetEventModel';
-export { default as _LastIndexedBlockModel } from './_LastIndexedBlockModel';
+export { default as LastIndexedBlockModel } from './LastIndexedBlockModel';
 export { default as OwnerUpdatedEventModel } from './OwnerUpdatedEventModel';
 export { default as SqueezedStreamsEventModel } from './SqueezedStreamsEventModel';
 export { default as EcosystemMainAccountModel } from './EcosystemMainAccountModel';

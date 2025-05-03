@@ -7,7 +7,7 @@ import {
   GivenEventModel,
   StreamsSetEventModel,
   StreamReceiverSeenEventModel,
-  _LastIndexedBlockModel,
+  LastIndexedBlockModel,
   SplitEventModel,
   SqueezedStreamsEventModel,
   SubListModel,
@@ -28,7 +28,7 @@ export function getRegisteredModels(): ModelStaticMembers[] {
 }
 
 export function registerModels(): void {
-  registerModel(_LastIndexedBlockModel);
+  registerModel(LastIndexedBlockModel);
 
   registerModel(SubListModel);
   registerModel(ProjectModel);

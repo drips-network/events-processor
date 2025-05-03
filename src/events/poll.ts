@@ -6,12 +6,12 @@ import type { Address, KnownAny } from '../core/types';
 import EventHandlerRequest from './EventHandlerRequest';
 import type EventHandlerBase from './EventHandlerBase';
 import type { EventSignature } from './types';
-import _LastIndexedBlockModel from '../models/_LastIndexedBlockModel';
+import LastIndexedBlockModel from '../models/LastIndexedBlockModel';
 import logger from '../core/logger';
 import appSettings from '../config/appSettings';
 
 async function getLatestIndexedBlock() {
-  const record = await _LastIndexedBlockModel.findOne({
+  const record = await LastIndexedBlockModel.findOne({
     order: [['block_number', 'DESC']],
   });
 
@@ -19,7 +19,7 @@ async function getLatestIndexedBlock() {
 }
 
 function setLatestIndexedBlock(blockNumber: number) {
-  return _LastIndexedBlockModel.upsert({
+  return LastIndexedBlockModel.upsert({
     id: 1,
     blockNumber: BigInt(blockNumber),
   });

@@ -7,9 +7,9 @@ import type {
 import { DataTypes, Model } from 'sequelize';
 import getSchema from '../utils/getSchema';
 
-export default class _LastIndexedBlockModel extends Model<
-  InferAttributes<_LastIndexedBlockModel>,
-  InferCreationAttributes<_LastIndexedBlockModel>
+export default class LastIndexedBlockModel extends Model<
+  InferAttributes<LastIndexedBlockModel>,
+  InferCreationAttributes<LastIndexedBlockModel>
 > {
   declare public blockNumber: bigint;
   declare public id: number;
@@ -41,7 +41,7 @@ export default class _LastIndexedBlockModel extends Model<
       {
         sequelize,
         schema: getSchema(),
-        tableName: '_last_indexed_block',
+        tableName: 'last_indexed_block',
         underscored: true,
       },
     );
