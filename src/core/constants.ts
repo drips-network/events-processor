@@ -41,4 +41,12 @@ export const COMMON_EVENT_INIT_ATTRIBUTES = {
     allowNull: false,
     type: DataTypes.INTEGER,
   },
+  createdAt: {
+    allowNull: false,
+    type: DataTypes.DATE,
+  },
+  updatedAt: {
+    allowNull: false,
+    type: DataTypes.DATE,
+  },
 } as const;

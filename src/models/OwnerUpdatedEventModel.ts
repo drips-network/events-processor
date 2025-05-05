@@ -40,7 +40,7 @@ export default class OwnerUpdatedEventModel
       {
         sequelize,
         underscored: true,
-        timestamps: false,
+        timestamps: true,
         schema: getSchema(),
         tableName: 'owner_updated_events',
       },

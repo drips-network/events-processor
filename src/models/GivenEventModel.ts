@@ -51,7 +51,7 @@ export default class GivenEventModel
         schema: getSchema(),
         tableName: 'given_events',
         underscored: true,
-        timestamps: false,
+        timestamps: true,
         indexes: [
           {
             fields: ['accountId'],

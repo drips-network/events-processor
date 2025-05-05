@@ -46,7 +46,7 @@ export default class StreamReceiverSeenEventModel
         schema: getSchema(),
         tableName: 'stream_receiver_seen_events',
         underscored: true,
-        timestamps: false,
+        timestamps: true,
         indexes: [
           {
             fields: ['accountId'],

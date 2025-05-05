@@ -2,6 +2,7 @@ import { DataTypes, literal } from 'sequelize';
 import type { DataType, QueryInterface } from 'sequelize';
 import getSchema from '../../utils/getSchema';
 import type { DbSchema } from '../../core/types';
+import { COMMON_EVENT_INIT_ATTRIBUTES } from '../../core/constants';
 
 export async function up({ context: sequelize }: any): Promise<void> {
   const schema = getSchema();
@@ -82,24 +83,7 @@ async function createOwnerUpdatedEventsTable(
         allowNull: false,
         type: DataTypes.STRING,
       },
-      transactionHash: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.STRING,
-      },
-      logIndex: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockNumber: {
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockTimestamp: {
-        allowNull: false,
-        type: DataTypes.DATE,
-      },
+      ...COMMON_EVENT_INIT_ATTRIBUTES,
     }),
   );
 }
@@ -122,24 +106,7 @@ async function createSplitsSetEventsTable(
         allowNull: false,
         type: DataTypes.STRING,
       },
-      transactionHash: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.STRING,
-      },
-      logIndex: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockNumber: {
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockTimestamp: {
-        allowNull: false,
-        type: DataTypes.DATE,
-      },
+      ...COMMON_EVENT_INIT_ATTRIBUTES,
     }),
   );
 }
@@ -178,24 +145,7 @@ async function createStreamsSetEventsTable(
         allowNull: false,
         type: DataTypes.STRING,
       },
-      transactionHash: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.STRING,
-      },
-      logIndex: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockNumber: {
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockTimestamp: {
-        allowNull: false,
-        type: DataTypes.DATE,
-      },
+      ...COMMON_EVENT_INIT_ATTRIBUTES,
     }),
   );
 
@@ -243,24 +193,7 @@ async function createStreamReceiverSeenEventsTable(
         allowNull: false,
         type: DataTypes.STRING,
       },
-      transactionHash: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.STRING,
-      },
-      logIndex: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockNumber: {
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockTimestamp: {
-        allowNull: false,
-        type: DataTypes.DATE,
-      },
+      ...COMMON_EVENT_INIT_ATTRIBUTES,
     }),
   );
 
@@ -306,24 +239,7 @@ async function createSqueezedStreamsEventsTable(
         allowNull: false,
         type: DataTypes.TEXT,
       },
-      transactionHash: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.STRING,
-      },
-      logIndex: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockNumber: {
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockTimestamp: {
-        allowNull: false,
-        type: DataTypes.DATE,
-      },
+      ...COMMON_EVENT_INIT_ATTRIBUTES,
     }),
   );
 }
@@ -354,24 +270,7 @@ async function createSplitEventsTable(
         allowNull: false,
         type: DataTypes.STRING,
       },
-      transactionHash: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.STRING,
-      },
-      logIndex: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockNumber: {
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockTimestamp: {
-        allowNull: false,
-        type: DataTypes.DATE,
-      },
+      ...COMMON_EVENT_INIT_ATTRIBUTES,
     }),
   );
 
@@ -423,24 +322,7 @@ async function createGivenEventsTable(
         allowNull: false,
         type: DataTypes.STRING,
       },
-      transactionHash: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.STRING,
-      },
-      logIndex: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockNumber: {
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockTimestamp: {
-        allowNull: false,
-        type: DataTypes.DATE,
-      },
+      ...COMMON_EVENT_INIT_ATTRIBUTES,
     }),
   );
 
@@ -893,24 +775,7 @@ async function createAccountMetadataEventsTable(
         allowNull: false,
         type: DataTypes.STRING,
       },
-      transactionHash: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.STRING,
-      },
-      logIndex: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockTimestamp: {
-        allowNull: false,
-        type: DataTypes.DATE,
-      },
-      blockNumber: {
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
+      ...COMMON_EVENT_INIT_ATTRIBUTES,
     }),
   );
 
@@ -948,24 +813,7 @@ async function createTransferEventsTable(
         allowNull: false,
         type: DataTypes.STRING,
       },
-      transactionHash: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.STRING,
-      },
-      logIndex: {
-        primaryKey: true,
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockNumber: {
-        allowNull: false,
-        type: DataTypes.INTEGER,
-      },
-      blockTimestamp: {
-        allowNull: false,
-        type: DataTypes.DATE,
-      },
+      ...COMMON_EVENT_INIT_ATTRIBUTES,
     }),
   );
 }

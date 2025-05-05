@@ -46,7 +46,7 @@ export default class AccountMetadataEmittedEventModel
         schema: getSchema(),
         tableName: 'account_metadata_emitted_events',
         underscored: true,
-        timestamps: false,
+        timestamps: true,
         indexes: [
           {
             fields: ['accountId'],

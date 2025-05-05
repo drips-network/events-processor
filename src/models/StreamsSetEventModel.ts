@@ -61,7 +61,7 @@ export default class StreamsSetEventModel
         schema: getSchema(),
         tableName: 'streams_set_events',
         underscored: true,
-        timestamps: false,
+        timestamps: true,
         indexes: [
           {
             fields: ['receiversHash'],

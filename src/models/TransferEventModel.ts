@@ -46,7 +46,7 @@ export default class TransferEventModel
         schema: getSchema(),
         tableName: 'transfer_events',
         underscored: true,
-        timestamps: false,
+        timestamps: true,
       },
     );
   }

@@ -38,7 +38,7 @@ export default class SplitsSetEventModel
       },
       {
         sequelize,
-        timestamps: false,
+        timestamps: true,
         underscored: true,
         schema: getSchema(),
         tableName: 'splits_set_events',

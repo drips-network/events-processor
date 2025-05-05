@@ -52,7 +52,7 @@ export default class SplitEventModel
         schema: getSchema(),
         tableName: 'split_events',
         underscored: true,
-        timestamps: false,
+        timestamps: true,
         indexes: [
           {
             fields: ['receiver'],

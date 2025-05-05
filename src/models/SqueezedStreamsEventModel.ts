@@ -67,7 +67,7 @@ export default class SqueezedStreamsEventModel
         schema: getSchema(),
         tableName: 'squeezed_streams_events',
         underscored: true,
-        timestamps: false,
+        timestamps: true,
       },
     );
   }
