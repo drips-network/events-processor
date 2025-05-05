@@ -3,7 +3,7 @@ export { default as ProjectModel } from './ProjectModel';
 export { default as DripListModel } from './DripListModel';
 export { default as GivenEventModel } from './GivenEventModel';
 export { default as SplitEventModel } from './SplitEventModel';
-export { default as SplitReceiverModel } from './SplitReceiverModel';
+export { default as SplitsReceiverModel } from './SplitsReceiverModel';
 export { default as TransferEventModel } from './TransferEventModel';
 export { default as SplitsSetEventModel } from './SplitsSetEventModel';
 export { default as StreamsSetEventModel } from './StreamsSetEventModel';

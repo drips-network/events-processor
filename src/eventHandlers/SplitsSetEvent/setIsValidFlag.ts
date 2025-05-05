@@ -17,7 +17,7 @@ import {
   DripListModel,
   EcosystemMainAccountModel,
   SubListModel,
-  SplitReceiverModel,
+  SplitsReceiverModel,
 } from '../../models';
 import type SplitsSetEventModel from '../../models/SplitsSetEventModel';
 import type ScopedLogger from '../../core/ScopedLogger';
@@ -169,7 +169,7 @@ async function hashDbSplits(
   accountId: AccountId,
   transaction: Transaction,
 ): Promise<string> {
-  const rows = await SplitReceiverModel.findAll({
+  const rows = await SplitsReceiverModel.findAll({
     transaction,
     lock: transaction.LOCK.UPDATE,
     where: { senderAccountId: accountId },

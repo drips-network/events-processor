@@ -825,7 +825,7 @@ async function createSplitReceiversTable(
   await queryInterface.createTable(
     {
       schema,
-      tableName: `split_receivers`,
+      tableName: `splits_receivers`,
     },
     transformFieldNamesToSnakeCase({
       id: {
@@ -875,21 +875,21 @@ async function createSplitReceiversTable(
   await queryInterface.addIndex(
     {
       schema,
-      tableName: `split_receivers`,
+      tableName: `splits_receivers`,
     },
     transformFieldArrayToSnakeCase(['receiverAccountId', 'senderAccountId']),
     {
-      name: 'idx_split_receivers_receiver_sender',
+      name: 'idx_splits_receivers_receiver_sender',
     },
   );
   await queryInterface.addIndex(
     {
       schema,
-      tableName: `split_receivers`,
+      tableName: `splits_receivers`,
     },
     transformFieldArrayToSnakeCase(['senderAccountId', 'receiverAccountId']),
     {
-      name: 'idx_split_receivers_sender_receiver',
+      name: 'idx_splits_receivers_sender_receiver',
     },
   );
 }
@@ -952,7 +952,7 @@ export async function down({ context: sequelize }: any): Promise<void> {
   });
   await queryInterface.dropTable({
     schema,
-    tableName: `split_receivers`,
+    tableName: `splits_receivers`,
   });
   await queryInterface.dropTable({
     schema,
