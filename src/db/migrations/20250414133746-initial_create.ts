@@ -35,7 +35,8 @@ export async function up({ context: sequelize }: any): Promise<void> {
   await queryInterface.sequelize.query(`
     CREATE TYPE ${schema}.project_verification_status AS ENUM (
       'claimed',
-      'unclaimed'
+      'unclaimed',
+      'pending_metadata'
     );
   `);
 
@@ -492,7 +493,7 @@ async function createLastIndexedBlockTable(
   await queryInterface.createTable(
     {
       schema,
-      tableName: `_last_indexed_block`,
+      tableName: `last_indexed_block`,
     },
     transformFieldNamesToSnakeCase({
       id: {
@@ -641,7 +642,7 @@ async function createDripListsTable(
         type: DataTypes.STRING,
       },
       previousOwnerAddress: {
-        allowNull: false,
+        allowNull: true,
         type: DataTypes.STRING,
       },
       isVisible: {
@@ -718,7 +719,7 @@ async function createEcosystemMainAccountsTable(
         type: DataTypes.STRING,
       },
       previousOwnerAddress: {
-        allowNull: false,
+        allowNull: true,
         type: DataTypes.STRING,
       },
       isVisible: {
@@ -774,8 +775,12 @@ async function createProjectsTable(
         allowNull: false,
         type: DataTypes.BOOLEAN,
       },
-      name: {
+      isVisible: {
         allowNull: false,
+        type: DataTypes.BOOLEAN,
+      },
+      name: {
+        allowNull: true,
         type: DataTypes.STRING,
       },
       verificationStatus: {
@@ -783,20 +788,20 @@ async function createProjectsTable(
         type: literal(`${schema}.project_verification_status`)
           .val as unknown as DataType,
       },
-      forge: {
-        allowNull: false,
-        type: literal(`${schema}.forges`).val as unknown as DataType,
-      },
       ownerAddress: {
-        allowNull: false,
+        allowNull: true,
         type: DataTypes.STRING,
       },
       ownerAccountId: {
-        allowNull: false,
+        allowNull: true,
         type: DataTypes.STRING,
       },
+      forge: {
+        allowNull: true,
+        type: literal(`${schema}.forges`).val as unknown as DataType,
+      },
       url: {
-        allowNull: false,
+        allowNull: true,
         type: DataTypes.STRING,
       },
       emoji: {
@@ -808,24 +813,20 @@ async function createProjectsTable(
         type: DataTypes.STRING,
       },
       color: {
-        allowNull: false,
+        allowNull: true,
         type: DataTypes.STRING,
       },
-      isVisible: {
-        allowNull: false,
-        type: DataTypes.BOOLEAN,
-      },
       lastProcessedIpfsHash: {
-        allowNull: false,
+        allowNull: true,
         type: DataTypes.TEXT,
-      },
-      claimedAt: {
-        allowNull: false,
-        type: DataTypes.DATE,
       },
       lastProcessedVersion: {
         allowNull: false,
-        type: DataTypes.BIGINT,
+        type: DataTypes.STRING,
+      },
+      claimedAt: {
+        allowNull: true,
+        type: DataTypes.DATE,
       },
       createdAt: {
         allowNull: false,
@@ -1107,7 +1108,7 @@ export async function down({ context: sequelize }: any): Promise<void> {
   });
   await queryInterface.dropTable({
     schema,
-    tableName: `_last_indexed_block`,
+    tableName: `last_indexed_block`,
   });
 
   await queryInterface.sequelize.query(`

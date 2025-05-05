@@ -1,11 +1,11 @@
-import { hexlify, toUtf8Bytes, ZeroAddress } from 'ethers';
+import { hexlify, toUtf8Bytes } from 'ethers';
 import type { z } from 'zod';
 import unreachableError from './unreachableError';
+import type ProjectModel from '../models/ProjectModel';
 import type { Forge, ProjectVerificationStatus } from '../models/ProjectModel';
 import { repoDriverContract } from '../core/contractClients';
 import type { sourceSchema } from '../metadata/schemas/common/sources';
 import { assertIsRepoDriverId } from './accountIdUtils';
-import type { Address } from '../core/types';
 
 export function convertForgeToNumber(forge: Forge) {
   switch (forge) {
@@ -21,17 +21,30 @@ export function convertForgeToNumber(forge: Forge) {
 }
 
 export function calculateProjectStatus(
-  owner: Address | null,
+  project: ProjectModel,
 ): ProjectVerificationStatus {
-  if (!owner || owner === ZeroAddress) {
+  const hasOwner = Boolean(project.ownerAddress);
+  const hasMetadata = Boolean(project.lastProcessedIpfsHash);
+
+  if (hasOwner && hasMetadata) {
+    return 'claimed';
+  }
+
+  if (!hasOwner && !hasMetadata) {
     return 'unclaimed';
   }
 
-  return 'claimed';
+  if (hasOwner) {
+    return 'pending_metadata';
+  }
+
+  return unreachableError(
+    `Invalid project status: hasOwner=${hasOwner}, hasMetadata=${hasMetadata}`,
+  );
 }
 
 export async function verifyProjectSources(
-  projectReceivers: {
+  projects: {
     accountId: string;
     source: z.infer<typeof sourceSchema>;
   }[],
@@ -44,7 +57,7 @@ export async function verifyProjectSources(
   for (const {
     accountId,
     source: { forge, ownerName, repoName },
-  } of projectReceivers) {
+  } of projects) {
     assertIsRepoDriverId(accountId);
 
     const calculatedAccountId = await repoDriverContract.calcAccountId(

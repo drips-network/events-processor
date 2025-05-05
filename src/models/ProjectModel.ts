@@ -5,11 +5,14 @@ import type {
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
-import type { AddressDriverId, RepoDriverId } from '../core/types';
+import type { Address, AddressDriverId, RepoDriverId } from '../core/types';
 
-export const PROJECT_VERIFICATION_STATUSES = ['claimed', 'unclaimed'] as const;
+export const PROJECT_VERIFICATION_STATUSES = [
+  'claimed',
+  'unclaimed',
+  'pending_metadata',
+] as const;
 export type ProjectVerificationStatus =
   (typeof PROJECT_VERIFICATION_STATUSES)[number];
 
@@ -22,20 +25,25 @@ export default class ProjectModel extends Model<
   InferAttributes<ProjectModel>,
   InferCreationAttributes<ProjectModel>
 > {
+  // Populated by `OwnerUpdated`
   declare public accountId: RepoDriverId;
-  declare public url: string;
-  declare public forge: Forge;
+  declare public ownerAddress: Address | null;
+  declare public ownerAccountId: AddressDriverId | null;
+  declare public claimedAt: Date | null;
+
+  // Populated by `AccountMetadataEmitted`
+  declare public url: string | null;
+  declare public forge: Forge | null;
+  declare public name: ProjectName | null;
   declare public emoji: string | null;
-  declare public color: string;
-  declare public name: ProjectName;
+  declare public color: string | null;
   declare public avatarCid: string | null;
+  declare public lastProcessedIpfsHash: string | null;
+
+  // Common
   declare public verificationStatus: ProjectVerificationStatus;
   declare public isValid: boolean;
   declare public isVisible: boolean;
-  declare public lastProcessedIpfsHash: string;
-  declare public ownerAddress: AddressLike;
-  declare public ownerAccountId: AddressDriverId;
-  declare public claimedAt: Date;
   declare public lastProcessedVersion: string;
   declare public createdAt: CreationOptional<Date>;
   declare public updatedAt: CreationOptional<Date>;
@@ -51,28 +59,32 @@ export default class ProjectModel extends Model<
           allowNull: false,
           type: DataTypes.BOOLEAN,
         },
-        name: {
+        isVisible: {
           allowNull: false,
+          type: DataTypes.BOOLEAN,
+        },
+        name: {
+          allowNull: true,
           type: DataTypes.STRING,
         },
         verificationStatus: {
           allowNull: false,
           type: DataTypes.ENUM(...PROJECT_VERIFICATION_STATUSES),
         },
-        forge: {
-          allowNull: false,
-          type: DataTypes.ENUM(...FORGES),
-        },
         ownerAddress: {
-          allowNull: false,
+          allowNull: true,
           type: DataTypes.STRING,
         },
         ownerAccountId: {
-          allowNull: false,
+          allowNull: true,
           type: DataTypes.STRING,
         },
+        forge: {
+          allowNull: true,
+          type: DataTypes.ENUM(...FORGES),
+        },
         url: {
-          allowNull: false,
+          allowNull: true,
           type: DataTypes.STRING,
         },
         emoji: {
@@ -84,15 +96,11 @@ export default class ProjectModel extends Model<
           type: DataTypes.STRING,
         },
         color: {
-          allowNull: false,
+          allowNull: true,
           type: DataTypes.STRING,
         },
-        isVisible: {
-          allowNull: false,
-          type: DataTypes.BOOLEAN,
-        },
         lastProcessedIpfsHash: {
-          allowNull: false,
+          allowNull: true,
           type: DataTypes.TEXT,
         },
         lastProcessedVersion: {
@@ -100,7 +108,7 @@ export default class ProjectModel extends Model<
           type: DataTypes.STRING,
         },
         claimedAt: {
-          allowNull: false,
+          allowNull: true,
           type: DataTypes.DATE,
         },
         createdAt: {

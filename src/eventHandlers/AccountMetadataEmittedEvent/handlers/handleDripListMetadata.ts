@@ -2,7 +2,6 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { UUID } from 'crypto';
-import { ZeroAddress } from 'ethers';
 import type {
   Address,
   AddressDriverId,
@@ -26,14 +25,12 @@ import {
   assertIsRepoDriverId,
   convertToNftDriverId,
 } from '../../../utils/accountIdUtils';
-import {
-  decodeVersion,
-  makeVersion,
-} from '../../../utils/lastProcessedVersion';
+import { makeVersion } from '../../../utils/lastProcessedVersion';
 import {
   addressDriverContract,
   nftDriverContract,
 } from '../../../core/contractClients';
+import { ProjectModel } from '../../../models';
 
 type Params = {
   ipfsHash: IpfsHash;
@@ -111,6 +108,8 @@ export default async function handleDripListMetadata({
 
   await createNewSplitReceivers({
     metadata,
+    logIndex,
+    blockNumber,
     transaction,
     scopedLogger,
     blockTimestamp,
@@ -151,11 +150,6 @@ async function upsertDripList({
         ? (metadata.latestVotingRoundId as UUID) || null
         : null,
     lastProcessedIpfsHash: ipfsHash,
-    isVisible:
-      blockNumber > appSettings.visibilityThresholdBlockNumber &&
-      'isVisible' in metadata
-        ? metadata.isVisible
-        : true,
     lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
   };
 
@@ -166,21 +160,31 @@ async function upsertDripList({
     defaults: {
       ...values,
       isValid: false, // Until the `SplitsSet` event is processed.
-      previousOwnerAddress: ZeroAddress as Address,
+      isVisible:
+        blockNumber > appSettings.visibilityThresholdBlockNumber &&
+        'isVisible' in metadata
+          ? metadata.isVisible
+          : true,
     },
   });
 
-  if (!isCreation) {
+  if (isCreation) {
+    scopedLogger.bufferCreation({
+      id: accountId,
+      type: DripListModel,
+      input: dripList,
+    });
+  } else {
     const newVersion = makeVersion(blockNumber, logIndex);
     const storedVersion = BigInt(dripList.lastProcessedVersion);
-    const { blockNumber: sb, logIndex: sl } = decodeVersion(storedVersion);
 
-    if (newVersion <= storedVersion) {
-      scopedLogger.log(
-        `Skipped Drip List ${accountId} stale 'AccountMetadata' event (${blockNumber}:${logIndex} ≤ lastProcessed ${sb}:${sl}).`,
-      );
-
-      return;
+    // Safely update fields that another event handler could also modify.
+    if (newVersion > storedVersion) {
+      dripList.isVisible =
+        blockNumber > appSettings.visibilityThresholdBlockNumber &&
+        'isVisible' in metadata
+          ? metadata.isVisible
+          : true;
     }
 
     scopedLogger.bufferUpdate({
@@ -189,23 +193,24 @@ async function upsertDripList({
       input: dripList,
     });
 
-    await dripList.update(values, { transaction });
-  } else {
-    scopedLogger.bufferCreation({
-      id: accountId,
-      type: DripListModel,
-      input: dripList,
-    });
+    await dripList.update(
+      { ...values, isVisible: dripList.isVisible },
+      { transaction },
+    );
   }
 }
 
 async function createNewSplitReceivers({
   metadata,
+  logIndex,
+  blockNumber,
   scopedLogger,
   transaction,
   blockTimestamp,
   emitterAccountId,
 }: {
+  logIndex: number;
+  blockNumber: number;
   blockTimestamp: Date;
   scopedLogger: ScopedLogger;
   transaction: Transaction;
@@ -248,10 +253,28 @@ async function createNewSplitReceivers({
     switch (receiver.type) {
       case 'repoDriver':
         assertIsRepoDriverId(receiver.accountId);
+
+        await ProjectModel.findOrCreate({
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+          where: {
+            accountId: receiver.accountId,
+          },
+          defaults: {
+            accountId: receiver.accountId,
+            verificationStatus: 'unclaimed',
+            isVisible: true, // Visible by default. Account metadata will set the final visibility.
+            isValid: true, // There are no receivers yet. Consider the project valid.
+            url: receiver.source.url,
+            forge: receiver.source.forge,
+            name: `${receiver.source.ownerName}/${receiver.source.repoName}`,
+            lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
+          },
+        });
+
         return createSplitReceiver({
           scopedLogger,
           transaction,
-          blockTimestamp,
           splitReceiverShape: {
             senderAccountId: emitterAccountId,
             senderAccountType: 'drip_list',
@@ -268,7 +291,6 @@ async function createNewSplitReceivers({
         return createSplitReceiver({
           scopedLogger,
           transaction,
-          blockTimestamp,
           splitReceiverShape: {
             senderAccountId: emitterAccountId,
             senderAccountType: 'drip_list',
@@ -285,7 +307,6 @@ async function createNewSplitReceivers({
         return createSplitReceiver({
           scopedLogger,
           transaction,
-          blockTimestamp,
           splitReceiverShape: {
             senderAccountId: emitterAccountId,
             senderAccountType: 'drip_list',

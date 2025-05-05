@@ -8,16 +8,9 @@ import {
   calculateProjectStatus,
   verifyProjectSources,
 } from '../../../utils/projectUtils';
-import type {
-  Address,
-  AddressDriverId,
-  IpfsHash,
-  RepoDriverId,
-} from '../../../core/types';
+import type { IpfsHash, RepoDriverId } from '../../../core/types';
 import {
   assertIsAddressDiverId,
-  convertToAddressDriverId,
-  convertToRepoDriverId,
   isAddressDriverId,
   isNftDriverId,
   isRepoDriverId,
@@ -26,18 +19,11 @@ import unreachableError from '../../../utils/unreachableError';
 import { getProjectMetadata } from '../../../utils/metadataUtils';
 import verifySplitsReceivers from '../verifySplitsReceivers';
 import {
-  addressDriverContract,
-  repoDriverContract,
-} from '../../../core/contractClients';
-import type { ProjectName } from '../../../models/ProjectModel';
-import {
   createSplitReceiver,
   deleteExistingSplitReceivers,
 } from '../receiversRepository';
-import {
-  decodeVersion,
-  makeVersion,
-} from '../../../utils/lastProcessedVersion';
+import { makeVersion } from '../../../utils/lastProcessedVersion';
+import RecoverableError from '../../../utils/recoverableError';
 
 type Params = {
   logIndex: number;
@@ -81,11 +67,33 @@ export default async function handleProjectMetadata({
     return;
   }
 
+  const project = await ProjectModel.findByPk(emitterAccountId, {
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+
+  if (!project) {
+    scopedLogger.bufferMessage(
+      `Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: project not found. Likely waiting on 'OwnerUpdated' event to be processed. Retrying, but if this persists, it is a real error.`,
+    );
+
+    scopedLogger.flush();
+
+    throw new RecoverableError(
+      `Cannot process metadata for Project ${emitterAccountId}: entity not found. Likely waiting on 'OwnerUpdated' event to be processed. Retrying, but if this persists, it is a real error.`,
+    );
+  }
+
   const projectReceivers = metadata.splits.dependencies.flatMap((s) =>
     'source' in s ? [s] : [],
   );
-  const { areProjectsValid, message } =
-    await verifyProjectSources(projectReceivers);
+  const { areProjectsValid, message } = await verifyProjectSources([
+    ...projectReceivers,
+    {
+      accountId: emitterAccountId,
+      source: metadata.source,
+    },
+  ]);
 
   if (!areProjectsValid) {
     scopedLogger.bufferMessage(
@@ -95,21 +103,41 @@ export default async function handleProjectMetadata({
     return;
   }
 
+  // We'll store `source` information the metadata, not from the 'OwnerUpdatedRequested' event.
+  // Therefore, it's necessary to also verify the project's source directly.
+  const { areProjectsValid: isProjectSourceValid } = await verifyProjectSources(
+    [
+      {
+        accountId: emitterAccountId,
+        source: metadata.source,
+      },
+    ],
+  );
+
+  if (!isProjectSourceValid) {
+    scopedLogger.bufferMessage(
+      `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: ${message}`,
+    );
+    return;
+  }
+
   // ✅ All checks passed, we can proceed with the processing.
 
-  await upsertProject({
-    logIndex,
-    metadata,
+  await updateProject({
+    project,
     ipfsHash,
+    metadata,
+    logIndex,
     blockNumber,
-    scopedLogger,
     transaction,
-    blockTimestamp,
+    scopedLogger,
   });
 
   deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
+    logIndex,
+    blockNumber,
     scopedLogger,
     transaction,
     blockTimestamp,
@@ -118,113 +146,71 @@ export default async function handleProjectMetadata({
   });
 }
 
-async function upsertProject({
-  ipfsHash,
+async function updateProject({
+  project,
   logIndex,
   metadata,
+  ipfsHash,
+  transaction,
   blockNumber,
   scopedLogger,
-  transaction,
-  blockTimestamp,
 }: {
   logIndex: number;
-  ipfsHash: IpfsHash;
   blockNumber: number;
-  blockTimestamp: Date;
+  project: ProjectModel;
+  ipfsHash: IpfsHash;
   transaction: Transaction;
   scopedLogger: ScopedLogger;
   metadata: AnyVersion<typeof repoDriverAccountMetadataParser>;
 }): Promise<void> {
-  const {
-    color,
-    source: { forge, ownerName, repoName, url },
-    describes,
-  } = metadata;
+  const { color, source } = metadata;
 
-  function getEmoji(): string | null {
-    if ('avatar' in metadata) {
-      return metadata.avatar.type === 'emoji' ? metadata.avatar.emoji : null;
+  project.url = source.url;
+  project.forge = source.forge;
+  project.name = `${source.ownerName}/${source.repoName}`;
+  project.color = color;
+
+  project.lastProcessedIpfsHash = ipfsHash;
+  project.lastProcessedVersion = makeVersion(blockNumber, logIndex).toString();
+  project.verificationStatus = calculateProjectStatus(project);
+  project.isVisible = 'isVisible' in metadata ? metadata.isVisible : true; // Projects without `isVisible` field (V4 and below) are considered visible by default.
+
+  if ('avatar' in metadata) {
+    // Metadata V4
+
+    if (metadata.avatar.type === 'emoji') {
+      project.emoji = metadata.avatar.emoji;
+      project.avatarCid = null;
+    } else if (metadata.avatar.type === 'image') {
+      project.avatarCid = metadata.avatar.cid;
+      project.emoji = null;
     }
+  } else {
+    // Metadata V3
 
-    return metadata.emoji ?? null;
+    project.emoji = metadata.emoji;
   }
 
-  function getAvatarCid(): string | null {
-    if ('avatar' in metadata && metadata.avatar.type === 'image') {
-      return metadata.avatar.cid;
-    }
-
-    return null;
-  }
-
-  const accountId = convertToRepoDriverId(describes.accountId);
-  const onChainOwner = (await repoDriverContract.ownerOf(accountId)) as Address;
-
-  const values = {
-    accountId,
-    url,
-    forge,
-    emoji: getEmoji(),
-    color,
-    name: `${ownerName}/${repoName}` as ProjectName,
-    avatarCid: getAvatarCid(),
-    verificationStatus: calculateProjectStatus(onChainOwner),
-    isVisible: 'isVisible' in metadata ? metadata.isVisible : true, // Projects without `isVisible` field (V4 and below) are considered visible by default.
-    lastProcessedIpfsHash: ipfsHash,
-    ownerAddress: onChainOwner,
-    ownerAccountId: convertToAddressDriverId(
-      (await addressDriverContract.calcAccountId(onChainOwner)).toString(),
-    ) as AddressDriverId,
-    claimedAt: blockTimestamp,
-    lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
-  };
-
-  const [project, isCreation] = await ProjectModel.findOrCreate({
-    transaction,
-    lock: transaction.LOCK.UPDATE,
-    where: { accountId },
-    defaults: {
-      ...values,
-      isValid: false, // Until the `SplitsSet` event is processed.
-    },
+  scopedLogger.bufferUpdate({
+    type: ProjectModel,
+    input: project,
+    id: project.accountId,
   });
 
-  if (!isCreation) {
-    const newVersion = makeVersion(blockNumber, logIndex);
-    const storedVersion = BigInt(project.lastProcessedVersion);
-    const { blockNumber: sb, logIndex: sl } = decodeVersion(storedVersion);
-
-    if (newVersion <= storedVersion) {
-      scopedLogger.log(
-        `Skipped Project ${accountId} stale 'AccountMetadata' event (${blockNumber}:${logIndex} ≤ lastProcessed ${sb}:${sl}).`,
-      );
-
-      return;
-    }
-
-    scopedLogger.bufferUpdate({
-      type: ProjectModel,
-      input: project,
-      id: project.accountId,
-    });
-
-    await project.update(values, { transaction });
-  } else {
-    scopedLogger.bufferCreation({
-      type: ProjectModel,
-      input: project,
-      id: project.accountId,
-    });
-  }
+  await project.save({ transaction });
 }
 
 async function createNewSplitReceivers({
-  scopedLogger,
+  logIndex,
+  blockNumber,
   transaction,
-  splitReceivers,
+  scopedLogger,
   blockTimestamp,
+  splitReceivers,
   emitterAccountId,
 }: {
+  logIndex: number;
+  blockNumber: number;
   blockTimestamp: Date;
   scopedLogger: ScopedLogger;
   transaction: Transaction;
@@ -239,7 +225,6 @@ async function createNewSplitReceivers({
     return createSplitReceiver({
       scopedLogger,
       transaction,
-      blockTimestamp,
       splitReceiverShape: {
         senderAccountId: emitterAccountId,
         senderAccountType: 'project',
@@ -254,10 +239,33 @@ async function createNewSplitReceivers({
 
   const dependencyPromises = dependencies.map(async (dependency) => {
     if (isRepoDriverId(dependency.accountId)) {
+      if (!('source' in dependency)) {
+        throw new Error(
+          `Project dependency ${dependency.accountId} is missing source information.`,
+        );
+      }
+
+      await ProjectModel.findOrCreate({
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+        where: {
+          accountId: dependency.accountId,
+        },
+        defaults: {
+          accountId: dependency.accountId,
+          verificationStatus: 'unclaimed',
+          isVisible: true, // Visible by default. Account metadata will set the final visibility.
+          isValid: true, // There are no receivers yet. Consider the project valid.
+          url: dependency.source.url,
+          forge: dependency.source.forge,
+          name: `${dependency.source.ownerName}/${dependency.source.repoName}`,
+          lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
+        },
+      });
+
       return createSplitReceiver({
         scopedLogger,
         transaction,
-        blockTimestamp,
         splitReceiverShape: {
           senderAccountId: emitterAccountId,
           senderAccountType: 'project',
@@ -274,7 +282,6 @@ async function createNewSplitReceivers({
       return createSplitReceiver({
         scopedLogger,
         transaction,
-        blockTimestamp,
         splitReceiverShape: {
           senderAccountId: emitterAccountId,
           senderAccountType: 'project',
@@ -291,7 +298,6 @@ async function createNewSplitReceivers({
       return createSplitReceiver({
         scopedLogger,
         transaction,
-        blockTimestamp,
         splitReceiverShape: {
           senderAccountId: emitterAccountId,
           senderAccountType: 'project',

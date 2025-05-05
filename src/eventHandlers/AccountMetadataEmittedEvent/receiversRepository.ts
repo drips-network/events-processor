@@ -21,7 +21,6 @@ export async function createSplitReceiver({
   transaction,
   splitReceiverShape,
 }: {
-  blockTimestamp: Date;
   scopedLogger: ScopedLogger;
   transaction: Transaction;
   splitReceiverShape: SplitReceiverShape;

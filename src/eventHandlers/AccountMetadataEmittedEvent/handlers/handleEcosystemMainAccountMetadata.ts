@@ -19,7 +19,7 @@ import {
   assertIsRepoDriverId,
   convertToNftDriverId,
 } from '../../../utils/accountIdUtils';
-import { EcosystemMainAccountModel } from '../../../models';
+import { EcosystemMainAccountModel, ProjectModel } from '../../../models';
 import appSettings from '../../../config/appSettings';
 import {
   createSplitReceiver,
@@ -103,8 +103,10 @@ export default async function handleEcosystemMainAccountMetadata({
   deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
-    scopedLogger,
+    logIndex,
+    blockNumber,
     transaction,
+    scopedLogger,
     blockTimestamp,
     emitterAccountId,
     splitReceivers: metadata.recipients,
@@ -165,7 +167,7 @@ async function upsertEcosystemMainAccount({
     const storedVersion = BigInt(ecosystemMainAccount.lastProcessedVersion);
     const { blockNumber: sb, logIndex: sl } = decodeVersion(storedVersion);
 
-    if (newVersion <= storedVersion) {
+    if (newVersion < storedVersion) {
       scopedLogger.log(
         `Skipped Drip List ${accountId} stale 'AccountMetadata' event (${blockNumber}:${logIndex} ≤ lastProcessed ${sb}:${sl}).`,
       );
@@ -190,12 +192,16 @@ async function upsertEcosystemMainAccount({
 }
 
 async function createNewSplitReceivers({
-  splitReceivers,
-  scopedLogger,
+  logIndex,
+  blockNumber,
   transaction,
+  scopedLogger,
+  splitReceivers,
   blockTimestamp,
   emitterAccountId,
 }: {
+  logIndex: number;
+  blockNumber: number;
   blockTimestamp: Date;
   scopedLogger: ScopedLogger;
   transaction: Transaction;
@@ -209,10 +215,28 @@ async function createNewSplitReceivers({
     switch (receiver.type) {
       case 'repoDriver':
         assertIsRepoDriverId(receiver.accountId);
+
+        await ProjectModel.findOrCreate({
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+          where: {
+            accountId: receiver.accountId,
+          },
+          defaults: {
+            accountId: receiver.accountId,
+            verificationStatus: 'unclaimed',
+            isVisible: true, // Visible by default. Account metadata will set the final visibility.
+            isValid: true, // There are no receivers yet. Consider the project valid.
+            url: receiver.source.url,
+            forge: receiver.source.forge,
+            name: `${receiver.source.ownerName}/${receiver.source.repoName}`,
+            lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
+          },
+        });
+
         return createSplitReceiver({
           scopedLogger,
           transaction,
-          blockTimestamp,
           splitReceiverShape: {
             senderAccountId: emitterAccountId,
             senderAccountType: 'ecosystem_main_account',
@@ -229,7 +253,6 @@ async function createNewSplitReceivers({
         return createSplitReceiver({
           scopedLogger,
           transaction,
-          blockTimestamp,
           splitReceiverShape: {
             senderAccountId: emitterAccountId,
             senderAccountType: 'ecosystem_main_account',

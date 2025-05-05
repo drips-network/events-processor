@@ -27,6 +27,7 @@ import { getCurrentSplitReceiversBySender } from './receiversRepository';
 import type { AccountMetadataEmittedEvent } from '../../../contracts/CURRENT_NETWORK/Drips';
 import { AccountMetadataEmittedEventModel } from '../../models';
 import ScopedLogger from '../../core/ScopedLogger';
+import { isLatestEvent } from '../../utils/isLatestEvent';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignatures = [
@@ -101,6 +102,23 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         id: `${accountMetadataEmittedEvent.transactionHash}-${accountMetadataEmittedEvent.logIndex}`,
       });
 
+      if (
+        !(await isLatestEvent(
+          accountMetadataEmittedEvent,
+          AccountMetadataEmittedEventModel,
+          {
+            accountId,
+            logIndex,
+            transactionHash,
+          },
+          transaction,
+        ))
+      ) {
+        scopedLogger.flush();
+
+        return;
+      }
+
       if (isRepoDriverId(accountId)) {
         await handleProjectMetadata({
           logIndex,
@@ -144,6 +162,8 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       if (isImmutableSplitsDriverId(accountId)) {
         await handleSubListMetadata({
           ipfsHash,
+          logIndex,
+          blockNumber,
           scopedLogger,
           transaction,
           blockTimestamp,

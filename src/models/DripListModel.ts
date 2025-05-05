@@ -20,7 +20,7 @@ export default class DripListModel extends Model<
   declare public description: string | null;
   declare public ownerAddress: Address;
   declare public ownerAccountId: AccountId;
-  declare public previousOwnerAddress: Address;
+  declare public previousOwnerAddress: Address | null;
   declare public latestVotingRoundId: UUID | null;
   declare public isVisible: boolean;
   declare public lastProcessedIpfsHash: string;
@@ -64,7 +64,7 @@ export default class DripListModel extends Model<
           type: DataTypes.STRING,
         },
         previousOwnerAddress: {
-          allowNull: false,
+          allowNull: true,
           type: DataTypes.STRING,
         },
         isVisible: {

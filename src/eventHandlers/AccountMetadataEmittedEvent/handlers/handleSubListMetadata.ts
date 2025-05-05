@@ -4,7 +4,11 @@ import type { z } from 'zod';
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type ScopedLogger from '../../../core/ScopedLogger';
 import type { ImmutableSplitsDriverId, IpfsHash } from '../../../core/types';
-import { EcosystemMainAccountModel, SubListModel } from '../../../models';
+import {
+  EcosystemMainAccountModel,
+  ProjectModel,
+  SubListModel,
+} from '../../../models';
 import { getImmutableSpitsDriverMetadata } from '../../../utils/metadataUtils';
 import unreachableError from '../../../utils/unreachableError';
 import verifySplitsReceivers from '../verifySplitsReceivers';
@@ -30,8 +34,11 @@ import {
   convertToAccountId,
   convertToImmutableSplitsDriverId,
 } from '../../../utils/accountIdUtils';
+import { makeVersion } from '../../../utils/lastProcessedVersion';
 
 type Params = {
+  logIndex: number;
+  blockNumber: number;
   ipfsHash: IpfsHash;
   blockTimestamp: Date;
   scopedLogger: ScopedLogger;
@@ -41,6 +48,8 @@ type Params = {
 
 export default async function handleSubListMetadata({
   ipfsHash,
+  logIndex,
+  blockNumber,
   scopedLogger,
   transaction,
   blockTimestamp,
@@ -99,6 +108,8 @@ export default async function handleSubListMetadata({
   deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
+    logIndex,
+    blockNumber,
     scopedLogger,
     transaction,
     blockTimestamp,
@@ -160,12 +171,16 @@ async function upsertSubList({
 }
 
 async function createNewSplitReceivers({
+  logIndex,
   receivers,
+  blockNumber,
   scopedLogger,
   transaction,
   blockTimestamp,
   emitterAccountId,
 }: {
+  logIndex: number;
+  blockNumber: number;
   blockTimestamp: Date;
   scopedLogger: ScopedLogger;
   transaction: Transaction;
@@ -181,10 +196,28 @@ async function createNewSplitReceivers({
     switch (receiver.type) {
       case 'repoDriver':
         assertIsRepoDriverId(receiver.accountId);
+
+        await ProjectModel.findOrCreate({
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+          where: {
+            accountId: receiver.accountId,
+          },
+          defaults: {
+            accountId: receiver.accountId,
+            verificationStatus: 'unclaimed',
+            isVisible: true, // Visible by default. Account metadata will set the final visibility.
+            isValid: true, // There are no receivers yet. Consider the project valid.
+            url: receiver.source.url,
+            forge: receiver.source.forge,
+            name: `${receiver.source.ownerName}/${receiver.source.repoName}`,
+            lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
+          },
+        });
+
         return createSplitReceiver({
           scopedLogger,
           transaction,
-          blockTimestamp,
           splitReceiverShape: {
             senderAccountId: emitterAccountId,
             senderAccountType: 'sub_list',
@@ -201,7 +234,6 @@ async function createNewSplitReceivers({
         return createSplitReceiver({
           scopedLogger,
           transaction,
-          blockTimestamp,
           splitReceiverShape: {
             senderAccountId: emitterAccountId,
             senderAccountType: 'sub_list',
@@ -218,7 +250,6 @@ async function createNewSplitReceivers({
         return createSplitReceiver({
           scopedLogger,
           transaction,
-          blockTimestamp,
           splitReceiverShape: {
             senderAccountId: emitterAccountId,
             senderAccountType: 'sub_list',
@@ -235,7 +266,6 @@ async function createNewSplitReceivers({
         return createSplitReceiver({
           scopedLogger,
           transaction,
-          blockTimestamp,
           splitReceiverShape: {
             senderAccountId: emitterAccountId,
             senderAccountType: 'sub_list',
