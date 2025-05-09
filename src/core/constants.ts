@@ -1,4 +1,4 @@
-import { ethers } from 'ethers';
+import { encodeBytes32String } from 'ethers';
 import { DataTypes } from 'sequelize';
 
 export const SUPPORTED_NETWORKS = [
@@ -13,11 +13,6 @@ export const SUPPORTED_NETWORKS = [
   'zksync_era_sepolia',
 ] as const;
 
-export const FORGES_MAP = {
-  0: 'GitHub',
-  1: 'GitLab',
-} as const;
-
 export const DRIPS_CONTRACTS = [
   'drips',
   'nftDriver',
@@ -26,25 +21,33 @@ export const DRIPS_CONTRACTS = [
   'immutableSplitsDriver',
 ] as const;
 
-export const DRIPS_APP_USER_METADATA_KEY = ethers.encodeBytes32String('ipfs');
+export const DRIPS_APP_USER_METADATA_KEY = encodeBytes32String('ipfs');
 
 export const COMMON_EVENT_INIT_ATTRIBUTES = {
   transactionHash: {
-    type: DataTypes.STRING,
-    allowNull: false,
     primaryKey: true,
+    allowNull: false,
+    type: DataTypes.STRING,
   },
   logIndex: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
     primaryKey: true,
+    allowNull: false,
+    type: DataTypes.INTEGER,
   },
   blockTimestamp: {
-    type: DataTypes.DATE,
     allowNull: false,
+    type: DataTypes.DATE,
   },
   blockNumber: {
-    type: DataTypes.INTEGER,
     allowNull: false,
+    type: DataTypes.INTEGER,
+  },
+  createdAt: {
+    allowNull: false,
+    type: DataTypes.DATE,
+  },
+  updatedAt: {
+    allowNull: false,
+    type: DataTypes.DATE,
   },
 } as const;

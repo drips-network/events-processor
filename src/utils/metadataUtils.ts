@@ -1,4 +1,4 @@
-import { ethers } from 'ethers';
+import { toUtf8String } from 'ethers';
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { IpfsHash } from '../core/types';
 import {
@@ -9,7 +9,7 @@ import {
 import appSettings from '../config/appSettings';
 
 export function convertToIpfsHash(str: string): IpfsHash {
-  const ipfsHash = ethers.toUtf8String(str);
+  const ipfsHash = toUtf8String(str);
 
   const isIpfsHash = /^(Qm[a-zA-Z0-9]{44})$/.test(ipfsHash);
 

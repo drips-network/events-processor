@@ -5,9 +5,10 @@ import { TransferEventHandler } from '../../src/eventHandlers';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import { convertToNftDriverId } from '../../src/utils/accountIdUtils';
-import LogManager from '../../src/core/LogManager';
+import ScopedLogger from '../../src/core/ScopedLogger';
 import TransferEventModel from '../../src/models/TransferEventModel';
 import DripListModel from '../../src/models/DripListModel';
+import * as contractClients from '../../src/core/contractClients';
 
 jest.mock('../../src/models/TransferEventModel');
 jest.mock('../../src/models/DripListModel');
@@ -15,8 +16,8 @@ jest.mock('../../src/db/database');
 jest.mock('bee-queue');
 jest.mock('../../src/events/eventHandlerUtils');
 jest.mock('../../src/utils/accountIdUtils');
-jest.mock('../../src/core/LogManager');
-jest.mock('../../src/utils/isLatestEvent');
+jest.mock('../../src/core/ScopedLogger');
+jest.mock('../../src/core/contractClients');
 
 describe('TransferEventHandler', () => {
   let mockDbTransaction: {};
@@ -43,7 +44,9 @@ describe('TransferEventHandler', () => {
       } as EventData<'Transfer(address,address,uint256)'>,
     };
 
-    mockDbTransaction = {};
+    mockDbTransaction = {
+      LOCK: { UPDATE: jest.fn() },
+    };
 
     dbConnection.transaction = jest
       .fn()
@@ -60,11 +63,15 @@ describe('TransferEventHandler', () => {
         },
       ]);
 
-      DripListModel.findOne = jest
+      DripListModel.findByPk = jest
         .fn()
-        .mockResolvedValue([{ save: jest.fn() }, true]);
+        .mockResolvedValue({ save: jest.fn(), lastProcessedVersion: '0' });
 
-      LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
+      ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
+
+      contractClients.nftDriverContract.ownerOf = jest
+        .fn()
+        .mockResolvedValue(mockRequest.event.args[1]) as any;
 
       // Act
       await handler['_handle'](mockRequest);

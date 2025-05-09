@@ -1,5 +1,5 @@
 import { isAddress } from 'ethers';
-import { ValidationError } from 'sequelize';
+import { BaseError } from 'sequelize';
 import appSettings from '../config/appSettings';
 import logger from '../core/logger';
 import type { AccountId, Result } from '../core/types';
@@ -20,7 +20,7 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
   protected abstract _handle(request: EventHandlerRequest<T>): Promise<void>;
 
   public async createJob(request: EventHandlerRequest<T>): Promise<void> {
-    await saveEventProcessingJob(request, request.event.eventSignature);
+    await saveEventProcessingJob(request);
   }
 
   /**
@@ -32,9 +32,9 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
     const result = await getResult(this._handle.bind(this))(request);
 
     if (!result.ok) {
-      if (result.error instanceof ValidationError) {
+      if (result.error instanceof BaseError) {
         logger.error(
-          `[${request.id}] ${this.name} failed to process event: ${result.error.message}`,
+          `[${request.id}] ${this.name} failed to process event: ${JSON.stringify(result.error, null, 2)}`,
         );
       }
 
@@ -54,8 +54,9 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
   public async afterHandle(context: {
     args: any[];
     blockTimestamp: Date;
+    requestId: string;
   }): Promise<void> {
-    const { args, blockTimestamp } = context;
+    const { args, blockTimestamp, requestId } = context;
 
     // If the block is older than 15 minutes, we don't invalidate the cache to avoid unnecessary requests while indexing.
     if (new Date(blockTimestamp).getTime() < Date.now() - 15 * 60000) {
@@ -92,14 +93,16 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
         });
 
         logger.info(
-          `'${
+          `[${requestId}]'${
             this.name
           }' invalidated cache entries for accountIds: ${accountIds.join(
             ', ',
           )}`,
         );
       } catch (error: any) {
-        logger.error(`Failed to invalidate cache: ${error.message}`);
+        logger.error(
+          `[${requestId}] Failed to invalidate cache: ${error.message}`,
+        );
       }
     }
   }

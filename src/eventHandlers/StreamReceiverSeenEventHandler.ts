@@ -1,5 +1,5 @@
 import type { StreamReceiverSeenEvent } from '../../contracts/CURRENT_NETWORK/Drips';
-import LogManager from '../core/LogManager';
+import ScopedLogger from '../core/ScopedLogger';
 import type { AccountId } from '../core/types';
 import { dbConnection } from '../db/database';
 import EventHandlerBase from '../events/EventHandlerBase';
@@ -7,7 +7,7 @@ import type EventHandlerRequest from '../events/EventHandlerRequest';
 import StreamReceiverSeenEventModel from '../models/StreamReceiverSeenEventModel';
 import { convertToAccountId } from '../utils/accountIdUtils';
 import { toBigIntString } from '../utils/bigintUtils';
-import { getCurrentSplitsByReceiversHash } from './AccountMetadataEmittedEvent/receiversRepository';
+import { getCurrentSplitReceiversByReceiversHash } from './AccountMetadataEmittedEvent/receiversRepository';
 
 export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'StreamReceiverSeen(bytes32,uint256,uint256)'> {
   public eventSignatures = [
@@ -28,19 +28,18 @@ export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'St
     const accountId = convertToAccountId(rawAccountId);
     const config = toBigIntString(rawConfig.toString());
 
-    LogManager.logRequestInfo(
+    const scopedLogger = new ScopedLogger(this.name, requestId);
+
+    scopedLogger.log(
       `📥 ${this.name} is processing the following ${request.event.eventSignature}:
       \r\t - receiversHash: ${rawReceiversHash}
       \r\t - accountId:     ${accountId}
       \r\t - config:        ${config}
       \r\t - logIndex:      ${logIndex}
       \r\t - tx hash:       ${transactionHash}`,
-      requestId,
     );
 
     await dbConnection.transaction(async (transaction) => {
-      const logManager = new LogManager(requestId);
-
       const streamReceiverSeenEvent = await StreamReceiverSeenEventModel.create(
         {
           receiversHash: rawReceiversHash,
@@ -56,28 +55,39 @@ export default class StreamReceiverSeenEventHandler extends EventHandlerBase<'St
         },
       );
 
-      logManager.appendFindOrCreateLog(
-        StreamReceiverSeenEventModel,
-        true,
-        `${streamReceiverSeenEvent.transactionHash}-${streamReceiverSeenEvent.logIndex}`,
-      );
+      scopedLogger.bufferCreation({
+        type: StreamReceiverSeenEventModel,
+        input: streamReceiverSeenEvent,
+        id: `${streamReceiverSeenEvent.transactionHash}-${streamReceiverSeenEvent.logIndex}`,
+      });
     });
   }
 
-  public override async beforeHandle(
-    request: EventHandlerRequest<'StreamReceiverSeen(bytes32,uint256,uint256)'>,
-  ): Promise<{
+  public override async beforeHandle({
+    event: { args },
+    id: requestId,
+  }: EventHandlerRequest<'StreamReceiverSeen(bytes32,uint256,uint256)'>): Promise<{
     accountIdsToInvalidate: AccountId[];
   }> {
-    const {
-      event: { args },
-    } = request;
+    const scopedLogger = new ScopedLogger(this.name, requestId);
+
+    scopedLogger.log(`${this.name} is gathering accountIds to invalidate...`);
 
     const [rawReceiversHash] = args as StreamReceiverSeenEvent.OutputTuple;
 
+    const accountIdsToInvalidate =
+      await getCurrentSplitReceiversByReceiversHash(rawReceiversHash);
+
+    scopedLogger.log(
+      `${this.name} account IDs to invalidate: ${
+        accountIdsToInvalidate.length
+          ? accountIdsToInvalidate.join(', ')
+          : 'none'
+      }`,
+    );
+
     return {
-      accountIdsToInvalidate:
-        await getCurrentSplitsByReceiversHash(rawReceiversHash),
+      accountIdsToInvalidate,
     };
   }
 }

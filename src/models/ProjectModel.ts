@@ -1,162 +1,143 @@
 import type {
+  CreationOptional,
   InferAttributes,
   InferCreationAttributes,
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
-import type { AddressLike } from 'ethers';
 import getSchema from '../utils/getSchema';
-import type { AccountId, Forge, RepoDriverId } from '../core/types';
-import { FORGES_MAP } from '../core/constants';
+import type { Address, AddressDriverId, RepoDriverId } from '../core/types';
 
-export enum ProjectVerificationStatus {
-  Claimed = 'Claimed',
-  OwnerUpdateRequested = 'OwnerUpdateRequested',
-  OwnerUpdated = 'OwnerUpdated',
-  Unclaimed = 'Unclaimed',
-  PendingOwner = 'PendingOwner',
-  PendingMetadata = 'PendingMetadata',
-}
+export const PROJECT_VERIFICATION_STATUSES = [
+  'claimed',
+  'unclaimed',
+  'pending_metadata',
+] as const;
+export type ProjectVerificationStatus =
+  (typeof PROJECT_VERIFICATION_STATUSES)[number];
+
+export type ProjectName = `${string}/${string}`;
+
+export const FORGES = ['github', 'gitlab'] as const;
+export type Forge = (typeof FORGES)[number];
 
 export default class ProjectModel extends Model<
   InferAttributes<ProjectModel>,
   InferCreationAttributes<ProjectModel>
 > {
-  public declare id: RepoDriverId; // The `accountId` from `OwnerUpdatedRequested` event.
-  public declare isValid: boolean;
-  public declare name: string | null;
-  public declare forge: Forge | null;
-  public declare ownerAddress: AddressLike | null;
-  public declare ownerAccountId: AccountId | null;
+  // Populated by `OwnerUpdated`
+  declare public accountId: RepoDriverId;
+  declare public ownerAddress: Address | null;
+  declare public ownerAccountId: AddressDriverId | null;
+  declare public claimedAt: Date | null;
 
-  public declare url: string | null;
-  public declare emoji: string | null;
-  public declare avatarCid: string | null;
-  public declare color: string | null;
-  public declare description: string | null;
-  public declare verificationStatus: ProjectVerificationStatus;
-  public declare isVisible: boolean;
-  public declare lastProcessedIpfsHash: string | null;
+  // Populated by `AccountMetadataEmitted`
+  declare public url: string | null;
+  declare public forge: Forge | null;
+  declare public name: ProjectName | null;
+  declare public emoji: string | null;
+  declare public color: string | null;
+  declare public avatarCid: string | null;
+  declare public lastProcessedIpfsHash: string | null;
 
-  public declare claimedAt: Date | null;
+  // Common
+  declare public verificationStatus: ProjectVerificationStatus;
+  declare public isValid: boolean;
+  declare public isVisible: boolean;
+  declare public lastProcessedVersion: string;
+  declare public createdAt: CreationOptional<Date>;
+  declare public updatedAt: CreationOptional<Date>;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
       {
-        id: {
-          type: DataTypes.STRING,
+        accountId: {
           primaryKey: true,
+          type: DataTypes.STRING,
         },
         isValid: {
+          allowNull: false,
           type: DataTypes.BOOLEAN,
-          allowNull: false,
-        },
-        name: {
-          type: DataTypes.STRING,
-          allowNull: true,
-          validate: {
-            isValidName(value: string) {
-              if (!value) {
-                return;
-              }
-
-              const components = value?.split('/');
-
-              if (components.length !== 2) {
-                throw new Error(`Invalid project name: '${value}'.`);
-              }
-
-              const ownerName = components[0];
-              const repoName = components[1];
-
-              const validProjectNameRegex: RegExp = /^[\w.-]+$/;
-
-              if (
-                !validProjectNameRegex.test(ownerName) ||
-                !validProjectNameRegex.test(repoName)
-              ) {
-                throw new Error(`Invalid project name: '${value}'.`);
-              }
-            },
-          },
-        },
-        verificationStatus: {
-          type: DataTypes.ENUM(...Object.values(ProjectVerificationStatus)),
-          allowNull: false,
-        },
-        claimedAt: {
-          type: DataTypes.DATE,
-          allowNull: true,
-        },
-        forge: {
-          type: DataTypes.ENUM(...Object.values(FORGES_MAP)),
-          allowNull: true,
-        },
-        ownerAddress: {
-          type: DataTypes.STRING,
-          allowNull: true,
-        },
-        ownerAccountId: {
-          type: DataTypes.STRING,
-          allowNull: true,
-        },
-        url: {
-          type: DataTypes.STRING,
-          allowNull: true,
-        },
-        emoji: {
-          type: DataTypes.STRING,
-          allowNull: true,
-        },
-        avatarCid: {
-          type: DataTypes.STRING,
-          allowNull: true,
-        },
-        color: {
-          type: DataTypes.STRING,
-          allowNull: true,
-        },
-        description: {
-          type: DataTypes.TEXT,
-          allowNull: true,
         },
         isVisible: {
-          type: DataTypes.BOOLEAN,
           allowNull: false,
+          type: DataTypes.BOOLEAN,
+        },
+        name: {
+          allowNull: true,
+          type: DataTypes.STRING,
+        },
+        verificationStatus: {
+          allowNull: false,
+          type: DataTypes.ENUM(...PROJECT_VERIFICATION_STATUSES),
+        },
+        ownerAddress: {
+          allowNull: true,
+          type: DataTypes.STRING,
+        },
+        ownerAccountId: {
+          allowNull: true,
+          type: DataTypes.STRING,
+        },
+        forge: {
+          allowNull: true,
+          type: DataTypes.ENUM(...FORGES),
+        },
+        url: {
+          allowNull: true,
+          type: DataTypes.STRING,
+        },
+        emoji: {
+          allowNull: true,
+          type: DataTypes.STRING,
+        },
+        avatarCid: {
+          allowNull: true,
+          type: DataTypes.STRING,
+        },
+        color: {
+          allowNull: true,
+          type: DataTypes.STRING,
         },
         lastProcessedIpfsHash: {
-          type: DataTypes.TEXT,
           allowNull: true,
+          type: DataTypes.TEXT,
+        },
+        lastProcessedVersion: {
+          allowNull: false,
+          type: DataTypes.STRING,
+        },
+        claimedAt: {
+          allowNull: true,
+          type: DataTypes.DATE,
+        },
+        createdAt: {
+          allowNull: false,
+          type: DataTypes.DATE,
+        },
+        updatedAt: {
+          allowNull: false,
+          type: DataTypes.DATE,
         },
       },
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'GitProjects',
+        tableName: 'projects',
+        underscored: true,
+        timestamps: true,
         indexes: [
           {
             fields: ['ownerAddress'],
-            name: `IX_GitProjects_ownerAddress`,
-            unique: false,
-            where: {
-              isValid: true,
-            },
+            name: 'idx_projects_owner_address',
           },
           {
             fields: ['verificationStatus'],
-            name: `IX_GitProjects_verificationStatus`,
-            where: {
-              isValid: true,
-            },
-            unique: false,
+            name: 'idx_projects_verification_status',
           },
           {
             fields: ['url'],
-            name: `IX_GitProjects_url`,
-            where: {
-              isValid: true,
-            },
-            unique: false,
+            name: 'idx_projects_url',
           },
         ],
       },

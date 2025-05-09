@@ -1,5 +1,5 @@
 import EventHandlerBase from '../events/EventHandlerBase';
-import LogManager from '../core/LogManager';
+import ScopedLogger from '../core/ScopedLogger';
 import { convertToAccountId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import { SplitEventModel } from '../models';
@@ -27,7 +27,9 @@ export default class SplitEventHandler extends EventHandlerBase<'Split(uint256,u
     const erc20 = toAddress(rawErc20);
     const amt = toBigIntString(rawAmt.toString());
 
-    LogManager.logRequestInfo(
+    const scopedLogger = new ScopedLogger(this.name, requestId);
+
+    scopedLogger.log(
       `📥 ${this.name} is processing the following ${request.event.eventSignature}:
       \r\t - accountId:   ${accountId}
       \r\t - receiver:    ${rawReceiver}
@@ -35,12 +37,9 @@ export default class SplitEventHandler extends EventHandlerBase<'Split(uint256,u
       \r\t - amt:         ${rawAmt}
       \r\t - logIndex:    ${logIndex}
       \r\t - tx hash:     ${transactionHash}`,
-      requestId,
     );
 
     await dbConnection.transaction(async (transaction) => {
-      const logManager = new LogManager(requestId);
-
       const splitEvent = await SplitEventModel.create(
         {
           accountId,
@@ -55,13 +54,13 @@ export default class SplitEventHandler extends EventHandlerBase<'Split(uint256,u
         { transaction },
       );
 
-      logManager.appendFindOrCreateLog(
-        SplitEventModel,
-        true,
-        `${splitEvent.transactionHash}-${splitEvent.logIndex}`,
-      );
+      scopedLogger.bufferCreation({
+        input: splitEvent,
+        type: SplitEventModel,
+        id: `${splitEvent.transactionHash}-${splitEvent.logIndex}`,
+      });
 
-      logManager.logAllInfo(this.name);
+      scopedLogger.flush();
     });
   }
 }

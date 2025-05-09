@@ -73,7 +73,6 @@ async function init() {
     ],
     getHandlers(),
     getProvider(),
-
     startBlock,
   );
 

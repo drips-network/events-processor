@@ -1,5 +1,5 @@
 import type { StreamsSetEvent } from '../../contracts/CURRENT_NETWORK/Drips';
-import LogManager from '../core/LogManager';
+import ScopedLogger from '../core/ScopedLogger';
 import { dbConnection } from '../db/database';
 import EventHandlerBase from '../events/EventHandlerBase';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
@@ -33,7 +33,9 @@ export default class StreamsSetEventHandler extends EventHandlerBase<'StreamsSet
     const balance = toBigIntString(rawBalance.toString());
     const maxEnd = toBigIntString(rawMaxEnd.toString());
 
-    LogManager.logRequestInfo(
+    const scopedLogger = new ScopedLogger(this.name, requestId);
+
+    scopedLogger.log(
       `📥 ${this.name} is processing the following ${request.event.eventSignature}:
       \r\t - accountId:          ${accountId}
       \r\t - erc20:              ${rawErc20}
@@ -43,12 +45,9 @@ export default class StreamsSetEventHandler extends EventHandlerBase<'StreamsSet
       \r\t - maxEnd:             ${maxEnd}
       \r\t - logIndex:           ${logIndex}
       \r\t - tx hash:            ${transactionHash}`,
-      requestId,
     );
 
     await dbConnection.transaction(async (transaction) => {
-      const logManager = new LogManager(requestId);
-
       const streamsSetEvent = await StreamsSetEventModel.create(
         {
           accountId,
@@ -67,11 +66,13 @@ export default class StreamsSetEventHandler extends EventHandlerBase<'StreamsSet
         },
       );
 
-      logManager.appendFindOrCreateLog(
-        StreamsSetEventModel,
-        true,
-        `${streamsSetEvent.transactionHash}-${streamsSetEvent.logIndex}`,
-      );
+      scopedLogger.bufferCreation({
+        type: StreamsSetEventModel,
+        input: streamsSetEvent,
+        id: `${streamsSetEvent.transactionHash}-${streamsSetEvent.logIndex}`,
+      });
+
+      scopedLogger.flush();
     });
   }
 }

@@ -1,9 +1,4 @@
-import {
-  type FindOptions,
-  type Model,
-  type Transaction,
-  type WhereOptions,
-} from 'sequelize';
+import type { FindOptions, Model, Transaction, WhereOptions } from 'sequelize';
 import type { IEventModel } from '../events/types';
 
 export async function isLatestEvent<T extends IEventModel & Model<any, any>>(
@@ -12,8 +7,8 @@ export async function isLatestEvent<T extends IEventModel & Model<any, any>>(
   where: WhereOptions<T>,
   transaction: Transaction,
 ): Promise<boolean> {
-  const latest = await model.findOne({
-    lock: transaction.LOCK.UPDATE,
+  const latestEventInDb = await model.findOne({
+    lock: true,
     transaction,
     where,
     order: [
@@ -22,14 +17,17 @@ export async function isLatestEvent<T extends IEventModel & Model<any, any>>(
     ],
   });
 
-  if (!latest) {
+  if (!latestEventInDb) {
     return true;
   }
 
-  const isNewerBlock = latest.blockNumber < incomingEvent.blockNumber;
-  const isSameBlockNewerLog =
-    latest.blockNumber === incomingEvent.blockNumber &&
-    latest.logIndex <= incomingEvent.logIndex;
+  if (
+    latestEventInDb.blockNumber > incomingEvent.blockNumber ||
+    (latestEventInDb.blockNumber === incomingEvent.blockNumber &&
+      latestEventInDb.logIndex > incomingEvent.logIndex)
+  ) {
+    return false;
+  }
 
-  return isNewerBlock || isSameBlockNewerLog;
+  return true;
 }

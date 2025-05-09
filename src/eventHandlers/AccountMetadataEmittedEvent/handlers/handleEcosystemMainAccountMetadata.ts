@@ -1,27 +1,46 @@
 import type { AnyVersion } from '@efstajas/versioned-parser';
 import type { Transaction } from 'sequelize';
 import type { z } from 'zod';
-import appSettings from '../../../config/appSettings';
-import type LogManager from '../../../core/LogManager';
-import type { IpfsHash, NftDriverId } from '../../../core/types';
+import { ZeroAddress } from 'ethers';
+import type ScopedLogger from '../../../core/ScopedLogger';
+import type {
+  Address,
+  AddressDriverId,
+  IpfsHash,
+  NftDriverId,
+} from '../../../core/types';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
-import { EcosystemMainAccountModel } from '../../../models';
-import unreachableError from '../../../utils/unreachableError';
 import verifySplitsReceivers from '../verifySplitsReceivers';
 import type { repoDriverSplitReceiverSchema } from '../../../metadata/schemas/repo-driver/v2';
 import type { subListSplitReceiverSchema } from '../../../metadata/schemas/immutable-splits-driver/v1';
-import verifyProjectSources from '../projectVerification';
+import { verifyProjectSources } from '../../../utils/projectUtils';
 import {
-  createProjectReceiver,
-  createSubListReceiver,
-  deleteExistingReceivers,
+  assertIsImmutableSplitsDriverId,
+  assertIsRepoDriverId,
+  convertToNftDriverId,
+} from '../../../utils/accountIdUtils';
+import { EcosystemMainAccountModel, ProjectModel } from '../../../models';
+import appSettings from '../../../config/appSettings';
+import {
+  createSplitReceiver,
+  deleteExistingSplitReceivers,
 } from '../receiversRepository';
+import unreachableError from '../../../utils/unreachableError';
+import {
+  addressDriverContract,
+  nftDriverContract,
+} from '../../../core/contractClients';
+import {
+  decodeVersion,
+  makeVersion,
+} from '../../../utils/lastProcessedVersion';
 
 type Params = {
   ipfsHash: IpfsHash;
+  logIndex: number;
   blockNumber: number;
   blockTimestamp: Date;
-  logManager: LogManager;
+  scopedLogger: ScopedLogger;
   transaction: Transaction;
   emitterAccountId: NftDriverId;
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>;
@@ -29,139 +48,225 @@ type Params = {
 
 export default async function handleEcosystemMainAccountMetadata({
   ipfsHash,
+  logIndex,
   metadata,
-  logManager,
+  scopedLogger,
   blockNumber,
   transaction,
   blockTimestamp,
   emitterAccountId,
 }: Params) {
-  validateMetadata(emitterAccountId, metadata);
+  validateMetadata(metadata);
 
-  const [areSplitsValid, onChainSplitsHash, calculatedSplitsHash] =
-    await verifySplitsReceivers(
-      emitterAccountId,
-      metadata.recipients.map(({ weight, accountId }) => ({
-        weight,
-        accountId,
-      })),
-    );
-
-  if (!areSplitsValid) {
-    logManager.appendLog(
-      `Skipped Drip List ${emitterAccountId} metadata processing: on-chain splits hash '${onChainSplitsHash}' does not match hash '${calculatedSplitsHash}' calculated from metadata.`,
+  if (metadata.describes.accountId !== emitterAccountId) {
+    scopedLogger.bufferMessage(
+      `🚨🕵️‍♂️ Skipped Ecosystem Main Account ${emitterAccountId} metadata processing: metadata describes account ID '${metadata.describes.accountId}' but metadata emitted by '${emitterAccountId}'.`,
     );
 
     return;
   }
-  await verifyProjectSources(metadata.recipients);
 
-  const ecosystemMainAccountProps = {
-    id: emitterAccountId,
+  const { isMatch, actualHash, onChainHash } = await verifySplitsReceivers(
+    emitterAccountId,
+    metadata.recipients,
+  );
+
+  if (!isMatch) {
+    scopedLogger.bufferMessage(
+      `Skipped Ecosystem Main Account ${emitterAccountId} metadata processing: on-chain splits hash '${onChainHash}' does not match hash '${actualHash}' calculated from metadata.`,
+    );
+
+    return;
+  }
+
+  const { areProjectsValid, message } = await verifyProjectSources(
+    metadata.recipients.filter((r) => r.type === 'repoDriver'),
+  );
+
+  if (!areProjectsValid) {
+    scopedLogger.bufferMessage(
+      `🚨🕵️‍♂️ Skipped Ecosystem Main Account ${emitterAccountId} metadata processing: ${message}`,
+    );
+  }
+
+  // ✅ All checks passed, we can proceed with the processing.
+
+  await upsertEcosystemMainAccount({
+    ipfsHash,
+    logIndex,
+    metadata,
+    scopedLogger,
+    blockNumber,
+    transaction,
+  });
+
+  deleteExistingSplitReceivers(emitterAccountId, transaction);
+
+  await createNewSplitReceivers({
+    logIndex,
+    blockNumber,
+    transaction,
+    scopedLogger,
+    blockTimestamp,
+    emitterAccountId,
+    splitReceivers: metadata.recipients,
+  });
+}
+
+async function upsertEcosystemMainAccount({
+  ipfsHash,
+  logIndex,
+  metadata,
+  scopedLogger,
+  blockNumber,
+  transaction,
+}: {
+  logIndex: number;
+  ipfsHash: IpfsHash;
+  blockNumber: number;
+  scopedLogger: ScopedLogger;
+  transaction: Transaction;
+  metadata: AnyVersion<typeof nftDriverAccountMetadataParser>;
+}) {
+  const accountId = convertToNftDriverId(metadata.describes.accountId);
+
+  const onChainOwner = (await nftDriverContract.ownerOf(accountId)) as Address;
+
+  const values = {
+    accountId,
     name: metadata.name ?? null,
     description:
       'description' in metadata ? metadata.description || null : null,
+    ownerAddress: onChainOwner,
+    ownerAccountId: (
+      await addressDriverContract.calcAccountId(onChainOwner)
+    ).toString() as AddressDriverId,
     lastProcessedIpfsHash: ipfsHash,
     isVisible:
       blockNumber > appSettings.visibilityThresholdBlockNumber &&
       'isVisible' in metadata
         ? metadata.isVisible
         : true,
+    lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
   };
 
-  const [ecosystemMainAccount, isCreated] =
+  const [ecosystemMainAccount, isCreation] =
     await EcosystemMainAccountModel.findOrCreate({
       transaction,
       lock: transaction.LOCK.UPDATE,
-      where: { id: emitterAccountId },
+      where: { accountId },
       defaults: {
-        ...ecosystemMainAccountProps,
-        isValid: false, // Until the related `TransferEvent` is processed.
+        ...values,
+        isValid: false, // Until the `SetSplits` event is processed.
+        previousOwnerAddress: ZeroAddress as Address,
       },
     });
 
-  if (isCreated) {
-    logManager.appendFindOrCreateLog(
-      EcosystemMainAccountModel,
-      true,
-      ecosystemMainAccount.id,
-    );
+  if (!isCreation) {
+    const newVersion = makeVersion(blockNumber, logIndex);
+    const storedVersion = BigInt(ecosystemMainAccount.lastProcessedVersion);
+    const { blockNumber: sb, logIndex: sl } = decodeVersion(storedVersion);
+
+    if (newVersion < storedVersion) {
+      scopedLogger.log(
+        `Skipped Drip List ${accountId} stale 'AccountMetadata' event (${blockNumber}:${logIndex} ≤ lastProcessed ${sb}:${sl}).`,
+      );
+
+      return;
+    }
+
+    scopedLogger.bufferUpdate({
+      input: ecosystemMainAccount,
+      id: ecosystemMainAccount.accountId,
+      type: EcosystemMainAccountModel,
+    });
+
+    await ecosystemMainAccount.update(values, { transaction });
   } else {
-    ecosystemMainAccount.set(ecosystemMainAccountProps);
-
-    logManager.appendUpdateLog(
-      ecosystemMainAccount,
-      EcosystemMainAccountModel,
-      ecosystemMainAccount.id,
-    );
-
-    await ecosystemMainAccount.save({ transaction });
+    scopedLogger.bufferCreation({
+      input: ecosystemMainAccount,
+      id: ecosystemMainAccount.accountId,
+      type: EcosystemMainAccountModel,
+    });
   }
-
-  await deleteExistingReceivers({
-    for: {
-      accountId: emitterAccountId,
-      column: 'funderEcosystemMainAccountId',
-    },
-    transaction,
-  });
-
-  await setNewReceivers({
-    ipfsHash,
-    logManager,
-    transaction,
-    blockTimestamp,
-    emitterAccountId,
-    receivers: metadata.recipients,
-  });
 }
 
-async function setNewReceivers({
-  receivers,
-  logManager,
+async function createNewSplitReceivers({
+  logIndex,
+  blockNumber,
   transaction,
+  scopedLogger,
+  splitReceivers,
   blockTimestamp,
   emitterAccountId,
 }: {
-  ipfsHash: IpfsHash;
+  logIndex: number;
+  blockNumber: number;
   blockTimestamp: Date;
-  logManager: LogManager;
+  scopedLogger: ScopedLogger;
   transaction: Transaction;
   emitterAccountId: NftDriverId;
-  receivers: (
+  splitReceivers: (
     | z.infer<typeof repoDriverSplitReceiverSchema>
     | z.infer<typeof subListSplitReceiverSchema>
   )[];
 }) {
-  const receiverPromises = receivers.map(async (receiver) => {
+  const receiverPromises = splitReceivers.map(async (receiver) => {
     switch (receiver.type) {
       case 'repoDriver':
-        return createProjectReceiver({
-          logManager,
+        assertIsRepoDriverId(receiver.accountId);
+
+        await ProjectModel.findOrCreate({
           transaction,
-          blockTimestamp,
-          metadataReceiver: receiver,
-          funder: {
-            type: 'ecosystem',
-            accountId: emitterAccountId,
+          lock: transaction.LOCK.UPDATE,
+          where: {
+            accountId: receiver.accountId,
+          },
+          defaults: {
+            accountId: receiver.accountId,
+            verificationStatus: 'unclaimed',
+            isVisible: true, // Visible by default. Account metadata will set the final visibility.
+            isValid: true, // There are no receivers yet. Consider the project valid.
+            url: receiver.source.url,
+            forge: receiver.source.forge,
+            name: `${receiver.source.ownerName}/${receiver.source.repoName}`,
+            lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
+          },
+        });
+
+        return createSplitReceiver({
+          scopedLogger,
+          transaction,
+          splitReceiverShape: {
+            senderAccountId: emitterAccountId,
+            senderAccountType: 'ecosystem_main_account',
+            receiverAccountId: receiver.accountId,
+            receiverAccountType: 'project',
+            relationshipType: 'ecosystem_receiver',
+            weight: receiver.weight,
+            blockTimestamp,
           },
         });
 
       case 'subList':
-        return createSubListReceiver({
-          logManager,
+        assertIsImmutableSplitsDriverId(receiver.accountId);
+        return createSplitReceiver({
+          scopedLogger,
           transaction,
-          blockTimestamp,
-          metadataReceiver: receiver,
-          funder: {
-            type: 'ecosystem',
-            accountId: emitterAccountId,
+          splitReceiverShape: {
+            senderAccountId: emitterAccountId,
+            senderAccountType: 'ecosystem_main_account',
+            receiverAccountId: receiver.accountId,
+            receiverAccountType: 'sub_list',
+            relationshipType: 'sub_list_link',
+            weight: receiver.weight,
+            blockTimestamp,
           },
         });
 
       default:
         return unreachableError(
-          `Unhandled receiver type: ${(receiver as any).type}`,
+          `Unhandled Ecosystem Main Account Split Receiver type: ${(receiver as any).type}`,
         );
     }
   });
@@ -170,7 +275,6 @@ async function setNewReceivers({
 }
 
 function validateMetadata(
-  emitterAccountId: NftDriverId,
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
 ): asserts metadata is Extract<
   typeof metadata,
@@ -182,12 +286,6 @@ function validateMetadata(
     )[];
   }
 > {
-  if (emitterAccountId !== metadata.describes.accountId) {
-    throw new Error(
-      `Invalid Ecosystem Main Account metadata: emitter account ID is '${emitterAccountId}', but metadata describes '${metadata.describes.accountId}'.`,
-    );
-  }
-
   if (
     !(
       'recipients' in metadata &&

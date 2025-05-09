@@ -1,25 +1,21 @@
 import type { ModelStaticMembers } from '../core/types';
 import {
   AccountMetadataEmittedEventModel,
-  AddressDriverSplitReceiverModel,
   DripListModel,
-  DripListSplitReceiverModel,
   ProjectModel,
-  OwnerUpdateRequestedEventModel,
-  OwnerUpdatedEventModel,
-  RepoDriverSplitReceiverModel,
   TransferEventModel,
   GivenEventModel,
-  SplitsSetEventModel,
   StreamsSetEventModel,
   StreamReceiverSeenEventModel,
-  _LastIndexedBlockModel,
+  LastIndexedBlockModel,
   SplitEventModel,
   SqueezedStreamsEventModel,
   SubListModel,
   EcosystemMainAccountModel,
-  SubListSplitReceiverModel,
+  SplitsReceiverModel,
+  OwnerUpdatedEventModel,
 } from '../models';
+import SplitsSetEventModel from '../models/SplitsSetEventModel';
 
 const REGISTERED_MODELS: ModelStaticMembers[] = [];
 
@@ -32,24 +28,20 @@ export function getRegisteredModels(): ModelStaticMembers[] {
 }
 
 export function registerModels(): void {
-  registerModel(_LastIndexedBlockModel);
+  registerModel(LastIndexedBlockModel);
 
   registerModel(SubListModel);
+  registerModel(ProjectModel);
   registerModel(DripListModel);
   registerModel(GivenEventModel);
   registerModel(SplitEventModel);
-  registerModel(ProjectModel);
-  registerModel(EcosystemMainAccountModel);
   registerModel(TransferEventModel);
+  registerModel(SplitsReceiverModel);
   registerModel(SplitsSetEventModel);
   registerModel(StreamsSetEventModel);
   registerModel(OwnerUpdatedEventModel);
+  registerModel(EcosystemMainAccountModel);
   registerModel(SqueezedStreamsEventModel);
-  registerModel(SubListSplitReceiverModel);
-  registerModel(DripListSplitReceiverModel);
   registerModel(StreamReceiverSeenEventModel);
-  registerModel(RepoDriverSplitReceiverModel);
-  registerModel(OwnerUpdateRequestedEventModel);
-  registerModel(AddressDriverSplitReceiverModel);
   registerModel(AccountMetadataEmittedEventModel);
 }

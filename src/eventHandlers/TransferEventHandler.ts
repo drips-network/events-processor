@@ -1,8 +1,8 @@
 import { ZeroAddress } from 'ethers';
 import type { TransferEvent } from '../../contracts/CURRENT_NETWORK/NftDriver';
 import EventHandlerBase from '../events/EventHandlerBase';
-import LogManager from '../core/LogManager';
-import { calcAccountId, convertToNftDriverId } from '../utils/accountIdUtils';
+import ScopedLogger from '../core/ScopedLogger';
+import { convertToNftDriverId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import {
   DripListModel,
@@ -10,9 +10,15 @@ import {
   TransferEventModel,
 } from '../models';
 import { dbConnection } from '../db/database';
-import { isLatestEvent } from '../utils/isLatestEvent';
-import appSettings from '../config/appSettings';
 import RecoverableError from '../utils/recoverableError';
+import type { Address, AddressDriverId } from '../core/types';
+import {
+  addressDriverContract,
+  nftDriverContract,
+} from '../core/contractClients';
+import unreachableError from '../utils/unreachableError';
+import appSettings from '../config/appSettings';
+import { makeVersion } from '../utils/lastProcessedVersion';
 
 export default class TransferEventHandler extends EventHandlerBase<'Transfer(address,address,uint256)'> {
   public eventSignatures = ['Transfer(address,address,uint256)' as const];
@@ -29,8 +35,13 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
     },
   }: EventHandlerRequest<'Transfer(address,address,uint256)'>): Promise<void> {
     const [from, to, rawTokenId] = args as TransferEvent.OutputTuple;
+    const tokenId = convertToNftDriverId(rawTokenId);
 
-    LogManager.logRequestInfo(
+    const isMint = from === ZeroAddress;
+
+    const scopedLogger = new ScopedLogger(this.name, requestId);
+
+    scopedLogger.log(
       [
         `📥 ${this.name} is processing ${eventSignature}:`,
         `  - from:       ${from}`,
@@ -39,48 +50,27 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         `  - logIndex:   ${logIndex}`,
         `  - txHash:     ${transactionHash}`,
       ].join('\n'),
-      requestId,
     );
 
     await dbConnection.transaction(async (transaction) => {
-      const logManager = new LogManager(requestId);
-
-      const tokenId = convertToNftDriverId(rawTokenId);
-
       const transferEvent = await TransferEventModel.create(
         {
           tokenId,
-          to,
-          from,
+          to: to as Address,
+          from: from as Address,
           logIndex,
           blockNumber,
           blockTimestamp,
           transactionHash,
         },
-        {
-          transaction,
-        },
+        { transaction },
       );
 
-      logManager.appendFindOrCreateLog(
-        TransferEventModel,
-        true,
-        `${transferEvent.transactionHash}-${transferEvent.logIndex}`,
-      );
-
-      // Only process if this is the latest event.
-      if (
-        !(await isLatestEvent(
-          transferEvent,
-          TransferEventModel,
-          { tokenId },
-          transaction,
-        ))
-      ) {
-        logManager.logAllInfo(this.name);
-
-        return;
-      }
+      scopedLogger.bufferCreation({
+        type: TransferEventModel,
+        id: `${transactionHash}-${logIndex}`,
+        input: transferEvent,
+      });
 
       const dripList = await DripListModel.findByPk(tokenId, {
         transaction,
@@ -95,43 +85,99 @@ export default class TransferEventHandler extends EventHandlerBase<'Transfer(add
         },
       );
 
-      if (!dripList && !ecosystemMainAccount) {
+      const entity = dripList ?? ecosystemMainAccount;
+      const Model = dripList ? DripListModel : EcosystemMainAccountModel;
+
+      if (!entity) {
+        scopedLogger.flush();
+
         throw new RecoverableError(
-          `Drip List or Ecosystem Main Account '${tokenId}' not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
+          `Cannot process '${eventSignature}' event for Drip List or Ecosystem Main Account ${tokenId}: entity not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
         );
       }
 
-      const entity = (dripList ?? ecosystemMainAccount)!;
-      const entityModel = dripList ? DripListModel : EcosystemMainAccountModel;
+      if (dripList && ecosystemMainAccount) {
+        unreachableError(
+          `Invariant violation: both Drip List and Ecosystem Main Account found for token '${tokenId}'.`,
+        );
+      }
 
-      entity.ownerAddress = to;
-      entity.previousOwnerAddress = from;
-      entity.ownerAccountId = await calcAccountId(to);
-      entity.creator = to; // TODO: https://github.com/drips-network/events-processor/issues/14
-      entity.isVisible =
-        blockNumber > appSettings.visibilityThresholdBlockNumber
-          ? from === ZeroAddress || from === appSettings.ecosystemDeployer
-          : true;
-      entity.isValid = true; // The entity is initialized with `false` when created during account metadata processing.
+      const newVersion = makeVersion(blockNumber, logIndex);
+      const storedVersion = BigInt(entity.lastProcessedVersion);
 
-      logManager.appendUpdateLog(entity, entityModel, entity.id);
+      if (isMint) {
+        entity.creator = to as Address;
+
+        scopedLogger.bufferUpdate({
+          type: Model,
+          id: entity.accountId,
+          input: entity,
+        });
+
+        await entity.save({ transaction });
+      }
+
+      const onChainOwner = (await nftDriverContract.ownerOf(
+        tokenId,
+      )) as Address;
+
+      if (to !== onChainOwner) {
+        scopedLogger.bufferMessage(
+          `Skipped Drip List or Ecosystem Main Account ${tokenId} '${eventSignature}' event processing: event is not the latest (on-chain owner '${onChainOwner}' does not match 'to' '${to}').`,
+        );
+
+        scopedLogger.flush();
+
+        return;
+      }
+
+      // Update to the latest on-chain state.
+      entity.ownerAddress = onChainOwner; // Equal to `to`.
+      entity.ownerAccountId = (
+        await addressDriverContract.calcAccountId(onChainOwner)
+      ).toString() as AddressDriverId; // Equal to `to`.
+      entity.previousOwnerAddress = from as Address;
+
+      // Safely update fields that another event handler could also modify.
+      if (newVersion > storedVersion) {
+        entity.isVisible =
+          blockNumber > appSettings.visibilityThresholdBlockNumber
+            ? from === ZeroAddress // If it's a mint, then the Drip List will be visible. If it's a real transfer, then it's not.
+            : true; // If the block number is less than the visibility threshold, then the Drip List is visible by default.
+      }
+
+      entity.lastProcessedVersion = newVersion.toString();
+
+      scopedLogger.bufferUpdate({
+        type: Model,
+        id: entity.accountId,
+        input: entity,
+      });
 
       await entity.save({ transaction });
 
-      logManager.logAllInfo(this.name);
+      scopedLogger.flush();
     });
   }
 
   override async afterHandle(context: {
     args: [from: string, to: string, tokenId: bigint];
     blockTimestamp: Date;
+    requestId: string;
   }): Promise<void> {
-    const { args, blockTimestamp } = context;
-    const [from, to, tokenId] = args;
-
+    const [from, to, tokenId] = context.args;
     await super.afterHandle({
-      args: [tokenId, await calcAccountId(from), await calcAccountId(to)],
-      blockTimestamp,
+      args: [
+        tokenId,
+        (
+          await addressDriverContract.calcAccountId(from)
+        ).toString() as AddressDriverId,
+        (
+          await addressDriverContract.calcAccountId(to)
+        ).toString() as AddressDriverId,
+      ],
+      blockTimestamp: context.blockTimestamp,
+      requestId: context.requestId,
     });
   }
 }

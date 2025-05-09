@@ -1,76 +1,85 @@
-import type { AddressLike } from 'ethers';
-import { ethers } from 'ethers';
+import { hexlify, toUtf8Bytes } from 'ethers';
 import type { z } from 'zod';
-import { FORGES_MAP } from '../core/constants';
-import type { Forge } from '../core/types';
 import unreachableError from './unreachableError';
-import { ProjectVerificationStatus } from '../models/ProjectModel';
+import type ProjectModel from '../models/ProjectModel';
+import type { Forge, ProjectVerificationStatus } from '../models/ProjectModel';
+import { repoDriverContract } from '../core/contractClients';
 import type { sourceSchema } from '../metadata/schemas/common/sources';
+import { assertIsRepoDriverId } from './accountIdUtils';
 
-export function toProjectOwnerAddress(address: string): AddressLike {
-  if (!ethers.isAddress(address)) {
-    throw new Error(`Invalid owner address: ${address}.`);
-  }
-
-  return address as AddressLike;
-}
-
-export function toUrl(forge: Forge, projectName: string): string {
+export function convertForgeToNumber(forge: Forge) {
   switch (forge) {
-    case 'GitHub':
-      return `https://github.com/${projectName}`;
+    case 'github':
+      return 0;
+    case 'gitlab':
+      return 1;
     default:
-      throw new Error(`Unsupported forge: ${forge}.`);
+      return unreachableError(
+        `Failed to convert: '${forge}' is not a valid forge.`,
+      );
   }
 }
 
-export function toForge(forge: bigint): Forge {
-  const forgeAsString = FORGES_MAP[Number(forge) as keyof typeof FORGES_MAP];
+export function calculateProjectStatus(
+  project: ProjectModel,
+): ProjectVerificationStatus {
+  const hasOwner = Boolean(project.ownerAddress);
+  const hasMetadata = Boolean(project.lastProcessedIpfsHash);
 
-  if (!forgeAsString) {
-    throw new Error(`Invalid forge value: ${forge}.`);
+  if (hasOwner && hasMetadata) {
+    return 'claimed';
   }
 
-  return forgeAsString;
-}
-
-export const METADATA_FORGE_MAP: Record<
-  z.infer<typeof sourceSchema>['forge'],
-  Forge
-> = {
-  github: 'GitHub',
-};
-
-export function toReadable(bytes: string): string {
-  return ethers.toUtf8String(bytes);
-}
-
-export function calculateProjectStatus(project: {
-  id: string;
-  color: string | null;
-  ownerAddress: AddressLike | null;
-}): ProjectVerificationStatus {
-  if (!project.ownerAddress && !project.color) {
-    return ProjectVerificationStatus.Unclaimed;
+  if (!hasOwner && !hasMetadata) {
+    return 'unclaimed';
   }
 
-  if (project.ownerAddress && project.color) {
-    return ProjectVerificationStatus.Claimed;
-  }
-
-  if (project.ownerAddress && !project.color) {
-    return ProjectVerificationStatus.PendingMetadata;
-  }
-
-  if (!project.ownerAddress && project.color) {
-    return ProjectVerificationStatus.PendingOwner;
+  if (hasOwner) {
+    return 'pending_metadata';
   }
 
   return unreachableError(
-    `Project with ID ${project.id} has an invalid status.\n` +
-      `  Project:\n${JSON.stringify(project, null, 2)
-        .split('\n')
-        .map((line) => `    ${line}`)
-        .join('\n')}`,
+    `Invalid project status: hasOwner=${hasOwner}, hasMetadata=${hasMetadata}`,
   );
+}
+
+export async function verifyProjectSources(
+  projects: {
+    accountId: string;
+    source: z.infer<typeof sourceSchema>;
+  }[],
+): Promise<{
+  areProjectsValid: boolean;
+  message?: string;
+}> {
+  const errors: string[] = [];
+
+  for (const {
+    accountId,
+    source: { forge, ownerName, repoName },
+  } of projects) {
+    assertIsRepoDriverId(accountId);
+
+    const calculatedAccountId = await repoDriverContract.calcAccountId(
+      convertForgeToNumber(forge),
+      hexlify(toUtf8Bytes(`${ownerName}/${repoName}`)),
+    );
+
+    if (calculatedAccountId.toString() !== accountId) {
+      errors.push(
+        `Mismatch for '${ownerName}/${repoName}' on '${forge}': expected '${accountId}', got '${calculatedAccountId}'.`,
+      );
+    }
+  }
+
+  if (errors.length > 0) {
+    return {
+      areProjectsValid: false,
+      message: `Failed to verify project sources:\n${errors.join('\n')}`,
+    };
+  }
+
+  return {
+    areProjectsValid: true,
+  };
 }

@@ -1,13 +1,18 @@
 import type { OwnerUpdatedEvent } from '../../contracts/CURRENT_NETWORK/RepoDriver';
-import EventHandlerBase from '../events/EventHandlerBase';
-import { ProjectModel, OwnerUpdatedEventModel } from '../models';
-import LogManager from '../core/LogManager';
-import { calcAccountId, convertToRepoDriverId } from '../utils/accountIdUtils';
-import { isLatestEvent } from '../utils/isLatestEvent';
-import type EventHandlerRequest from '../events/EventHandlerRequest';
+import {
+  addressDriverContract,
+  repoDriverContract,
+} from '../core/contractClients';
+import ScopedLogger from '../core/ScopedLogger';
+import type { Address, AddressDriverId } from '../core/types';
 import { dbConnection } from '../db/database';
+import EventHandlerBase from '../events/EventHandlerBase';
+import type EventHandlerRequest from '../events/EventHandlerRequest';
+import { ProjectModel } from '../models';
+import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
+import { convertToRepoDriverId } from '../utils/accountIdUtils';
+import { makeVersion } from '../utils/lastProcessedVersion';
 import { calculateProjectStatus } from '../utils/projectUtils';
-import RecoverableError from '../utils/recoverableError';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
   public readonly eventSignatures = ['OwnerUpdated(uint256,address)' as const];
@@ -23,25 +28,33 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       eventSignature,
     },
   }: EventHandlerRequest<'OwnerUpdated(uint256,address)'>): Promise<void> {
-    const [accountId, owner] = args as OwnerUpdatedEvent.OutputTuple;
+    const [rawAccountId, owner] = args as OwnerUpdatedEvent.OutputTuple;
+    const accountId = convertToRepoDriverId(rawAccountId);
 
-    LogManager.logRequestInfo(
+    const scopedLogger = new ScopedLogger(this.name, requestId);
+
+    scopedLogger.log(
       [
-        `📥 ${this.name} is processing the following ${eventSignature}:`,
-        `  - owner:        ${owner}`,
-        `  - accountId:    ${accountId}`,
-        `  - logIndex:     ${logIndex}`,
-        `  - blockNumber:  ${blockNumber}`,
-        `  - txHash:       ${transactionHash}`,
+        `📥 ${this.name} is processing ${eventSignature}:`,
+        `  - owner:      ${owner}`,
+        `  - accountId:  ${accountId}`,
+        `  - logIndex:   ${logIndex}`,
+        `  - txHash:     ${transactionHash}`,
       ].join('\n'),
-      requestId,
     );
 
+    const onChainOwner = (await repoDriverContract.ownerOf(
+      accountId,
+    )) as Address;
+    if (owner !== onChainOwner) {
+      scopedLogger.log(
+        `Skipped Project ${accountId} 'OwnerUpdated' event processing: on-chain owner '${onChainOwner}' does not match event 'owner' '${owner}'.`,
+      );
+
+      return;
+    }
+
     await dbConnection.transaction(async (transaction) => {
-      const logManager = new LogManager(requestId);
-
-      const projectId = convertToRepoDriverId(accountId);
-
       const ownerUpdatedEvent = await OwnerUpdatedEventModel.create(
         {
           owner,
@@ -49,69 +62,87 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           blockNumber,
           blockTimestamp,
           transactionHash,
-          accountId: projectId,
+          accountId,
         },
         { transaction },
       );
 
-      logManager.appendFindOrCreateLog(
-        OwnerUpdatedEventModel,
-        true,
-        `${ownerUpdatedEvent.transactionHash}-${ownerUpdatedEvent.logIndex}`,
-      );
-
-      // Only process event further if this is the latest.
-      if (
-        !isLatestEvent(
-          ownerUpdatedEvent,
-          OwnerUpdatedEventModel,
-          {
-            accountId: projectId,
-          },
-          transaction,
-        )
-      ) {
-        logManager.logAllInfo(this.name);
-
-        return;
-      }
-
-      const project = await ProjectModel.findByPk(projectId, {
-        transaction,
-        lock: transaction.LOCK.UPDATE,
+      scopedLogger.bufferCreation({
+        input: ownerUpdatedEvent,
+        type: OwnerUpdatedEventModel,
+        id: `${transactionHash}-${logIndex}`,
       });
 
-      if (!project) {
-        throw new RecoverableError(
-          `Project ${projectId} not found. Likely waiting on 'AccountMetadata' event to be processed. Retrying, but if this persists, it is a real error.`,
-        );
+      const [project, isCreation] = await ProjectModel.findOrCreate({
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+        where: {
+          accountId,
+        },
+        defaults: {
+          accountId,
+          ownerAddress: onChainOwner,
+          ownerAccountId: (
+            await addressDriverContract.calcAccountId(onChainOwner)
+          ).toString() as AddressDriverId,
+          claimedAt: blockTimestamp,
+          verificationStatus: 'pending_metadata',
+          isVisible: true, // Visible by default. Account metadata will set the final visibility.
+          isValid: true, // There are no receivers yet. Consider the project valid.
+          lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
+        },
+      });
+
+      if (isCreation) {
+        scopedLogger.bufferCreation({
+          type: ProjectModel,
+          input: project,
+          id: project.accountId,
+        });
+      } else {
+        const newVersion = makeVersion(blockNumber, logIndex);
+        const storedVersion = BigInt(project.lastProcessedVersion);
+
+        // Safely update fields that another event handler could also modify.
+        if (newVersion > storedVersion) {
+          project.verificationStatus = calculateProjectStatus(project);
+        }
+
+        project.ownerAccountId = (
+          await addressDriverContract.calcAccountId(onChainOwner)
+        ).toString() as AddressDriverId;
+        project.ownerAddress = onChainOwner;
+        project.claimedAt = blockTimestamp;
+
+        project.lastProcessedVersion = newVersion.toString();
+
+        scopedLogger.bufferUpdate({
+          type: ProjectModel,
+          id: project.accountId,
+          input: project,
+        });
+
+        await project.save({ transaction });
       }
 
-      project.ownerAddress = owner;
-      project.claimedAt = blockTimestamp;
-      project.ownerAccountId = await calcAccountId(owner);
-      project.verificationStatus = calculateProjectStatus(project);
-
-      logManager.appendUpdateLog(project, ProjectModel, project.id);
-
-      await project.save({ transaction });
-
-      logManager.logAllInfo(this.name);
+      scopedLogger.flush();
     });
   }
 
   override async afterHandle(context: {
     args: [accountId: bigint, owner: string];
     blockTimestamp: Date;
+    requestId: string;
   }): Promise<void> {
     const { args, blockTimestamp } = context;
     const [accountId, owner] = args;
 
-    const ownerAccountId = await calcAccountId(owner);
+    const ownerAccountId = await addressDriverContract.calcAccountId(owner);
 
     super.afterHandle({
       args: [accountId, ownerAccountId],
       blockTimestamp,
+      requestId: context.requestId,
     });
   }
 }

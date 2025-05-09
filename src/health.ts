@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
 import logger from './core/logger';
 import getProvider from './core/getProvider';
-import _LastIndexedBlockModel from './models/_LastIndexedBlockModel';
+import LastIndexedBlockModel from './models/LastIndexedBlockModel';
 
 export const healthEndpoint: RequestHandler = async (req, res) => {
   const HEALTH_THRESHOLD = 10;
@@ -10,7 +10,7 @@ export const healthEndpoint: RequestHandler = async (req, res) => {
     const provider = getProvider();
     const latestChainBlock = await provider.getBlockNumber();
 
-    const lastIndexedBlockRecord = await _LastIndexedBlockModel.findOne({
+    const lastIndexedBlockRecord = await LastIndexedBlockModel.findOne({
       order: [['blockNumber', 'DESC']],
     });
 
@@ -21,7 +21,7 @@ export const healthEndpoint: RequestHandler = async (req, res) => {
     const blockDifference = latestChainBlock - lastIndexedBlock;
 
     if (blockDifference < HEALTH_THRESHOLD) {
-      return res.status(200).send({
+      res.status(200).send({
         status: 'OK',
         latestChainBlock,
         lastIndexedBlock,
@@ -32,7 +32,7 @@ export const healthEndpoint: RequestHandler = async (req, res) => {
     logger.warn(
       `Health check failed: Service is ${blockDifference} blocks behind (Threshold: ${HEALTH_THRESHOLD}).`,
     );
-    return res.status(503).send({
+    res.status(503).send({
       status: 'Unhealthy',
       latestChainBlock,
       lastIndexedBlock,
@@ -41,7 +41,7 @@ export const healthEndpoint: RequestHandler = async (req, res) => {
     });
   } catch (error: any) {
     logger.error(`Health check endpoint error: ${error.message}`, error);
-    return res.status(500).send({
+    res.status(500).send({
       status: 'Error',
       message: 'Internal server error during health check.',
     });

@@ -4,16 +4,16 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import SplitsSetEventModel from '../../src/models/SplitsSetEventModel';
-import LogManager from '../../src/core/LogManager';
 import { convertToAccountId } from '../../src/utils/accountIdUtils';
-import { SplitsSetEventHandler } from '../../src/eventHandlers';
-import setIsValidFlag from '../../src/eventHandlers/SplitsSetEventHandler/setIsValidFlag';
+import SplitsSetEventHandler from '../../src/eventHandlers/SplitsSetEvent/SplitsSetEventHandler';
+import ScopedLogger from '../../src/core/ScopedLogger';
+import setIsValidFlag from '../../src/eventHandlers/SplitsSetEvent/setIsValidFlag';
 
 jest.mock('../../src/models/SplitsSetEventModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
-jest.mock('../../src/core/LogManager');
-jest.mock('../../src/eventHandlers/SplitsSetEventHandler/setIsValidFlag');
+jest.mock('../../src/core/ScopedLogger');
+jest.mock('../../src/eventHandlers/SplitsSetEvent/setIsValidFlag');
 
 describe('SplitsSetEventHandler', () => {
   let mockDbTransaction: {};
@@ -56,7 +56,7 @@ describe('SplitsSetEventHandler', () => {
         },
       ]);
 
-      LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
+      ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
 
       // Act
       await handler['_handle'](mockRequest);

@@ -4,7 +4,7 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import SplitEventModel from '../../src/models/SplitEventModel';
-import LogManager from '../../src/core/LogManager';
+import ScopedLogger from '../../src/core/ScopedLogger';
 import SplitEventHandler from '../../src/eventHandlers/SplitEventHandler';
 import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { toAddress } from '../../src/utils/ethereumAddressUtils';
@@ -13,7 +13,7 @@ import { toBigIntString } from '../../src/utils/bigintUtils';
 jest.mock('../../src/models/SplitEventModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
-jest.mock('../../src/core/LogManager');
+jest.mock('../../src/core/ScopedLogger');
 
 describe('SplitEventHandler', () => {
   let mockDbTransaction: {};
@@ -58,7 +58,7 @@ describe('SplitEventHandler', () => {
         },
       ]);
 
-      LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
+      ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
 
       // Act
       await handler['_handle'](mockRequest);
