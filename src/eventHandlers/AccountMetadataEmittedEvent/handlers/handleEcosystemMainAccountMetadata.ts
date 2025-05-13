@@ -221,7 +221,7 @@ async function createNewSplitReceivers({
           transaction,
           lock: transaction.LOCK.UPDATE,
           where: {
-            accountId: receiver.accountId,
+            accountId: repoDriverId,
           },
           defaults: {
             accountId: repoDriverId,
