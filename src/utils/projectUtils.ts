@@ -6,8 +6,9 @@ import type { Forge, ProjectVerificationStatus } from '../models/ProjectModel';
 import { repoDriverContract } from '../core/contractClients';
 import type { sourceSchema } from '../metadata/schemas/common/sources';
 import {
-  assertIsRepoSubAccountDriverId,
   calcParentRepoDriverId,
+  isRepoDriverId,
+  isRepoSubAccountDriverId,
 } from './accountIdUtils';
 
 export function convertForgeToNumber(forge: Forge) {
@@ -56,34 +57,43 @@ export async function verifyProjectSources(
   message?: string;
 }> {
   const errors: string[] = [];
-
   for (const {
     accountId,
     source: { forge, ownerName, repoName },
   } of projects) {
-    assertIsRepoSubAccountDriverId(accountId);
+    const isSubAccount = isRepoSubAccountDriverId(accountId.toString());
+    const isParentAccount = isRepoDriverId(accountId.toString());
 
-    const parentAccountId = await calcParentRepoDriverId(accountId);
-
+    if (!isSubAccount && !isParentAccount) {
+      unreachableError(
+        `Invalid account ID: '${accountId}' is not a valid RepoDriver or RepoSubAccount ID.`,
+      );
+    }
     const calculatedParentAccountId = await repoDriverContract.calcAccountId(
       convertForgeToNumber(forge),
       hexlify(toUtf8Bytes(`${ownerName}/${repoName}`)),
     );
 
-    if (calculatedParentAccountId.toString() !== parentAccountId) {
+    if (isSubAccount) {
+      const parentId = await calcParentRepoDriverId(accountId);
+
+      if (parentId !== calculatedParentAccountId.toString()) {
+        errors.push(
+          `Mismatch for '${ownerName}/${repoName}' on '${forge}': for sub account '${accountId}', expected parent '${calculatedParentAccountId}', got '${parentId}'.`,
+        );
+      }
+    } else if (accountId !== calculatedParentAccountId.toString()) {
       errors.push(
-        `Mismatch for '${ownerName}/${repoName}' on '${forge}': expected '${parentAccountId}', got '${calculatedParentAccountId}'.`,
+        `Mismatch for '${ownerName}/${repoName}' on '${forge}': expected parent account '${calculatedParentAccountId}', got '${accountId}'.`,
       );
     }
   }
-
   if (errors.length > 0) {
     return {
       areProjectsValid: false,
       message: `Failed to verify project sources:\n${errors.join('\n')}`,
     };
   }
-
   return {
     areProjectsValid: true,
   };
