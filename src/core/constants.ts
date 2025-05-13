@@ -16,6 +16,7 @@ export const DRIPS_CONTRACTS = [
   'drips',
   'nftDriver',
   'repoDriver',
+  'repoSubAccountDriver',
   'addressDriver',
   'immutableSplitsDriver',
 ] as const;

@@ -1,9 +1,7 @@
 import z from 'zod';
-import {
-  addressDriverSplitReceiverSchema,
-  repoDriverSplitReceiverSchema,
-} from '../repo-driver/v2';
+import { addressDriverSplitReceiverSchema } from '../repo-driver/v2';
 import { dripListSplitReceiverSchema } from '../nft-driver/v2';
+import { repoSubAccountDriverSplitReceiverSchema } from '../common/repoSubAccountDriverSplitReceiverSchema';
 
 export const subListSplitReceiverSchema = z.object({
   type: z.literal('subList'),
@@ -18,7 +16,7 @@ export const subListMetadataSchemaV1 = z.object({
     z.union([
       addressDriverSplitReceiverSchema,
       dripListSplitReceiverSchema,
-      repoDriverSplitReceiverSchema,
+      repoSubAccountDriverSplitReceiverSchema,
       subListSplitReceiverSchema,
     ]),
   ),

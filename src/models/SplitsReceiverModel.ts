@@ -26,6 +26,7 @@ export default class SplitsReceiverModel extends Model<
   declare public relationshipType: RelationshipType;
   declare public weight: number;
   declare public blockTimestamp: Date;
+  declare public splitsToRepoDriverSubAccount: boolean | undefined;
   declare public createdAt: CreationOptional<Date>;
   declare public updatedAt: CreationOptional<Date>;
 
@@ -56,6 +57,24 @@ export default class SplitsReceiverModel extends Model<
         relationshipType: {
           allowNull: false,
           type: DataTypes.ENUM(...RELATIONSHIP_TYPES),
+        },
+        splitsToRepoDriverSubAccount: {
+          type: DataTypes.BOOLEAN,
+          allowNull: true,
+          validate: {
+            splitsToRepoDriverSubAccountValidation(value: boolean | null) {
+              if (this.receiverAccountType === 'project' && value === null) {
+                throw new Error(
+                  `'splitsToRepoDriverSubAccount' must have a value when 'receiverAccountType' is 'project'.`,
+                );
+              }
+              if (this.receiverAccountType !== 'project' && value !== null) {
+                throw new Error(
+                  `'splitsToRepoDriverSubAccount' must be 'null' when 'receiverAccountType' is not 'project'.`,
+                );
+              }
+            },
+          },
         },
         weight: {
           type: DataTypes.INTEGER,

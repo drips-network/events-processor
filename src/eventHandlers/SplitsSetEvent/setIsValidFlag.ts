@@ -1,6 +1,7 @@
 import type { Transaction } from 'sequelize';
 import type { AccountId } from '../../core/types';
 import {
+  calcSubRepoDriverId,
   isImmutableSplitsDriverId,
   isNftDriverId,
   isRepoDriverId,
@@ -175,10 +176,19 @@ async function hashDbSplits(
     where: { senderAccountId: accountId },
   });
 
-  const receivers = rows.map((r) => ({
-    accountId: r.receiverAccountId,
-    weight: r.weight,
-  }));
+  const receiverPromises = rows.map(async (s) => {
+    let receiverId = s.receiverAccountId;
+    if (s.splitsToRepoDriverSubAccount) {
+      receiverId = await calcSubRepoDriverId(s.receiverAccountId);
+    }
+
+    return {
+      accountId: receiverId,
+      weight: s.weight,
+    };
+  });
+
+  const receivers = await Promise.all(receiverPromises);
 
   return dripsContract.hashSplits(formatSplitReceivers(receivers));
 }

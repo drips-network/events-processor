@@ -12,10 +12,7 @@ import {
 import { getImmutableSpitsDriverMetadata } from '../../../utils/metadataUtils';
 import unreachableError from '../../../utils/unreachableError';
 import verifySplitsReceivers from '../verifySplitsReceivers';
-import type {
-  addressDriverSplitReceiverSchema,
-  repoDriverSplitReceiverSchema,
-} from '../../../metadata/schemas/repo-driver/v2';
+import type { addressDriverSplitReceiverSchema } from '../../../metadata/schemas/repo-driver/v2';
 import type { subListSplitReceiverSchema } from '../../../metadata/schemas/immutable-splits-driver/v1';
 import type { dripListSplitReceiverSchema } from '../../../metadata/schemas/nft-driver/v2';
 import RecoverableError from '../../../utils/recoverableError';
@@ -35,6 +32,7 @@ import {
   convertToImmutableSplitsDriverId,
 } from '../../../utils/accountIdUtils';
 import { makeVersion } from '../../../utils/lastProcessedVersion';
+import type { repoSubAccountDriverSplitReceiverSchema } from '../../../metadata/schemas/common/repoSubAccountDriverSplitReceiverSchema';
 
 type Params = {
   logIndex: number;
@@ -82,7 +80,7 @@ export default async function handleSubListMetadata({
   }
 
   const { areProjectsValid, message } = await verifyProjectSources(
-    metadata.recipients.filter((r) => r.type === 'repoDriver'),
+    metadata.recipients.filter((r) => r.type === 'repoSubAccountDriver'),
   );
 
   if (!areProjectsValid) {
@@ -186,7 +184,7 @@ async function createNewSplitReceivers({
   transaction: Transaction;
   emitterAccountId: ImmutableSplitsDriverId;
   receivers: (
-    | z.infer<typeof repoDriverSplitReceiverSchema>
+    | z.infer<typeof repoSubAccountDriverSplitReceiverSchema>
     | z.infer<typeof subListSplitReceiverSchema>
     | z.infer<typeof addressDriverSplitReceiverSchema>
     | z.infer<typeof dripListSplitReceiverSchema>
@@ -194,7 +192,7 @@ async function createNewSplitReceivers({
 }) {
   const receiverPromises = receivers.map(async (receiver) => {
     switch (receiver.type) {
-      case 'repoDriver':
+      case 'repoSubAccountDriver':
         assertIsRepoDriverId(receiver.accountId);
 
         await ProjectModel.findOrCreate({
