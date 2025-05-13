@@ -5,7 +5,7 @@ import type ProjectModel from '../models/ProjectModel';
 import type { Forge, ProjectVerificationStatus } from '../models/ProjectModel';
 import { repoDriverContract } from '../core/contractClients';
 import type { sourceSchema } from '../metadata/schemas/common/sources';
-import { assertIsRepoDriverId } from './accountIdUtils';
+import { assertIsRepoSubAccountDriverId } from './accountIdUtils';
 
 export function convertForgeToNumber(forge: Forge) {
   switch (forge) {
@@ -58,7 +58,7 @@ export async function verifyProjectSources(
     accountId,
     source: { forge, ownerName, repoName },
   } of projects) {
-    assertIsRepoDriverId(accountId);
+    assertIsRepoSubAccountDriverId(accountId);
 
     const calculatedAccountId = await repoDriverContract.calcAccountId(
       convertForgeToNumber(forge),

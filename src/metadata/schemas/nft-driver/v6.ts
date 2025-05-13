@@ -6,6 +6,7 @@ import {
 } from '../repo-driver/v2';
 import { subListSplitReceiverSchema } from '../immutable-splits-driver/v1';
 import { dripListSplitReceiverSchema } from './v2';
+import { repoSubAccountDriverSplitReceiverSchema } from '../common/repoSubAccountDriverSplitReceiverSchema';
 
 const base = nftDriverAccountMetadataSchemaV5
   .omit({
@@ -20,7 +21,10 @@ const base = nftDriverAccountMetadataSchemaV5
 const ecosystemVariant = base.extend({
   type: z.literal('ecosystem'),
   recipients: z.array(
-    z.union([repoDriverSplitReceiverSchema, subListSplitReceiverSchema]),
+    z.union([
+      repoSubAccountDriverSplitReceiverSchema,
+      subListSplitReceiverSchema,
+    ]),
   ),
 });
 

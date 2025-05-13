@@ -36,10 +36,14 @@ async function getIpfsFile(hash: IpfsHash): Promise<Response> {
 export async function getNftDriverMetadata(
   ipfsHash: IpfsHash,
 ): Promise<AnyVersion<typeof nftDriverAccountMetadataParser>> {
-  const ipfsFile = await (await getIpfsFile(ipfsHash)).json();
-  const metadata = nftDriverAccountMetadataParser.parseAny(ipfsFile);
+  try {
+    const ipfsFile = await (await getIpfsFile(ipfsHash)).json();
+    const metadata = nftDriverAccountMetadataParser.parseAny(ipfsFile);
 
-  return metadata;
+    return metadata;
+  } catch (error) {
+    throw new Error(`Failed to fetch NFT driver metadata from IPFS: ${error}`);
+  }
 }
 
 export async function getImmutableSpitsDriverMetadata(

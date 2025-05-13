@@ -1,4 +1,4 @@
-import { DataTypes, literal } from 'sequelize';
+import { DataTypes, literal, Op } from 'sequelize';
 import type { DataType, QueryInterface } from 'sequelize';
 import getSchema from '../../utils/getSchema';
 import type { DbSchema } from '../../core/types';
@@ -853,6 +853,10 @@ async function createSplitReceiversTable(
         allowNull: false,
         type: literal(`${schema}.relationship_type`).val as unknown as DataType,
       },
+      splitsToRepoDriverSubAccount: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+      },
       weight: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -892,6 +896,28 @@ async function createSplitReceiversTable(
       name: 'idx_splits_receivers_sender_receiver',
     },
   );
+
+  await queryInterface.addConstraint(`${getSchema()}.splits_receivers`, {
+    type: 'check',
+    name: 'chk_splits_receivers_project_splits_to_repo_driver_sub_account',
+    fields: ['receiver_account_type', 'splits_to_repo_driver_sub_account'],
+    where: {
+      [Op.or]: [
+        {
+          receiver_account_type: 'project',
+          splits_to_repo_driver_sub_account: {
+            [Op.not]: null,
+          },
+        },
+        {
+          receiver_account_type: {
+            [Op.ne]: 'project',
+          },
+          splits_to_repo_driver_sub_account: null,
+        },
+      ],
+    },
+  });
 }
 
 export async function down({ context: sequelize }: any): Promise<void> {

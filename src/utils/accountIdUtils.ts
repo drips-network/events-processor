@@ -1,4 +1,5 @@
 /* eslint-disable no-bitwise */
+import { repoSubAccountDriverContract } from '../core/contractClients';
 import type {
   AccountId,
   AddressDriverId,
@@ -6,7 +7,9 @@ import type {
   ImmutableSplitsDriverId,
   NftDriverId,
   RepoDriverId,
+  RepoSubAccountDriverId,
 } from '../core/types';
+import unreachableError from './unreachableError';
 
 export function getContractNameFromAccountId(id: string): DripsContract {
   if (Number.isNaN(Number(id))) {
@@ -34,6 +37,8 @@ export function getContractNameFromAccountId(id: string): DripsContract {
       return 'immutableSplitsDriver';
     case 3n:
       return 'repoDriver';
+    case 4n:
+      return 'repoSubAccountDriver';
     default:
       throw new Error(`Unknown driver for ID ${id}.`);
   }
@@ -173,6 +178,77 @@ export function assertIsImmutableSplitsDriverId(
       `Failed to assert: '${id}' is not a valid ImmutableSplitsDriver ID.`,
     );
   }
+}
+
+// RepoSubAccountDriver
+export function isRepoSubAccountDriverId(
+  id: string | bigint,
+): id is RepoSubAccountDriverId {
+  const idString = typeof id === 'bigint' ? id.toString() : id;
+  const isNaN = Number.isNaN(Number(idString));
+  const isAccountIdOfRepoSubAccountDriver =
+    getContractNameFromAccountId(idString) === 'repoSubAccountDriver';
+
+  if (isNaN || !isAccountIdOfRepoSubAccountDriver) {
+    return false;
+  }
+
+  return true;
+}
+
+export function assertIsRepoSubAccountDriverId(
+  id: string,
+): asserts id is RepoSubAccountDriverId {
+  if (!isRepoSubAccountDriverId(id)) {
+    throw new Error(
+      `Failed to assert: '${id}' is not a valid RepoSubAccountDriverId ID.`,
+    );
+  }
+}
+
+export async function transformRepoDriverId(
+  id: string,
+  direction: 'toParent' | 'toSub',
+): Promise<RepoDriverId> {
+  if (direction === 'toParent') {
+    assertIsRepoSubAccountDriverId(id);
+  } else {
+    assertIsRepoDriverId(id);
+  }
+
+  const transformedId = (
+    await repoSubAccountDriverContract.calcAccountId(id)
+  ).toString();
+
+  if (direction === 'toParent') {
+    assertIsRepoDriverId(transformedId);
+  } else {
+    assertIsRepoSubAccountDriverId(transformedId);
+  }
+
+  const recalculatedId = (
+    await repoSubAccountDriverContract.calcAccountId(transformedId)
+  ).toString();
+
+  if (recalculatedId !== id) {
+    unreachableError(
+      `Failed to transform RepoDriver ID: '${id}' does not match the recalculated ID '${recalculatedId}'.`,
+    );
+  }
+
+  return transformedId as RepoDriverId;
+}
+
+export async function calcParentRepoDriverId(
+  subAccountId: string,
+): Promise<RepoDriverId> {
+  return transformRepoDriverId(subAccountId, 'toParent');
+}
+
+export async function calcSubRepoDriverId(
+  parentId: string,
+): Promise<RepoDriverId> {
+  return transformRepoDriverId(parentId, 'toSub');
 }
 
 // Account ID

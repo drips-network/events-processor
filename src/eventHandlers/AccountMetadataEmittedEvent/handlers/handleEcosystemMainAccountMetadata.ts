@@ -11,12 +11,11 @@ import type {
 } from '../../../core/types';
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import verifySplitsReceivers from '../verifySplitsReceivers';
-import type { repoDriverSplitReceiverSchema } from '../../../metadata/schemas/repo-driver/v2';
 import type { subListSplitReceiverSchema } from '../../../metadata/schemas/immutable-splits-driver/v1';
 import { verifyProjectSources } from '../../../utils/projectUtils';
 import {
   assertIsImmutableSplitsDriverId,
-  assertIsRepoDriverId,
+  calcParentRepoDriverId,
   convertToNftDriverId,
 } from '../../../utils/accountIdUtils';
 import { EcosystemMainAccountModel, ProjectModel } from '../../../models';
@@ -34,6 +33,7 @@ import {
   decodeVersion,
   makeVersion,
 } from '../../../utils/lastProcessedVersion';
+import type { repoSubAccountDriverSplitReceiverSchema } from '../../../metadata/schemas/common/repoSubAccountDriverSplitReceiverSchema';
 
 type Params = {
   ipfsHash: IpfsHash;
@@ -80,7 +80,7 @@ export default async function handleEcosystemMainAccountMetadata({
   }
 
   const { areProjectsValid, message } = await verifyProjectSources(
-    metadata.recipients.filter((r) => r.type === 'repoDriver'),
+    metadata.recipients.filter((r) => r.type === 'repoSubAccountDriver'),
   );
 
   if (!areProjectsValid) {
@@ -207,14 +207,15 @@ async function createNewSplitReceivers({
   transaction: Transaction;
   emitterAccountId: NftDriverId;
   splitReceivers: (
-    | z.infer<typeof repoDriverSplitReceiverSchema>
+    | z.infer<typeof repoSubAccountDriverSplitReceiverSchema>
     | z.infer<typeof subListSplitReceiverSchema>
   )[];
 }) {
   const receiverPromises = splitReceivers.map(async (receiver) => {
     switch (receiver.type) {
-      case 'repoDriver':
-        assertIsRepoDriverId(receiver.accountId);
+      case 'repoSubAccountDriver':
+        // eslint-disable-next-line no-case-declarations
+        const repoDriverId = await calcParentRepoDriverId(receiver.accountId);
 
         await ProjectModel.findOrCreate({
           transaction,
@@ -223,7 +224,7 @@ async function createNewSplitReceivers({
             accountId: receiver.accountId,
           },
           defaults: {
-            accountId: receiver.accountId,
+            accountId: repoDriverId,
             verificationStatus: 'unclaimed',
             isVisible: true, // Visible by default. Account metadata will set the final visibility.
             isValid: true, // There are no receivers yet. Consider the project valid.
@@ -240,11 +241,12 @@ async function createNewSplitReceivers({
           splitReceiverShape: {
             senderAccountId: emitterAccountId,
             senderAccountType: 'ecosystem_main_account',
-            receiverAccountId: receiver.accountId,
+            receiverAccountId: repoDriverId,
             receiverAccountType: 'project',
             relationshipType: 'ecosystem_receiver',
             weight: receiver.weight,
             blockTimestamp,
+            splitsToRepoDriverSubAccount: true,
           },
         });
 
@@ -281,7 +283,7 @@ function validateMetadata(
   {
     type: 'ecosystem';
     recipients: (
-      | z.infer<typeof repoDriverSplitReceiverSchema>
+      | z.infer<typeof repoSubAccountDriverSplitReceiverSchema>
       | z.infer<typeof subListSplitReceiverSchema>
     )[];
   }

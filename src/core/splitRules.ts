@@ -114,6 +114,7 @@ export type SplitReceiverShape = SplitRuleFromRaw<
 > & {
   weight: number;
   blockTimestamp: Date;
+  splitsToRepoDriverSubAccount?: boolean;
 };
 
 export const ACCOUNT_TYPES = Array.from(
