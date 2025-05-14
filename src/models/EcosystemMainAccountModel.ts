@@ -23,6 +23,8 @@ export default class EcosystemMainAccountModel extends Model<
   declare public isVisible: boolean;
   declare public lastProcessedIpfsHash: string;
   declare public lastProcessedVersion: string;
+  declare public avatar: string | null;
+  declare public color: string | null;
   declare public createdAt: CreationOptional<Date>;
   declare public updatedAt: CreationOptional<Date>;
 
@@ -72,6 +74,14 @@ export default class EcosystemMainAccountModel extends Model<
         lastProcessedVersion: {
           allowNull: false,
           type: DataTypes.BIGINT,
+        },
+        avatar: {
+          allowNull: true,
+          type: DataTypes.STRING,
+        },
+        color: {
+          allowNull: true,
+          type: DataTypes.STRING,
         },
         createdAt: {
           allowNull: false,

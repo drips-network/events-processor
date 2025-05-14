@@ -148,6 +148,8 @@ async function upsertEcosystemMainAccount({
         ? metadata.isVisible
         : true,
     lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
+    color: 'color' in metadata ? metadata.color : null,
+    avatar: 'avatar' in metadata ? metadata.avatar.emoji : null,
   };
 
   const [ecosystemMainAccount, isCreation] =

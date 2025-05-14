@@ -7,6 +7,7 @@ import {
 import { subListSplitReceiverSchema } from '../immutable-splits-driver/v1';
 import { dripListSplitReceiverSchema } from './v2';
 import { repoSubAccountDriverSplitReceiverSchema } from '../common/repoSubAccountDriverSplitReceiverSchema';
+import { emojiAvatarSchema } from '../repo-driver/v4';
 
 const base = nftDriverAccountMetadataSchemaV5
   .omit({
@@ -16,6 +17,8 @@ const base = nftDriverAccountMetadataSchemaV5
   .extend({
     isDripList: z.undefined().optional(),
     projects: z.undefined().optional(),
+    color: z.string(),
+    avatar: emojiAvatarSchema,
   });
 
 const ecosystemVariant = base.extend({
