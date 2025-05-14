@@ -148,8 +148,14 @@ async function upsertEcosystemMainAccount({
         ? metadata.isVisible
         : true,
     lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
-    color: 'color' in metadata ? metadata.color : null,
-    avatar: 'avatar' in metadata ? metadata.avatar.emoji : null,
+    color:
+      'color' in metadata
+        ? metadata.color
+        : unreachableError('Missing color in Ecosystem Main Account metadata'),
+    avatar:
+      'avatar' in metadata
+        ? metadata.avatar.emoji
+        : unreachableError('Missing avatar in Ecosystem Main Account metadata'),
   };
 
   const [ecosystemMainAccount, isCreation] =

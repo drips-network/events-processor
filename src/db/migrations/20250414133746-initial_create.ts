@@ -617,11 +617,11 @@ async function createEcosystemMainAccountsTable(
         type: DataTypes.BIGINT,
       },
       avatar: {
-        allowNull: true,
+        allowNull: false,
         type: DataTypes.STRING,
       },
       color: {
-        allowNull: true,
+        allowNull: false,
         type: DataTypes.STRING,
       },
       createdAt: {

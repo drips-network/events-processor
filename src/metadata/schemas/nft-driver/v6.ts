@@ -17,8 +17,6 @@ const base = nftDriverAccountMetadataSchemaV5
   .extend({
     isDripList: z.undefined().optional(),
     projects: z.undefined().optional(),
-    color: z.string(),
-    avatar: emojiAvatarSchema,
   });
 
 const ecosystemVariant = base.extend({
@@ -29,6 +27,8 @@ const ecosystemVariant = base.extend({
       subListSplitReceiverSchema,
     ]),
   ),
+  color: z.string(),
+  avatar: emojiAvatarSchema,
 });
 
 const dripListVariant = base.extend({
