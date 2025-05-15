@@ -6,20 +6,20 @@ import type { Address, KnownAny } from '../core/types';
 import EventHandlerRequest from './EventHandlerRequest';
 import type EventHandlerBase from './EventHandlerBase';
 import type { EventSignature } from './types';
-import _LastIndexedBlockModel from '../models/_LastIndexedBlockModel';
+import LastIndexedBlockModel from '../models/LastIndexedBlockModel';
 import logger from '../core/logger';
 import appSettings from '../config/appSettings';
 
 async function getLatestIndexedBlock() {
-  const record = await _LastIndexedBlockModel.findOne({
-    order: [['blockNumber', 'DESC']],
+  const record = await LastIndexedBlockModel.findOne({
+    order: [['block_number', 'DESC']],
   });
 
   return record?.blockNumber ? Number(record.blockNumber) : 0;
 }
 
 function setLatestIndexedBlock(blockNumber: number) {
-  return _LastIndexedBlockModel.upsert({
+  return LastIndexedBlockModel.upsert({
     id: 1,
     blockNumber: BigInt(blockNumber),
   });
@@ -86,14 +86,19 @@ export default async function poll(
           );
 
           await handler?.createJob(
-            new EventHandlerRequest<typeof signature>({
-              logIndex: log.index,
-              blockNumber: log.blockNumber,
-              blockTimestamp: new Date((await log.getBlock()).timestamp * 1000),
-              transactionHash: log.transactionHash,
-              args: parsedLog.args as KnownAny,
-              eventSignature: signature,
-            }),
+            new EventHandlerRequest<typeof signature>(
+              {
+                logIndex: log.index,
+                blockNumber: log.blockNumber,
+                blockTimestamp: new Date(
+                  (await log.getBlock()).timestamp * 1000,
+                ),
+                transactionHash: log.transactionHash,
+                args: parsedLog.args as KnownAny,
+                eventSignature: signature,
+              },
+              `${log.blockNumber}:${log.transactionHash}:${log.index}`,
+            ),
           );
         }
       }),

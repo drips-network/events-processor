@@ -1,12 +1,11 @@
 import { getEventHandler } from '../events/eventHandlerUtils';
 import type { KnownAny } from '../core/types';
 import eventProcessingQueue from './queue';
-import { assertRequestId } from '../utils/assert';
 import EventHandlerRequest from '../events/EventHandlerRequest';
 import logger from '../core/logger';
 
 export default async function initJobProcessingQueue() {
-  eventProcessingQueue.process(100, async (job) => {
+  eventProcessingQueue.process(10, async (job) => {
     const handler = getEventHandler(job.data.eventSignature);
 
     const {
@@ -17,8 +16,6 @@ export default async function initJobProcessingQueue() {
       args,
       blockTimestamp,
     } = job.data;
-
-    assertRequestId(job.id);
 
     const handleContext = new EventHandlerRequest(
       {
@@ -47,9 +44,12 @@ export default async function initJobProcessingQueue() {
       await handler.afterHandle({
         args: handleContext.event.args.concat(accountIdsToInvalidate),
         blockTimestamp: handleContext.event.blockTimestamp,
+        requestId: handleContext.id,
       });
     } catch (error: any) {
-      logger.error(`❌ ${handler.name} 'afterHandle' error: ${error.message}.`);
+      logger.error(
+        `❌ [${handleContext.id}] ${handler.name} 'afterHandle' error: ${error.message}.`,
+      );
     }
   });
 }

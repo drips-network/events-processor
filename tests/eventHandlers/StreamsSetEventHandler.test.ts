@@ -4,15 +4,15 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import StreamsSetEventModel from '../../src/models/StreamsSetEventModel';
-import LogManager from '../../src/core/LogManager';
-import { toAccountId } from '../../src/utils/accountIdUtils';
+import ScopedLogger from '../../src/core/ScopedLogger';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { StreamsSetEventHandler } from '../../src/eventHandlers';
 import { toBigIntString } from '../../src/utils/bigintUtils';
 
 jest.mock('../../src/models/StreamsSetEventModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
-jest.mock('../../src/core/LogManager');
+jest.mock('../../src/core/ScopedLogger');
 
 describe('StreamsSetEventHandler', () => {
   let mockDbTransaction: {};
@@ -52,7 +52,7 @@ describe('StreamsSetEventHandler', () => {
   describe('_handle', () => {
     test('should create a new StreamsSetEventModel', async () => {
       // Arrange
-      StreamsSetEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      StreamsSetEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'StreamsSetTransactionHash',
           logIndex: 1,
@@ -60,7 +60,7 @@ describe('StreamsSetEventHandler', () => {
         true,
       ]);
 
-      LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
+      ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
 
       // Act
       await handler['_handle'](mockRequest);
@@ -83,15 +83,9 @@ describe('StreamsSetEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(StreamsSetEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
-          accountId: toAccountId(rawAccountId),
+      expect(StreamsSetEventModel.create).toHaveBeenCalledWith(
+        {
+          accountId: convertToAccountId(rawAccountId),
           erc20: rawErc20,
           receiversHash: rawReceiversHash,
           streamsHistoryHash: rawStreamsHistoryHash,
@@ -102,7 +96,10 @@ describe('StreamsSetEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
     });
   });
 });

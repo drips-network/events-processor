@@ -1,6 +1,6 @@
 import EventHandlerBase from '../events/EventHandlerBase';
-import LogManager from '../core/LogManager';
-import { toAccountId } from '../utils/accountIdUtils';
+import ScopedLogger from '../core/ScopedLogger';
+import { convertToAccountId } from '../utils/accountIdUtils';
 import type EventHandlerRequest from '../events/EventHandlerRequest';
 import { SplitEventModel } from '../models';
 import { dbConnection } from '../db/database';
@@ -22,12 +22,14 @@ export default class SplitEventHandler extends EventHandlerBase<'Split(uint256,u
     const [rawAccountId, rawReceiver, rawErc20, rawAmt] =
       args as SplitEvent.OutputTuple;
 
-    const accountId = toAccountId(rawAccountId);
-    const receiver = toAccountId(rawReceiver);
+    const accountId = convertToAccountId(rawAccountId);
+    const receiver = convertToAccountId(rawReceiver);
     const erc20 = toAddress(rawErc20);
     const amt = toBigIntString(rawAmt.toString());
 
-    LogManager.logRequestInfo(
+    const scopedLogger = new ScopedLogger(this.name, requestId);
+
+    scopedLogger.log(
       `📥 ${this.name} is processing the following ${request.event.eventSignature}:
       \r\t - accountId:   ${accountId}
       \r\t - receiver:    ${rawReceiver}
@@ -35,20 +37,11 @@ export default class SplitEventHandler extends EventHandlerBase<'Split(uint256,u
       \r\t - amt:         ${rawAmt}
       \r\t - logIndex:    ${logIndex}
       \r\t - tx hash:     ${transactionHash}`,
-      requestId,
     );
 
     await dbConnection.transaction(async (transaction) => {
-      const logManager = new LogManager(requestId);
-
-      const [givenEvent, isEventCreated] = await SplitEventModel.findOrCreate({
-        lock: true,
-        transaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
+      const splitEvent = await SplitEventModel.create(
+        {
           accountId,
           receiver,
           erc20,
@@ -58,15 +51,16 @@ export default class SplitEventHandler extends EventHandlerBase<'Split(uint256,u
           blockTimestamp,
           transactionHash,
         },
-      });
-
-      logManager.appendFindOrCreateLog(
-        SplitEventModel,
-        isEventCreated,
-        `${givenEvent.transactionHash}-${givenEvent.logIndex}`,
+        { transaction },
       );
 
-      logManager.logAllInfo();
+      scopedLogger.bufferCreation({
+        input: splitEvent,
+        type: SplitEventModel,
+        id: `${splitEvent.transactionHash}-${splitEvent.logIndex}`,
+      });
+
+      scopedLogger.flush();
     });
   }
 }

@@ -16,41 +16,41 @@ export default class StreamReceiverSeenEventModel
   >
   implements IEventModel
 {
-  public declare receiversHash: string;
-  public declare accountId: AccountId;
-  public declare config: BigIntString;
-
-  // Common event log properties.
-  public declare logIndex: number;
-  public declare blockNumber: number;
-  public declare blockTimestamp: Date;
-  public declare transactionHash: string;
+  declare public receiversHash: string;
+  declare public accountId: AccountId;
+  declare public config: BigIntString;
+  declare public logIndex: number;
+  declare public blockNumber: number;
+  declare public blockTimestamp: Date;
+  declare public transactionHash: string;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
       {
         accountId: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         config: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         receiversHash: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         ...COMMON_EVENT_INIT_ATTRIBUTES,
       },
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'StreamReceiverSeenEvents',
+        tableName: 'stream_receiver_seen_events',
+        underscored: true,
+        timestamps: true,
         indexes: [
           {
             fields: ['accountId'],
-            name: `IX_StreamReceiverSeenEvents_accountId`,
+            name: `idx_stream_receiver_seen_events_accountId`,
             unique: false,
           },
         ],

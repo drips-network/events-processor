@@ -28,19 +28,15 @@ eventProcessingQueue.on('error', (error: Error) => {
 });
 
 eventProcessingQueue.on('job succeeded', (job) => {
-  logger.info(`✅ SUCCESS: Job with ID ${job} completed successfully.`);
+  logger.info(`✅ [${job}] completed successfully.`);
 });
 
 eventProcessingQueue.on('job failed', (job, err) => {
-  logger.error(
-    `❌ FAILED: Job with ID ${job} failed with error '${err.message}'.`,
-  );
+  logger.error(`❌ [${job}] failed: ${err.message}`);
 });
 
 eventProcessingQueue.on('job retrying', (job, err) => {
-  logger.info(
-    `♻️  Job with ID ${job} failed with error '${err.message}' but is being retried...`,
-  );
+  logger.info(`♻️ [${job}] failed (will be retried): ${err.message}`);
 });
 
 export default eventProcessingQueue;

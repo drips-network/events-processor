@@ -17,33 +17,32 @@ export default class OwnerUpdatedEventModel
   >
   implements IEventModel
 {
-  // Properties from event output.
-  public declare owner: AddressLike;
-  public declare accountId: RepoDriverId;
-
-  // Common event log properties.
-  public declare logIndex: number;
-  public declare blockNumber: number;
-  public declare blockTimestamp: Date;
-  public declare transactionHash: string;
+  declare public owner: AddressLike;
+  declare public accountId: RepoDriverId;
+  declare public logIndex: number;
+  declare public blockNumber: number;
+  declare public blockTimestamp: Date;
+  declare public transactionHash: string;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
       {
         owner: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         accountId: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         ...COMMON_EVENT_INIT_ATTRIBUTES,
       },
       {
         sequelize,
+        underscored: true,
+        timestamps: true,
         schema: getSchema(),
-        tableName: 'OwnerUpdatedEvents',
+        tableName: 'owner_updated_events',
       },
     );
   }
