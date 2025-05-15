@@ -63,12 +63,12 @@ export default class SplitsReceiverModel extends Model<
           allowNull: true,
           validate: {
             splitsToRepoDriverSubAccountValidation(value: boolean | null) {
-              if (this.receiverAccountType === 'project' && value === null) {
+              if (this.receiverAccountType === 'project' && !value) {
                 throw new Error(
                   `'splitsToRepoDriverSubAccount' must have a value when 'receiverAccountType' is 'project'.`,
                 );
               }
-              if (this.receiverAccountType !== 'project' && value !== null) {
+              if (this.receiverAccountType !== 'project' && value) {
                 throw new Error(
                   `'splitsToRepoDriverSubAccount' must be 'null' when 'receiverAccountType' is not 'project'.`,
                 );
