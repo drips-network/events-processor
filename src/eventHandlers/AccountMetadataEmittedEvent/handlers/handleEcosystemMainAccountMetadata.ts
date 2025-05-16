@@ -221,8 +221,7 @@ async function createNewSplitReceivers({
 }) {
   const receiverPromises = splitReceivers.map(async (receiver) => {
     switch (receiver.type) {
-      case 'repoSubAccountDriver':
-        // eslint-disable-next-line no-case-declarations
+      case 'repoSubAccountDriver': {
         const repoDriverId = await calcParentRepoDriverId(receiver.accountId);
 
         await ProjectModel.findOrCreate({
@@ -257,6 +256,7 @@ async function createNewSplitReceivers({
             splitsToRepoDriverSubAccount: true,
           },
         });
+      }
 
       case 'subList':
         assertIsImmutableSplitsDriverId(receiver.accountId);
