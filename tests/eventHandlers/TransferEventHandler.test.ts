@@ -73,6 +73,10 @@ describe('TransferEventHandler', () => {
         .fn()
         .mockResolvedValue(mockRequest.event.args[1]) as any;
 
+      contractClients.addressDriverContract.calcAccountId = jest
+        .fn()
+        .mockResolvedValue('ownerAccountId') as any;
+
       // Act
       await handler['_handle'](mockRequest);
 

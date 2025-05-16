@@ -161,10 +161,12 @@ describe('AccountMetadataEmittedHandler', () => {
 
       // Assert
       expect(handleProjectMetadata.default).toHaveBeenCalledWith({
+        logIndex: mockRequest.event.logIndex,
+        ipfsHash: convertToIpfsHash(mockRequest.event.args[2]),
+        blockNumber: mockRequest.event.blockNumber,
         scopedLogger: expect.anything(),
         emitterAccountId: convertToAccountId(mockRequest.event.args[0]),
         transaction: mockDbTransaction,
-        ipfsHash: convertToIpfsHash(mockRequest.event.args[2]),
         blockTimestamp: mockRequest.event.blockTimestamp,
       });
     });

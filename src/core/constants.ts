@@ -10,6 +10,7 @@ export const SUPPORTED_NETWORKS = [
   'filecoin',
   'metis',
   'optimism',
+  'zksync_era_sepolia',
 ] as const;
 
 export const DRIPS_CONTRACTS = [
