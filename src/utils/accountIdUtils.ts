@@ -259,7 +259,8 @@ export function convertToAccountId(id: bigint | string): AccountId {
     isRepoDriverId(accountIdAsString) ||
     isNftDriverId(accountIdAsString) ||
     isAddressDriverId(accountIdAsString) ||
-    isImmutableSplitsDriverId(accountIdAsString)
+    isImmutableSplitsDriverId(accountIdAsString) ||
+    isRepoSubAccountDriverId(accountIdAsString)
   ) {
     return accountIdAsString as AccountId;
   }
@@ -276,7 +277,8 @@ export function assertIsAccountId(
     !isRepoDriverId(accountId) &&
     !isNftDriverId(accountId) &&
     !isAddressDriverId(accountId) &&
-    !isImmutableSplitsDriverId(accountId)
+    !isImmutableSplitsDriverId(accountId) &&
+    !isRepoSubAccountDriverId(accountId)
   ) {
     throw new Error(
       `Failed to assert: '${accountId}' is not a valid account ID.`,
