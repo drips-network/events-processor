@@ -21,18 +21,15 @@ export default class SqueezedStreamsEventModel
   >
   implements IEventModel
 {
-  // Properties from event output.
-  public declare accountId: AccountId;
-  public declare erc20: Address;
-  public declare senderId: AccountId;
-  public declare amount: BigIntString;
-  public declare streamsHistoryHashes: StreamHistoryHashes;
-
-  // Common event log properties.
-  public declare logIndex: number;
-  public declare blockNumber: number;
-  public declare blockTimestamp: Date;
-  public declare transactionHash: string;
+  declare public accountId: AccountId;
+  declare public erc20: Address;
+  declare public senderId: AccountId;
+  declare public amount: BigIntString;
+  declare public streamsHistoryHashes: StreamHistoryHashes;
+  declare public logIndex: number;
+  declare public blockNumber: number;
+  declare public blockTimestamp: Date;
+  declare public transactionHash: string;
 
   public static toStreamHistoryHashes(
     streamsHistoryHashes: string[],
@@ -44,31 +41,33 @@ export default class SqueezedStreamsEventModel
     this.init(
       {
         accountId: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         erc20: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         senderId: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         amount: {
-          type: DataTypes.STRING,
           allowNull: false,
+          type: DataTypes.STRING,
         },
         streamsHistoryHashes: {
-          type: DataTypes.JSON,
           allowNull: false,
+          type: DataTypes.JSON,
         },
         ...COMMON_EVENT_INIT_ATTRIBUTES,
       },
       {
         sequelize,
         schema: getSchema(),
-        tableName: 'SqueezedStreamsEvents',
+        tableName: 'squeezed_streams_events',
+        underscored: true,
+        timestamps: true,
       },
     );
   }

@@ -1,0 +1,24 @@
+{
+  "network": "zksync_era_sepolia",
+  "block": 5023276,
+  "contracts": {
+    "drips": {
+      "address": "0xe190AB5e92F937751c5ECec9416349666e8C54b9"
+    },
+    "repoDriver": {
+      "address": "0x8bDC23877A23Ce59fEF1712A1486810d9A6E2B94"
+    },
+    "repoSubAccountDriver": {
+      "address": "0x0000000000000000000000000000000000000000"
+    },
+    "addressDriver": {
+      "address": "0x0557b6BA791A24df0Fa6167E1Dc304F403ee777A"
+    },
+    "nftDriver": {
+      "address": "0xB6B3b6a24cB9A9E2De4c6f2Ea54870E411bFc30d"
+    },
+    "immutableSplitsDriver": {
+      "address": "0x47A51E1b8BcB885D0fE6b47d514EEf1E28F0ae95"
+    }
+  }
+}

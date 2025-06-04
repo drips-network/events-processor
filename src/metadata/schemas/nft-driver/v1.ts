@@ -12,7 +12,6 @@ const repoDriverSplitReceiverSchema = z.object({
   source: sourceSchema,
 });
 
-// eslint-disable-next-line import/prefer-default-export
 export const nftDriverAccountMetadataSchemaV1 = z.object({
   driver: z.literal('nft'),
   describes: z.object({

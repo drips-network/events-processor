@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import { assertEventSignature } from '../utils/assert';
 import eventProcessingQueue from './queue';
 import type { EventSignature } from '../events/types';
@@ -6,7 +5,6 @@ import type EventHandlerRequest from '../events/EventHandlerRequest';
 
 export default async function saveEventProcessingJob<T extends EventSignature>(
   request: EventHandlerRequest<T>,
-  expectedEventSignature: T,
 ) {
   const {
     blockNumber,
@@ -17,7 +15,7 @@ export default async function saveEventProcessingJob<T extends EventSignature>(
     eventSignature,
   } = request.event;
 
-  assertEventSignature<T>(eventSignature, expectedEventSignature);
+  assertEventSignature<T>(eventSignature, eventSignature);
 
   return eventProcessingQueue
     .createJob({
@@ -33,8 +31,8 @@ export default async function saveEventProcessingJob<T extends EventSignature>(
         return value;
       }),
     })
-    .setId(randomUUID())
-    .retries(10)
-    .backoff('exponential', 500)
+    .setId(request.id)
+    .retries(20)
+    .backoff('fixed', 30000)
     .save();
 }
