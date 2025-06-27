@@ -4,16 +4,16 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import SplitsSetEventModel from '../../src/models/SplitsSetEventModel';
-import LogManager from '../../src/core/LogManager';
-import { toAccountId } from '../../src/utils/accountIdUtils';
-import { SplitsSetEventHandler } from '../../src/eventHandlers';
-import setIsValidFlag from '../../src/eventHandlers/SplitsSetEventHandler/setIsValidFlag';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
+import SplitsSetEventHandler from '../../src/eventHandlers/SplitsSetEvent/SplitsSetEventHandler';
+import ScopedLogger from '../../src/core/ScopedLogger';
+import setIsValidFlag from '../../src/eventHandlers/SplitsSetEvent/setIsValidFlag';
 
 jest.mock('../../src/models/SplitsSetEventModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
-jest.mock('../../src/core/LogManager');
-jest.mock('../../src/eventHandlers/SplitsSetEventHandler/setIsValidFlag');
+jest.mock('../../src/core/ScopedLogger');
+jest.mock('../../src/eventHandlers/SplitsSetEvent/setIsValidFlag');
 
 describe('SplitsSetEventHandler', () => {
   let mockDbTransaction: {};
@@ -49,15 +49,14 @@ describe('SplitsSetEventHandler', () => {
   describe('_handle', () => {
     test('should create a new SplitsSetEventModel', async () => {
       // Arrange
-      SplitsSetEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      SplitsSetEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'SplitsSetTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
-      LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
+      ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
 
       // Act
       await handler['_handle'](mockRequest);
@@ -73,22 +72,19 @@ describe('SplitsSetEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(SplitsSetEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
-          accountId: toAccountId(rawAccountId),
+      expect(SplitsSetEventModel.create).toHaveBeenCalledWith(
+        {
+          accountId: convertToAccountId(rawAccountId),
           receiversHash: rawReceiversHash,
           logIndex,
           blockNumber,
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
 
       expect(setIsValidFlag).toHaveBeenCalled();
     });
