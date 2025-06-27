@@ -71,14 +71,6 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       return;
     }
 
-    if (!this._canProcessDriverType(accountId)) {
-      scopedLogger.log(
-        `Skipping ${eventSignature} event: accountId '${accountId}' is not of a Driver that can be processed.`,
-      );
-
-      return;
-    }
-
     await dbConnection.transaction(async (transaction) => {
       const accountMetadataEmittedEvent =
         await AccountMetadataEmittedEventModel.create(
@@ -101,6 +93,14 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
         input: accountMetadataEmittedEvent,
         id: `${accountMetadataEmittedEvent.transactionHash}-${accountMetadataEmittedEvent.logIndex}`,
       });
+
+      if (!this._canProcessDriverType(accountId)) {
+        scopedLogger.log(
+          `Skipping ${eventSignature} event: accountId '${accountId}' is not of a Driver that can be processed.`,
+        );
+
+        return;
+      }
 
       if (
         !(await isLatestEvent(

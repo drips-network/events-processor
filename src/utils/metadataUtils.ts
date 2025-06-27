@@ -11,12 +11,6 @@ import appSettings from '../config/appSettings';
 export function convertToIpfsHash(str: string): IpfsHash {
   const ipfsHash = toUtf8String(str);
 
-  const isIpfsHash = /^(Qm[a-zA-Z0-9]{44})$/.test(ipfsHash);
-
-  if (!isIpfsHash) {
-    throw new Error(`Failed to convert: '${str}' is not a valid IPFS hash.`);
-  }
-
   return ipfsHash as IpfsHash;
 }
 
