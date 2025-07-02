@@ -47,6 +47,18 @@ export function calculateProjectStatus(
   );
 }
 
+export async function calcProjectId(
+  forge: Forge,
+  owner: string,
+  repo: string,
+): Promise<string> {
+  const accountId = await repoDriverContract.calcAccountId(
+    convertForgeToNumber(forge),
+    hexlify(toUtf8Bytes(`${owner}/${repo}`)),
+  );
+  return accountId.toString();
+}
+
 export async function verifyProjectSources(
   projects: {
     accountId: string;
@@ -69,9 +81,10 @@ export async function verifyProjectSources(
         `Invalid account ID: '${accountId}' is not a valid RepoDriver or RepoSubAccount ID.`,
       );
     }
-    const calculatedParentAccountId = await repoDriverContract.calcAccountId(
-      convertForgeToNumber(forge),
-      hexlify(toUtf8Bytes(`${ownerName}/${repoName}`)),
+    const calculatedParentAccountId = await calcProjectId(
+      forge,
+      ownerName,
+      repoName,
     );
 
     if (isSubAccount) {
