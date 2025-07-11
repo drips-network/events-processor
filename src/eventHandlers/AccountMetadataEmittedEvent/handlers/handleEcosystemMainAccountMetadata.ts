@@ -253,7 +253,7 @@ async function createNewSplitReceivers({
             relationshipType: 'ecosystem_receiver',
             weight: receiver.weight,
             blockTimestamp,
-            splitsToRepoDriverSubAccount: true,
+            splitsToRepoDriverSubAccount: true, // Ecosystem Main Accounts always split to Repo Driver Sub Accounts. This is how `Ecosystems API` is designed.
           },
         });
       }

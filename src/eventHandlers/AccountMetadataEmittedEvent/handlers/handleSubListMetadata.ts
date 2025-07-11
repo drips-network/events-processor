@@ -27,7 +27,7 @@ import {
   assertIsAddressDiverId,
   assertIsImmutableSplitsDriverId,
   assertIsNftDriverId,
-  assertIsRepoDriverId,
+  calcParentRepoDriverId,
   convertToAccountId,
   convertToImmutableSplitsDriverId,
 } from '../../../utils/accountIdUtils';
@@ -95,7 +95,7 @@ export default async function handleSubListMetadata({
 
   // ✅ All checks passed, we can proceed with the processing.
 
-  await upsertSubList({
+  const subList = await upsertSubList({
     metadata,
     ipfsHash,
     scopedLogger,
@@ -106,6 +106,7 @@ export default async function handleSubListMetadata({
   deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
+    subList,
     logIndex,
     blockNumber,
     scopedLogger,
@@ -128,7 +129,7 @@ async function upsertSubList({
   transaction: Transaction;
   emitterAccountId: ImmutableSplitsDriverId;
   metadata: AnyVersion<typeof immutableSplitsDriverMetadataParser>;
-}): Promise<void> {
+}): Promise<SubListModel> {
   const values = {
     accountId: emitterAccountId,
     parentAccountType:
@@ -166,9 +167,12 @@ async function upsertSubList({
       id: subList.accountId,
     });
   }
+
+  return subList;
 }
 
 async function createNewSplitReceivers({
+  subList,
   logIndex,
   receivers,
   blockNumber,
@@ -180,8 +184,9 @@ async function createNewSplitReceivers({
   logIndex: number;
   blockNumber: number;
   blockTimestamp: Date;
-  scopedLogger: ScopedLogger;
+  subList: SubListModel;
   transaction: Transaction;
+  scopedLogger: ScopedLogger;
   emitterAccountId: ImmutableSplitsDriverId;
   receivers: (
     | z.infer<typeof repoSubAccountDriverSplitReceiverSchema>
@@ -192,17 +197,17 @@ async function createNewSplitReceivers({
 }) {
   const receiverPromises = receivers.map(async (receiver) => {
     switch (receiver.type) {
-      case 'repoSubAccountDriver':
-        assertIsRepoDriverId(receiver.accountId);
+      case 'repoSubAccountDriver': {
+        const repoDriverId = await calcParentRepoDriverId(receiver.accountId);
 
         await ProjectModel.findOrCreate({
           transaction,
           lock: transaction.LOCK.UPDATE,
           where: {
-            accountId: receiver.accountId,
+            accountId: repoDriverId,
           },
           defaults: {
-            accountId: receiver.accountId,
+            accountId: repoDriverId,
             verificationStatus: 'unclaimed',
             isVisible: true, // Visible by default. Account metadata will set the final visibility.
             isValid: true, // There are no receivers yet. Consider the project valid.
@@ -219,13 +224,18 @@ async function createNewSplitReceivers({
           splitReceiverShape: {
             senderAccountId: emitterAccountId,
             senderAccountType: 'sub_list',
-            receiverAccountId: receiver.accountId,
+            receiverAccountId: repoDriverId,
             receiverAccountType: 'project',
             relationshipType: 'sub_list_link',
             weight: receiver.weight,
             blockTimestamp,
+            splitsToRepoDriverSubAccount:
+              subList.rootAccountType === 'ecosystem_main_account'
+                ? true
+                : undefined,
           },
         });
+      }
 
       case 'subList':
         assertIsImmutableSplitsDriverId(receiver.accountId);
