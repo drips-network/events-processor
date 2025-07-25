@@ -4,6 +4,7 @@ import type {
   Sequelize,
 } from 'sequelize';
 import { DataTypes, Model } from 'sequelize';
+import { ZeroAddress } from 'ethers';
 import type { Address, NftDriverId } from '../core/types';
 import getSchema from '../utils/getSchema';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../core/constants';
@@ -47,6 +48,19 @@ export default class TransferEventModel
         tableName: 'transfer_events',
         underscored: true,
         timestamps: true,
+        indexes: [
+          {
+            fields: ['from', 'tokenId'],
+            name: 'idx_transfer_events_mint',
+            where: {
+              from: ZeroAddress,
+            },
+          },
+          {
+            fields: ['blockTimestamp'],
+            name: 'idx_transfer_events_timestamp',
+          },
+        ],
       },
     );
   }

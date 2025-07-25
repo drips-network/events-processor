@@ -1,5 +1,6 @@
 import { DataTypes, literal } from 'sequelize';
 import type { DataType, QueryInterface } from 'sequelize';
+import { ZeroAddress } from 'ethers';
 import getSchema from '../../utils/getSchema';
 import type { DbSchema } from '../../core/types';
 import { COMMON_EVENT_INIT_ATTRIBUTES } from '../../core/constants';
@@ -823,6 +824,33 @@ async function createTransferEventsTable(
       },
       ...COMMON_EVENT_INIT_ATTRIBUTES,
     }),
+  );
+
+  // Optimizes mint event lookup
+  await queryInterface.addIndex(
+    {
+      schema,
+      tableName: `transfer_events`,
+    },
+    transformFieldArrayToSnakeCase(['from', 'tokenId']),
+    {
+      name: 'idx_transfer_events_mint',
+      where: {
+        from: ZeroAddress,
+      },
+    },
+  );
+
+  // Optimizes timestamp ordering
+  await queryInterface.addIndex(
+    {
+      schema,
+      tableName: `transfer_events`,
+    },
+    transformFieldArrayToSnakeCase(['blockTimestamp']),
+    {
+      name: 'idx_transfer_events_timestamp',
+    },
   );
 }
 
