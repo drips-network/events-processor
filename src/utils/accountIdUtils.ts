@@ -9,6 +9,7 @@ import type {
   RepoDriverId,
   RepoSubAccountDriverId,
 } from '../core/types';
+import { ORCID_FORGE_ID } from '../models/LinkedIdentityModel';
 import unreachableError from './unreachableError';
 
 export function getContractNameFromAccountId(id: string): DripsContract {
@@ -284,4 +285,25 @@ export function assertIsAccountId(
       `Failed to assert: '${accountId}' is not a valid account ID.`,
     );
   }
+}
+
+// Forge
+export function extractForgeFromAccountId(accountId: string): number {
+  if (!isRepoDriverId(accountId)) {
+    throw new Error(
+      `Cannot extract forge: '${accountId}' is not a RepoDriver ID.`,
+    );
+  }
+
+  const accountIdAsBigInt = BigInt(accountId);
+  // Extract forgeId from bits 216-223 (8 bits after the 32-bit driver ID)
+  const forgeId = (accountIdAsBigInt >> 216n) & 0xffn;
+  return Number(forgeId);
+}
+
+export function isOrcidAccount(accountId: string): boolean {
+  return (
+    isRepoDriverId(accountId) &&
+    extractForgeFromAccountId(accountId) === ORCID_FORGE_ID
+  );
 }

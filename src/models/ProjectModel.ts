@@ -18,6 +18,7 @@ export type ProjectVerificationStatus =
 
 export type ProjectName = `${string}/${string}`;
 
+// Note: 'orcid' IS a forge in the protocol, but it's not listed here because we index it separately as its own entity (LinkedIdentityModel).
 export const FORGES = ['github', 'gitlab'] as const;
 export type Forge = (typeof FORGES)[number];
 

@@ -79,6 +79,13 @@ const SPLIT_RULES = Object.freeze([
     receiverAccountType: 'sub_list',
     relationshipType: 'sub_list_link',
   },
+
+  // Linked Identity Rules
+  {
+    senderAccountType: 'linked_identity',
+    receiverAccountType: 'address',
+    relationshipType: 'identity_owner',
+  },
 ] as const);
 
 type EntityIdMap = {
@@ -88,6 +95,7 @@ type EntityIdMap = {
   sub_list: ImmutableSplitsDriverId;
   deadline: RepoDeadlineDriverId;
   address: AddressDriverId;
+  linked_identity: RepoDriverId;
 };
 
 export type RelationshipType = (typeof SPLIT_RULES)[number]['relationshipType'];
@@ -139,6 +147,7 @@ export const ACCOUNT_TYPE_TO_METADATA_RECEIVER_TYPE: Record<
   ecosystem_main_account: 'ecosystem',
   sub_list: 'subList',
   address: 'address',
+  linked_identity: 'linkedIdentity',
 };
 
 export const METADATA_RECEIVER_TYPE_TO_ACCOUNT_TYPE = Object.fromEntries(

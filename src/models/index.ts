@@ -6,6 +6,7 @@ export { default as SplitEventModel } from './SplitEventModel';
 export { default as SplitsReceiverModel } from './SplitsReceiverModel';
 export { default as TransferEventModel } from './TransferEventModel';
 export { default as SplitsSetEventModel } from './SplitsSetEventModel';
+export { default as LinkedIdentityModel } from './LinkedIdentityModel';
 export { default as StreamsSetEventModel } from './StreamsSetEventModel';
 export { default as LastIndexedBlockModel } from './LastIndexedBlockModel';
 export { default as OwnerUpdatedEventModel } from './OwnerUpdatedEventModel';

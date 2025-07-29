@@ -14,6 +14,7 @@ import {
   EcosystemMainAccountModel,
   SplitsReceiverModel,
   OwnerUpdatedEventModel,
+  LinkedIdentityModel,
 } from '../models';
 import SplitsSetEventModel from '../models/SplitsSetEventModel';
 
@@ -36,6 +37,7 @@ export function registerModels(): void {
   registerModel(GivenEventModel);
   registerModel(SplitEventModel);
   registerModel(TransferEventModel);
+  registerModel(LinkedIdentityModel);
   registerModel(SplitsReceiverModel);
   registerModel(SplitsSetEventModel);
   registerModel(StreamsSetEventModel);

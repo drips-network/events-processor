@@ -14,6 +14,8 @@ import {
   getNftDriverMetadata,
 } from '../../src/utils/metadataUtils';
 import * as handleDripListMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleDripListMetadata';
+import * as handleEcosystemMainAccountMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleEcosystemMainAccountMetadata';
+import * as handleSubListMetadata from '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleSubListMetadata';
 
 jest.mock('../../src/models/AccountMetadataEmittedEventModel');
 jest.mock('../../src/db/database');
@@ -25,6 +27,12 @@ jest.mock(
 );
 jest.mock(
   '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleDripListMetadata',
+);
+jest.mock(
+  '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleEcosystemMainAccountMetadata',
+);
+jest.mock(
+  '../../src/eventHandlers/AccountMetadataEmittedEvent/handlers/handleSubListMetadata',
 );
 jest.mock('../../src/utils/metadataUtils');
 
@@ -85,6 +93,20 @@ describe('AccountMetadataEmittedHandler', () => {
     });
 
     test('should return if the metadata are not emitted by a supported Driver', async () => {
+      // Arrange
+      let transactionCallbackExecuted = false;
+      AccountMetadataEmittedEventModel.create = jest.fn().mockResolvedValue({
+        transactionHash: 'AccountMetadataEmittedEventTransactionHash',
+        logIndex: 1,
+      });
+
+      dbConnection.transaction = jest
+        .fn()
+        .mockImplementation(async (callback) => {
+          await callback(mockDbTransaction);
+          transactionCallbackExecuted = true;
+        });
+
       // Act
       await handler['_handle']({
         id: randomUUID(),
@@ -102,7 +124,12 @@ describe('AccountMetadataEmittedHandler', () => {
       });
 
       // Assert
-      expect(dbConnection.transaction).not.toHaveBeenCalled();
+      expect(dbConnection.transaction).toHaveBeenCalled();
+      expect(transactionCallbackExecuted).toBe(true);
+      expect(handleProjectMetadata.default).not.toHaveBeenCalled();
+      expect(handleDripListMetadata.default).not.toHaveBeenCalled();
+      expect(handleEcosystemMainAccountMetadata.default).not.toHaveBeenCalled();
+      expect(handleSubListMetadata.default).not.toHaveBeenCalled();
     });
 
     test('should create a new AccountMetadataEmittedEvent', async () => {
