@@ -19,8 +19,8 @@ describe('accountIdUtils', () => {
         }, // GitLab
         {
           accountId:
-            '81090464584789033757396881316426232885549223458422815665819452702820',
-          expectedForge: 2,
+            '81320912658542974439730181977206773330805723773165208113981035642880',
+          expectedForge: 4,
         }, // ORCID
       ];
 
@@ -42,7 +42,7 @@ describe('accountIdUtils', () => {
   describe('isOrcidAccount', () => {
     it('should return true for valid ORCID account ID', () => {
       const orcidAccountId =
-        '81090464584789033757396881316426232885549223458422815665819452702825';
+        '81320912658542974439730181977206773330805723773165208113981035642880';
       const result = isOrcidAccount(orcidAccountId);
       expect(result).toBe(true);
     });

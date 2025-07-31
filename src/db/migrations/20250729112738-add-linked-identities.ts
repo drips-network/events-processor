@@ -58,6 +58,10 @@ async function createLinkedIdentitiesTable(
         allowNull: false,
         type: DataTypes.STRING,
       },
+      isLinked: {
+        allowNull: false,
+        type: DataTypes.BOOLEAN,
+      },
       lastProcessedVersion: {
         allowNull: false,
         type: DataTypes.STRING,

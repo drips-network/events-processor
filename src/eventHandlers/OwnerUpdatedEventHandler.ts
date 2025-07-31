@@ -18,6 +18,7 @@ import {
   createSplitReceiver,
   deleteExistingSplitReceivers,
 } from './AccountMetadataEmittedEvent/receiversRepository';
+import { validateLinkedIdentity } from '../utils/validateLinkedIdentity';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
   public readonly eventSignatures = ['OwnerUpdated(uint256,address)' as const];
@@ -164,6 +165,25 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
     transaction: Transaction;
     scopedLogger: ScopedLogger;
   }): Promise<void> {
+    const ownerAccountId = (
+      await addressDriverContract.calcAccountId(owner)
+    ).toString() as AddressDriverId;
+
+    await deleteExistingSplitReceivers(accountId, transaction);
+    await createSplitReceiver({
+      scopedLogger,
+      transaction,
+      splitReceiverShape: {
+        senderAccountId: accountId,
+        senderAccountType: 'linked_identity',
+        receiverAccountId: ownerAccountId,
+        receiverAccountType: 'address',
+        relationshipType: 'identity_owner',
+        weight: 1_000_000, // 100%
+        blockTimestamp,
+      },
+    });
+
     const [linkedIdentity, isCreation] = await LinkedIdentityModel.findOrCreate(
       {
         transaction,
@@ -175,9 +195,8 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           accountId,
           identityType: 'orcid',
           ownerAddress: owner,
-          ownerAccountId: (
-            await addressDriverContract.calcAccountId(owner)
-          ).toString() as AddressDriverId,
+          ownerAccountId,
+          isLinked: true, // Safe to set true since split receiver creation succeeded.
           lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
         },
       },
@@ -192,9 +211,11 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
     } else {
       // Update existing linked identity
       linkedIdentity.ownerAddress = owner;
-      linkedIdentity.ownerAccountId = (
-        await addressDriverContract.calcAccountId(owner)
-      ).toString() as AddressDriverId;
+      linkedIdentity.ownerAccountId = ownerAccountId;
+      linkedIdentity.isLinked = await validateLinkedIdentity(
+        accountId,
+        linkedIdentity.ownerAccountId,
+      );
       linkedIdentity.lastProcessedVersion = makeVersion(
         blockNumber,
         logIndex,
@@ -208,22 +229,6 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
 
       await linkedIdentity.save({ transaction });
     }
-
-    await deleteExistingSplitReceivers(accountId, transaction);
-
-    await createSplitReceiver({
-      scopedLogger,
-      transaction,
-      splitReceiverShape: {
-        senderAccountId: accountId,
-        senderAccountType: 'linked_identity',
-        receiverAccountId: linkedIdentity.ownerAccountId,
-        receiverAccountType: 'address',
-        relationshipType: 'identity_owner',
-        weight: 1_000_000, // 100%
-        blockTimestamp,
-      },
-    });
   }
 
   override async afterHandle(context: {

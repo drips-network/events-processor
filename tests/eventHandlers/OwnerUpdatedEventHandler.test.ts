@@ -14,6 +14,7 @@ import * as receiversRepository from '../../src/eventHandlers/AccountMetadataEmi
 import * as projectUtils from '../../src/utils/projectUtils';
 import { makeVersion } from '../../src/utils/lastProcessedVersion';
 import ScopedLogger from '../../src/core/ScopedLogger';
+import * as validateLinkedIdentityModule from '../../src/utils/validateLinkedIdentity';
 
 jest.mock('../../src/models/OwnerUpdatedEventModel');
 jest.mock('../../src/models');
@@ -24,6 +25,7 @@ jest.mock(
 );
 jest.mock('../../src/utils/projectUtils');
 jest.mock('../../src/core/ScopedLogger');
+jest.mock('../../src/utils/validateLinkedIdentity');
 jest.mock('bee-queue');
 
 describe('OwnerUpdatedEventHandler', () => {
@@ -32,7 +34,7 @@ describe('OwnerUpdatedEventHandler', () => {
   let mockDbTransaction: {};
 
   const mockOrcidAccountId =
-    '81090464584789033757396881316426232885549223458422815665819452702830' as RepoDriverId; // ORCID account
+    '81320912658542974439730181977206773330805723773165208113981035642880' as RepoDriverId; // ORCID account
   const mockProjectId =
     '80904476653030408870644821256816768152249563001421913220796675056650' as RepoDriverId; // GitHub account
   const mockOwnerAddress = Wallet.createRandom().address;
@@ -57,14 +59,14 @@ describe('OwnerUpdatedEventHandler', () => {
   };
 
   beforeAll(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
 
     handler = new OwnerUpdatedEventHandler();
 
     mockRequest = {
       id: 'test-request-id',
       event: {
-        args: [mockOrcidAccountId, mockOwnerAddress],
+        args: [BigInt(mockOrcidAccountId), mockOwnerAddress],
         logIndex: mockLogIndex,
         blockNumber: mockBlockNumber,
         blockTimestamp: mockBlockTimestamp,
@@ -130,6 +132,10 @@ describe('OwnerUpdatedEventHandler', () => {
     (ScopedLogger as jest.MockedClass<typeof ScopedLogger>).mockImplementation(
       () => mockScopedLogger as any,
     );
+
+    (validateLinkedIdentityModule.validateLinkedIdentity as jest.Mock) = jest
+      .fn()
+      .mockResolvedValue(true);
   });
 
   it('should create an OwnerUpdatedEventModel', async () => {
@@ -153,7 +159,7 @@ describe('OwnerUpdatedEventHandler', () => {
         logIndex: mockOwnerUpdatedEventModel.logIndex,
         blockNumber: mockOwnerUpdatedEventModel.blockNumber,
         blockTimestamp: mockOwnerUpdatedEventModel.blockTimestamp,
-        accountId: mockOwnerUpdatedEventModel.accountId,
+        accountId: mockOrcidAccountId,
         owner: mockOwnerUpdatedEventModel.owner,
       }),
       { transaction: mockDbTransaction },
@@ -176,6 +182,7 @@ describe('OwnerUpdatedEventHandler', () => {
         identityType: 'orcid',
         ownerAddress: mockOwnerAddress,
         ownerAccountId: '123456789',
+        isLinked: true,
         lastProcessedVersion: mockExpectedVersion,
       },
     });
@@ -205,7 +212,7 @@ describe('OwnerUpdatedEventHandler', () => {
       {
         id: 'test-github-request-id',
         event: {
-          args: [mockProjectId, mockOwnerAddress],
+          args: [BigInt(mockProjectId), mockOwnerAddress],
           logIndex: mockGitHubLogIndex,
           blockNumber: mockGitHubBlockNumber,
           blockTimestamp: mockBlockTimestamp,
@@ -261,6 +268,7 @@ describe('OwnerUpdatedEventHandler', () => {
     // Assert
     expect(existingLinkedIdentity.ownerAddress).toBe(mockOwnerAddress);
     expect(existingLinkedIdentity.ownerAccountId).toBe('123456789');
+    expect(existingLinkedIdentity.isLinked).toBe(true);
     expect(existingLinkedIdentity.lastProcessedVersion).toBe(
       mockExpectedVersion,
     );
@@ -310,7 +318,7 @@ describe('OwnerUpdatedEventHandler', () => {
       {
         id: 'test-github-update-request-id',
         event: {
-          args: [mockProjectId, mockOwnerAddress],
+          args: [BigInt(mockProjectId), mockOwnerAddress],
           logIndex: mockGitHubLogIndex,
           blockNumber: mockGitHubBlockNumber,
           blockTimestamp: mockBlockTimestamp,
@@ -332,5 +340,77 @@ describe('OwnerUpdatedEventHandler', () => {
     expect(existingProject.save).toHaveBeenCalledWith({
       transaction: mockDbTransaction,
     });
+  });
+
+  it('should ensure ownerAccountId matches calculated account ID from ownerAddress for ORCID accounts', async () => {
+    // Arrange
+    const testOwnerAddress = '0x1234567890123456789012345678901234567890';
+    const expectedAccountId = '123456789';
+
+    jest.mocked(repoDriverContract.ownerOf).mockResolvedValue(testOwnerAddress);
+
+    const testRequest: EventHandlerRequest<'OwnerUpdated(uint256,address)'> = {
+      id: 'test-validation-request',
+      event: {
+        args: [BigInt(mockOrcidAccountId), testOwnerAddress],
+        logIndex: mockLogIndex,
+        blockNumber: mockBlockNumber,
+        blockTimestamp: mockBlockTimestamp,
+        transactionHash: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef',
+        eventSignature: 'OwnerUpdated(uint256,address)',
+      },
+    };
+
+    // Act
+    await handler['_handle'](testRequest);
+
+    // Assert
+    expect(addressDriverContract.calcAccountId).toHaveBeenCalledWith(
+      testOwnerAddress,
+    );
+    expect(LinkedIdentityModel.findOrCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaults: expect.objectContaining({
+          ownerAddress: testOwnerAddress,
+          ownerAccountId: expectedAccountId,
+        }),
+      }),
+    );
+  });
+
+  it('should ensure ownerAccountId matches calculated account ID from ownerAddress for GitHub projects', async () => {
+    // Arrange
+    const testOwnerAddress = '0x9876543210987654321098765432109876543210';
+    const expectedAccountId = '123456789'; // Use the same as the global mock
+
+    jest.mocked(repoDriverContract.ownerOf).mockResolvedValue(testOwnerAddress);
+
+    const testRequest: EventHandlerRequest<'OwnerUpdated(uint256,address)'> = {
+      id: 'test-github-validation-request',
+      event: {
+        args: [BigInt(mockProjectId), testOwnerAddress],
+        logIndex: mockGitHubLogIndex,
+        blockNumber: mockGitHubBlockNumber,
+        blockTimestamp: mockBlockTimestamp,
+        transactionHash: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef',
+        eventSignature: 'OwnerUpdated(uint256,address)',
+      },
+    };
+
+    // Act
+    await handler['_handle'](testRequest);
+
+    // Assert
+    expect(addressDriverContract.calcAccountId).toHaveBeenCalledWith(
+      testOwnerAddress,
+    );
+    expect(ProjectModel.findOrCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaults: expect.objectContaining({
+          ownerAddress: testOwnerAddress,
+          ownerAccountId: expectedAccountId,
+        }),
+      }),
+    );
   });
 });
