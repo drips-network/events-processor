@@ -1,5 +1,4 @@
 import { dripsContract } from '../core/contractClients';
-import { formatSplitReceivers } from './formatSplitReceivers';
 import type { SplitsReceiverStruct } from '../../contracts/CURRENT_NETWORK/Drips';
 import type { AccountId, AddressDriverId } from '../core/types';
 import logger from '../core/logger';
@@ -19,9 +18,7 @@ export async function validateLinkedIdentity(
       },
     ];
 
-    const expectedHash = await dripsContract.hashSplits(
-      formatSplitReceivers(expectedReceivers),
-    );
+    const expectedHash = await dripsContract.hashSplits(expectedReceivers);
 
     return onChainHash === expectedHash;
   } catch (error) {
