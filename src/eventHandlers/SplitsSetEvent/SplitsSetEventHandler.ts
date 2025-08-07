@@ -56,13 +56,12 @@ export default class SplitsSetEventHandler extends EventHandlerBase<'SplitsSet(u
         id: `${splitsSetEvent.transactionHash}-${splitsSetEvent.logIndex}`,
       });
 
-      // Account's splits are set by `AccountMetadataEmitted` events.
-      // The `SplitsSet` event only confirms that the split receivers are valid.
-
-      await setIsValidFlag(splitsSetEvent, scopedLogger, transaction);
-
       if (isOrcidAccount(accountId)) {
-        await setLinkedIdentityFlag(accountId, scopedLogger, transaction);
+        await setLinkedIdentityFlag(splitsSetEvent, scopedLogger, transaction);
+      } else {
+        // Account's splits are set by `AccountMetadataEmitted` events.
+        // The `SplitsSet` event only confirms that the split receivers are valid.
+        await setIsValidFlag(splitsSetEvent, scopedLogger, transaction);
       }
 
       scopedLogger.flush();

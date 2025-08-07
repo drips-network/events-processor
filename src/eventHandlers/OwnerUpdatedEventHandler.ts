@@ -14,10 +14,6 @@ import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
 import { convertToRepoDriverId, isOrcidAccount } from '../utils/accountIdUtils';
 import { makeVersion } from '../utils/lastProcessedVersion';
 import { calculateProjectStatus } from '../utils/projectUtils';
-import {
-  createSplitReceiver,
-  deleteExistingSplitReceivers,
-} from './AccountMetadataEmittedEvent/receiversRepository';
 import { validateLinkedIdentity } from '../utils/validateLinkedIdentity';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
@@ -86,7 +82,6 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           transaction,
           blockNumber,
           scopedLogger,
-          blockTimestamp,
           owner: onChainOwner,
         });
       } else {
@@ -155,12 +150,10 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
     blockNumber,
     transaction,
     scopedLogger,
-    blockTimestamp,
   }: {
     owner: Address;
     logIndex: number;
     blockNumber: number;
-    blockTimestamp: Date;
     accountId: RepoDriverId;
     transaction: Transaction;
     scopedLogger: ScopedLogger;
@@ -168,21 +161,6 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
     const ownerAccountId = (
       await addressDriverContract.calcAccountId(owner)
     ).toString() as AddressDriverId;
-
-    await deleteExistingSplitReceivers(accountId, transaction);
-    await createSplitReceiver({
-      scopedLogger,
-      transaction,
-      splitReceiverShape: {
-        senderAccountId: accountId,
-        senderAccountType: 'linked_identity',
-        receiverAccountId: ownerAccountId,
-        receiverAccountType: 'address',
-        relationshipType: 'identity_owner',
-        weight: 1_000_000, // 100%
-        blockTimestamp,
-      },
-    });
 
     const [linkedIdentity, isCreation] = await LinkedIdentityModel.findOrCreate(
       {
@@ -196,7 +174,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           identityType: 'orcid',
           ownerAddress: owner,
           ownerAccountId,
-          isLinked: true, // Safe to set true since split receiver creation succeeded.
+          isLinked: await validateLinkedIdentity(accountId, ownerAccountId),
           lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
         },
       },

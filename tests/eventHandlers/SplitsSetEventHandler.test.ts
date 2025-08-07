@@ -4,12 +4,12 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import SplitsSetEventModel from '../../src/models/SplitsSetEventModel';
-import { LinkedIdentityModel } from '../../src/models';
-import { convertToAccountId } from '../../src/utils/accountIdUtils';
-import { validateLinkedIdentity } from '../../src/utils/validateLinkedIdentity';
+import * as accountIdUtils from '../../src/utils/accountIdUtils';
 import SplitsSetEventHandler from '../../src/eventHandlers/SplitsSetEvent/SplitsSetEventHandler';
 import ScopedLogger from '../../src/core/ScopedLogger';
 import setIsValidFlag from '../../src/eventHandlers/SplitsSetEvent/setIsValidFlag';
+import { setLinkedIdentityFlag } from '../../src/eventHandlers/SplitsSetEvent/setLinkedIdentityFlag';
+import type { AccountId } from '../../src/core/types';
 
 jest.mock('../../src/models/SplitsSetEventModel');
 jest.mock('../../src/models/LinkedIdentityModel');
@@ -18,6 +18,8 @@ jest.mock('../../src/utils/validateLinkedIdentity');
 jest.mock('bee-queue');
 jest.mock('../../src/core/ScopedLogger');
 jest.mock('../../src/eventHandlers/SplitsSetEvent/setIsValidFlag');
+jest.mock('../../src/eventHandlers/SplitsSetEvent/setLinkedIdentityFlag');
+jest.mock('../../src/utils/accountIdUtils');
 
 describe('SplitsSetEventHandler', () => {
   let mockDbTransaction: {};
@@ -48,6 +50,10 @@ describe('SplitsSetEventHandler', () => {
         UPDATE: 'UPDATE',
       },
     };
+
+    jest
+      .mocked(accountIdUtils.convertToAccountId)
+      .mockReturnValue(mockRequest.event.args[0] as AccountId);
 
     dbConnection.transaction = jest
       .fn()
@@ -82,7 +88,7 @@ describe('SplitsSetEventHandler', () => {
 
       expect(SplitsSetEventModel.create).toHaveBeenCalledWith(
         {
-          accountId: convertToAccountId(rawAccountId),
+          accountId: accountIdUtils.convertToAccountId(rawAccountId),
           receiversHash: rawReceiversHash,
           logIndex,
           blockNumber,
@@ -97,7 +103,7 @@ describe('SplitsSetEventHandler', () => {
       expect(setIsValidFlag).toHaveBeenCalled();
     });
 
-    test('should update isLinked flag for ORCID account when splits are valid', async () => {
+    test('should set isLinked flag for ORCID account', async () => {
       // Arrange
       const orcidAccountId =
         '81320912658542974439730181977206773330805723773165208113981035642880'; // ORCID account
@@ -109,103 +115,56 @@ describe('SplitsSetEventHandler', () => {
         },
       };
 
-      const mockLinkedIdentity = {
-        accountId: orcidAccountId,
-        ownerAccountId: '123456789',
-        isLinked: false,
-        save: jest.fn(),
+      jest.mocked(accountIdUtils.isOrcidAccount).mockReturnValue(true);
+
+      const splitsSetEvent = {
+        transactionHash: 'SplitsSetTransactionHash',
+        logIndex: 1,
       };
 
-      (LinkedIdentityModel as any).findOne = jest
-        .fn()
-        .mockResolvedValue(mockLinkedIdentity);
-      (validateLinkedIdentity as jest.Mock).mockResolvedValue(true);
+      SplitsSetEventModel.create = jest.fn().mockResolvedValue(splitsSetEvent);
 
       // Act
       await handler['_handle'](mockOrcidRequest);
 
       // Assert
-      expect(LinkedIdentityModel.findOne).toHaveBeenCalledWith({
-        where: { accountId: orcidAccountId },
-        transaction: mockDbTransaction,
-        lock: (mockDbTransaction as any).LOCK.UPDATE,
-      });
-      expect(validateLinkedIdentity).toHaveBeenCalledWith(
-        orcidAccountId,
-        '123456789',
+      expect(setLinkedIdentityFlag).toHaveBeenCalledWith(
+        splitsSetEvent,
+        expect.any(ScopedLogger),
+        mockDbTransaction,
       );
-      expect(mockLinkedIdentity.isLinked).toBe(true);
-      expect(mockLinkedIdentity.save).toHaveBeenCalledWith({
-        transaction: mockDbTransaction,
-      });
     });
 
-    test('should update isLinked flag to false for ORCID account when splits are invalid', async () => {
+    test('should set isValid flag for Project account', async () => {
       // Arrange
-      const orcidAccountId =
+      const projectAccountId =
         '81320912658542974439730181977206773330805723773165208113981035642880'; // ORCID account
       const mockOrcidRequest = {
         ...mockRequest,
         event: {
           ...mockRequest.event,
-          args: [BigInt(orcidAccountId), 'receiversHash'],
+          args: [BigInt(projectAccountId), 'receiversHash'],
         },
       };
 
-      const mockLinkedIdentity = {
-        accountId: orcidAccountId,
-        ownerAccountId: '123456789',
-        isLinked: true,
-        save: jest.fn(),
+      jest.mocked(accountIdUtils.isOrcidAccount).mockReturnValue(false);
+
+      const splitsSetEvent = {
+        transactionHash: 'SplitsSetTransactionHash',
+        logIndex: 1,
       };
 
-      (LinkedIdentityModel as any).findOne = jest
-        .fn()
-        .mockResolvedValue(mockLinkedIdentity);
-      (validateLinkedIdentity as jest.Mock).mockResolvedValue(false);
+      SplitsSetEventModel.create = jest.fn().mockResolvedValue(splitsSetEvent);
 
       // Act
       await handler['_handle'](mockOrcidRequest);
 
       // Assert
-      expect(mockLinkedIdentity.isLinked).toBe(false);
-      expect(mockLinkedIdentity.save).toHaveBeenCalledWith({
-        transaction: mockDbTransaction,
-      });
-    });
-
-    test('should skip isLinked update for non-ORCID account', async () => {
-      // Arrange - using the default mockRequest which is a non-ORCID account
-      (LinkedIdentityModel as any).findOne = jest.fn().mockResolvedValue(null);
-
-      // Act
-      await handler['_handle'](mockRequest);
-
-      // Assert
-      expect(LinkedIdentityModel.findOne).not.toHaveBeenCalled();
-      expect(validateLinkedIdentity).not.toHaveBeenCalled();
-    });
-
-    test('should skip isLinked update when LinkedIdentity not found', async () => {
-      // Arrange
-      const orcidAccountId =
-        '81320912658542974439730181977206773330805723773165208113981035642880'; // ORCID account
-      const mockOrcidRequest = {
-        ...mockRequest,
-        event: {
-          ...mockRequest.event,
-          args: [BigInt(orcidAccountId), 'receiversHash'],
-        },
-      };
-
-      (LinkedIdentityModel as any).findOne = jest.fn().mockResolvedValue(null);
-
-      // Act
-      await handler['_handle'](mockOrcidRequest);
-
-      // Assert
-      expect(LinkedIdentityModel.findOne).toHaveBeenCalled();
-      expect(validateLinkedIdentity).not.toHaveBeenCalled();
+      expect(setIsValidFlag).toHaveBeenCalledWith(
+        splitsSetEvent,
+        expect.any(ScopedLogger),
+        mockDbTransaction,
+      );
     });
   });
 });

@@ -4,9 +4,16 @@ import LinkedIdentityModel from '../../../src/models/LinkedIdentityModel';
 import { validateLinkedIdentity } from '../../../src/utils/validateLinkedIdentity';
 import type ScopedLogger from '../../../src/core/ScopedLogger';
 import type { AccountId } from '../../../src/core/types';
+import { dripsContract } from '../../../src/core/contractClients';
+import RecoverableError from '../../../src/utils/recoverableError';
 
 jest.mock('../../../src/models/LinkedIdentityModel');
 jest.mock('../../../src/utils/validateLinkedIdentity');
+jest.mock('../../../src/core/contractClients', () => ({
+  dripsContract: {
+    splitsHash: jest.fn(),
+  },
+}));
 
 describe('setLinkedIdentityFlag', () => {
   let mockScopedLogger: ScopedLogger;
@@ -15,6 +22,7 @@ describe('setLinkedIdentityFlag', () => {
   const mockAccountId: AccountId =
     '81320912658542974439730181977206773330805723773165208113981035642880' as AccountId;
   const mockOwnerAccountId = '123456789';
+  const mockReceiversHash = '0xabc123';
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -22,6 +30,7 @@ describe('setLinkedIdentityFlag', () => {
     mockScopedLogger = {
       log: jest.fn(),
       bufferUpdate: jest.fn(),
+      bufferMessage: jest.fn(),
     } as any;
 
     mockTransaction = {
@@ -36,6 +45,8 @@ describe('setLinkedIdentityFlag', () => {
       isLinked: false,
       save: jest.fn(),
     };
+
+    jest.mocked(dripsContract.splitsHash).mockResolvedValue(mockReceiversHash);
   });
 
   it('should update isLinked flag when validation returns true', async () => {
@@ -44,8 +55,13 @@ describe('setLinkedIdentityFlag', () => {
     );
     (validateLinkedIdentity as jest.Mock).mockResolvedValue(true);
 
+    const mockEvent = {
+      accountId: mockAccountId,
+      receiversHash: mockReceiversHash,
+    };
+
     await setLinkedIdentityFlag(
-      mockAccountId,
+      mockEvent as any,
       mockScopedLogger,
       mockTransaction,
     );
@@ -74,8 +90,13 @@ describe('setLinkedIdentityFlag', () => {
     );
     (validateLinkedIdentity as jest.Mock).mockResolvedValue(false);
 
+    const mockEvent = {
+      accountId: mockAccountId,
+      receiversHash: mockReceiversHash,
+    };
+
     await setLinkedIdentityFlag(
-      mockAccountId,
+      mockEvent as any,
       mockScopedLogger,
       mockTransaction,
     );
@@ -91,36 +112,45 @@ describe('setLinkedIdentityFlag', () => {
     });
   });
 
-  it('should not update when isLinked flag matches validation result', async () => {
-    mockLinkedIdentity.isLinked = true;
+  it('should skip when on-chain hash does not match event hash', async () => {
+    jest.mocked(dripsContract.splitsHash).mockResolvedValue('0xdifferent');
     (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(
       mockLinkedIdentity,
     );
-    (validateLinkedIdentity as jest.Mock).mockResolvedValue(true);
+
+    const mockEvent = {
+      accountId: mockAccountId,
+      receiversHash: mockReceiversHash,
+    };
 
     await setLinkedIdentityFlag(
-      mockAccountId,
+      mockEvent as any,
       mockScopedLogger,
       mockTransaction,
     );
 
-    expect(validateLinkedIdentity).toHaveBeenCalledWith(
-      mockAccountId,
-      mockOwnerAccountId,
+    expect(LinkedIdentityModel.findOne).not.toHaveBeenCalled();
+    expect(validateLinkedIdentity).not.toHaveBeenCalled();
+    expect(mockScopedLogger.bufferMessage).toHaveBeenCalledWith(
+      expect.stringContaining('Skipped setting'),
     );
-
-    expect(mockLinkedIdentity.save).not.toHaveBeenCalled();
-    expect(mockScopedLogger.bufferUpdate).not.toHaveBeenCalled();
   });
 
-  it('should log and return early when LinkedIdentity does not exist', async () => {
+  it('should throw RecoverableError when LinkedIdentity does not exist', async () => {
     (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(null);
 
-    await setLinkedIdentityFlag(
-      mockAccountId,
-      mockScopedLogger,
-      mockTransaction,
-    );
+    const mockEvent = {
+      accountId: mockAccountId,
+      receiversHash: mockReceiversHash,
+    };
+
+    await expect(
+      setLinkedIdentityFlag(
+        mockEvent as any,
+        mockScopedLogger,
+        mockTransaction,
+      ),
+    ).rejects.toThrow(RecoverableError);
 
     expect(LinkedIdentityModel.findOne).toHaveBeenCalledWith({
       where: { accountId: mockAccountId },

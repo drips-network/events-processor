@@ -58,7 +58,7 @@ describe('OwnerUpdatedEventHandler', () => {
     flush: jest.fn(),
   };
 
-  beforeAll(() => {
+  beforeEach(() => {
     jest.resetAllMocks();
 
     handler = new OwnerUpdatedEventHandler();
@@ -167,6 +167,11 @@ describe('OwnerUpdatedEventHandler', () => {
   });
 
   it('should create a linked identity when account ID is ORCID', async () => {
+    // Arrange
+    (validateLinkedIdentityModule.validateLinkedIdentity as jest.Mock) = jest
+      .fn()
+      .mockResolvedValue(false);
+
     // Act
     await handler['_handle'](mockRequest);
 
@@ -182,26 +187,8 @@ describe('OwnerUpdatedEventHandler', () => {
         identityType: 'orcid',
         ownerAddress: mockOwnerAddress,
         ownerAccountId: '123456789',
-        isLinked: true,
+        isLinked: false,
         lastProcessedVersion: mockExpectedVersion,
-      },
-    });
-
-    expect(
-      receiversRepository.deleteExistingSplitReceivers,
-    ).toHaveBeenCalledWith(mockOrcidAccountId, mockDbTransaction);
-
-    expect(receiversRepository.createSplitReceiver).toHaveBeenCalledWith({
-      scopedLogger: expect.anything(),
-      transaction: mockDbTransaction,
-      splitReceiverShape: {
-        senderAccountId: mockOrcidAccountId,
-        senderAccountType: 'linked_identity',
-        receiverAccountId: '123456789',
-        receiverAccountType: 'address',
-        relationshipType: 'identity_owner',
-        weight: 1_000_000,
-        blockTimestamp: mockBlockTimestamp,
       },
     });
   });
@@ -268,29 +255,12 @@ describe('OwnerUpdatedEventHandler', () => {
     // Assert
     expect(existingLinkedIdentity.ownerAddress).toBe(mockOwnerAddress);
     expect(existingLinkedIdentity.ownerAccountId).toBe('123456789');
-    expect(existingLinkedIdentity.isLinked).toBe(true);
+    expect(existingLinkedIdentity.isLinked).toBe(true); // the mocked validateLinkedIdentity returns true.
     expect(existingLinkedIdentity.lastProcessedVersion).toBe(
       mockExpectedVersion,
     );
     expect(existingLinkedIdentity.save).toHaveBeenCalledWith({
       transaction: mockDbTransaction,
-    });
-
-    expect(
-      receiversRepository.deleteExistingSplitReceivers,
-    ).toHaveBeenCalledWith(mockOrcidAccountId, mockDbTransaction);
-    expect(receiversRepository.createSplitReceiver).toHaveBeenCalledWith({
-      scopedLogger: expect.anything(),
-      transaction: mockDbTransaction,
-      splitReceiverShape: {
-        senderAccountId: mockOrcidAccountId,
-        senderAccountType: 'linked_identity',
-        receiverAccountId: '123456789',
-        receiverAccountType: 'address',
-        relationshipType: 'identity_owner',
-        weight: 1_000_000,
-        blockTimestamp: mockBlockTimestamp,
-      },
     });
   });
 
