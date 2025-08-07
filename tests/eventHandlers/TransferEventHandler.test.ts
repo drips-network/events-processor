@@ -24,7 +24,7 @@ describe('TransferEventHandler', () => {
   let handler: TransferEventHandler;
   let mockRequest: EventHandlerRequest<'Transfer(address,address,uint256)'>;
 
-  beforeAll(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
 
     handler = new TransferEventHandler();

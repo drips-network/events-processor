@@ -19,7 +19,7 @@ describe('StreamReceiverSeenEventHandler', () => {
   let handler: StreamReceiverSeenEventHandler;
   let mockRequest: EventHandlerRequest<'StreamReceiverSeen(bytes32,uint256,uint256)'>;
 
-  beforeAll(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
 
     handler = new StreamReceiverSeenEventHandler();

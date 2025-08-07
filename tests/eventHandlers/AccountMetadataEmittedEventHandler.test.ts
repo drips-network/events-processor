@@ -41,7 +41,7 @@ describe('AccountMetadataEmittedHandler', () => {
   let handler: AccountMetadataEmittedEventHandler;
   let mockRequest: EventHandlerRequest<'AccountMetadataEmitted(uint256,bytes32,bytes)'>;
 
-  beforeAll(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
 
     handler = new AccountMetadataEmittedEventHandler();

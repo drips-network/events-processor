@@ -20,7 +20,7 @@ describe('SplitEventHandler', () => {
   let handler: SplitEventHandler;
   let mockRequest: EventHandlerRequest<'Split(uint256,uint256,address,uint128)'>;
 
-  beforeAll(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
 
     handler = new SplitEventHandler();

@@ -20,7 +20,7 @@ describe('GivenEventHandler', () => {
   let handler: GivenEventHandler;
   let mockRequest: EventHandlerRequest<'Given(uint256,uint256,address,uint128)'>;
 
-  beforeAll(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
 
     handler = new GivenEventHandler();

@@ -19,7 +19,7 @@ describe('StreamsSetEventHandler', () => {
   let handler: StreamsSetEventHandler;
   let mockRequest: EventHandlerRequest<'StreamsSet(uint256,address,bytes32,bytes32,uint128,uint32)'>;
 
-  beforeAll(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
 
     handler = new StreamsSetEventHandler();

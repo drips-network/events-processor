@@ -20,7 +20,7 @@ describe('SqueezedStreamsEventHandler', () => {
   let handler: SqueezedStreamsEventHandler;
   let mockRequest: EventHandlerRequest<'SqueezedStreams(uint256,address,uint256,uint128,bytes32[])'>;
 
-  beforeAll(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
 
     handler = new SqueezedStreamsEventHandler();
