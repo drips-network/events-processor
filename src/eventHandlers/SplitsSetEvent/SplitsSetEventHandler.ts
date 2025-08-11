@@ -6,7 +6,7 @@ import type EventHandlerRequest from '../../events/EventHandlerRequest';
 import SplitsSetEventModel from '../../models/SplitsSetEventModel';
 import { convertToAccountId, isOrcidAccount } from '../../utils/accountIdUtils';
 import setIsValidFlag from './setIsValidFlag';
-import { setLinkedIdentityFlag } from './setLinkedIdentityFlag';
+import { processLinkedIdentitySplits } from './processLinkedIdentitySplits';
 
 export default class SplitsSetEventHandler extends EventHandlerBase<'SplitsSet(uint256,bytes32)'> {
   public eventSignatures = ['SplitsSet(uint256,bytes32)' as const];
@@ -57,7 +57,11 @@ export default class SplitsSetEventHandler extends EventHandlerBase<'SplitsSet(u
       });
 
       if (isOrcidAccount(accountId)) {
-        await setLinkedIdentityFlag(splitsSetEvent, scopedLogger, transaction);
+        await processLinkedIdentitySplits(
+          splitsSetEvent,
+          scopedLogger,
+          transaction,
+        );
       } else {
         // Account's splits are set by `AccountMetadataEmitted` events.
         // The `SplitsSet` event only confirms that the split receivers are valid.

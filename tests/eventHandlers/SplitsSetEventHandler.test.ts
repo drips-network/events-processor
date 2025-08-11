@@ -8,7 +8,7 @@ import * as accountIdUtils from '../../src/utils/accountIdUtils';
 import SplitsSetEventHandler from '../../src/eventHandlers/SplitsSetEvent/SplitsSetEventHandler';
 import ScopedLogger from '../../src/core/ScopedLogger';
 import setIsValidFlag from '../../src/eventHandlers/SplitsSetEvent/setIsValidFlag';
-import { setLinkedIdentityFlag } from '../../src/eventHandlers/SplitsSetEvent/setLinkedIdentityFlag';
+import { processLinkedIdentitySplits } from '../../src/eventHandlers/SplitsSetEvent/processLinkedIdentitySplits';
 import type { AccountId } from '../../src/core/types';
 
 jest.mock('../../src/models/SplitsSetEventModel');
@@ -18,7 +18,7 @@ jest.mock('../../src/utils/validateLinkedIdentity');
 jest.mock('bee-queue');
 jest.mock('../../src/core/ScopedLogger');
 jest.mock('../../src/eventHandlers/SplitsSetEvent/setIsValidFlag');
-jest.mock('../../src/eventHandlers/SplitsSetEvent/setLinkedIdentityFlag');
+jest.mock('../../src/eventHandlers/SplitsSetEvent/processLinkedIdentitySplits');
 jest.mock('../../src/utils/accountIdUtils');
 
 describe('SplitsSetEventHandler', () => {
@@ -128,7 +128,7 @@ describe('SplitsSetEventHandler', () => {
       await handler['_handle'](mockOrcidRequest);
 
       // Assert
-      expect(setLinkedIdentityFlag).toHaveBeenCalledWith(
+      expect(processLinkedIdentitySplits).toHaveBeenCalledWith(
         splitsSetEvent,
         expect.any(ScopedLogger),
         mockDbTransaction,

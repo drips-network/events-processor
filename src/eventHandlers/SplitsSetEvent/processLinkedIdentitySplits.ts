@@ -5,9 +5,16 @@ import { validateLinkedIdentity } from '../../utils/validateLinkedIdentity';
 import RecoverableError from '../../utils/recoverableError';
 import type SplitsSetEventModel from '../../models/SplitsSetEventModel';
 import { dripsContract } from '../../core/contractClients';
+import { SplitsReceiverModel } from '../../models';
+import { createSplitReceiver } from '../AccountMetadataEmittedEvent/receiversRepository';
+import { assertIsRepoDriverId } from '../../utils/accountIdUtils';
 
-export async function setLinkedIdentityFlag(
-  { accountId, receiversHash: eventReceiversHash }: SplitsSetEventModel,
+export async function processLinkedIdentitySplits(
+  {
+    accountId,
+    receiversHash: eventReceiversHash,
+    blockTimestamp,
+  }: SplitsSetEventModel,
   scopedLogger: ScopedLogger,
   transaction: Transaction,
 ): Promise<void> {
@@ -37,6 +44,46 @@ export async function setLinkedIdentityFlag(
   const isLinked = await validateLinkedIdentity(
     accountId,
     linkedIdentity.ownerAccountId,
+  );
+
+  assertIsRepoDriverId(accountId);
+
+  const existingSplits = await SplitsReceiverModel.findAll({
+    where: { senderAccountId: accountId },
+    transaction,
+  });
+
+  // ORCID accounts should have exactly one splits receiver (100% to owner).
+  if (existingSplits.length > 1) {
+    const errorMsg = `Found ${existingSplits.length} splits receivers for ORCID account ${accountId}, expected 1`;
+    scopedLogger.bufferMessage(errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  if (existingSplits.length > 0) {
+    await SplitsReceiverModel.destroy({
+      where: { senderAccountId: accountId },
+      transaction,
+    });
+  }
+
+  // Create the ORCID splits record (100% to owner).
+  await createSplitReceiver({
+    scopedLogger,
+    transaction,
+    splitReceiverShape: {
+      senderAccountType: 'linked_identity',
+      senderAccountId: accountId,
+      receiverAccountType: 'address',
+      receiverAccountId: linkedIdentity.ownerAccountId,
+      relationshipType: 'identity_owner',
+      weight: 1_000_000, // 100% in Drips weight format.
+      blockTimestamp,
+    },
+  });
+
+  scopedLogger.bufferMessage(
+    `Updated splits record for ORCID account ${accountId} with 100% to owner ${linkedIdentity.ownerAccountId}`,
   );
 
   linkedIdentity.isLinked = isLinked;

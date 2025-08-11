@@ -1,21 +1,29 @@
 import type { Transaction } from 'sequelize';
-import { setLinkedIdentityFlag } from '../../../src/eventHandlers/SplitsSetEvent/setLinkedIdentityFlag';
+import { processLinkedIdentitySplits } from '../../../src/eventHandlers/SplitsSetEvent/processLinkedIdentitySplits';
 import LinkedIdentityModel from '../../../src/models/LinkedIdentityModel';
 import { validateLinkedIdentity } from '../../../src/utils/validateLinkedIdentity';
 import type ScopedLogger from '../../../src/core/ScopedLogger';
 import type { AccountId } from '../../../src/core/types';
 import { dripsContract } from '../../../src/core/contractClients';
 import RecoverableError from '../../../src/utils/recoverableError';
+import { SplitsReceiverModel } from '../../../src/models';
+import * as receiversRepository from '../../../src/eventHandlers/AccountMetadataEmittedEvent/receiversRepository';
+import * as accountIdUtils from '../../../src/utils/accountIdUtils';
 
 jest.mock('../../../src/models/LinkedIdentityModel');
+jest.mock('../../../src/models/SplitsReceiverModel');
 jest.mock('../../../src/utils/validateLinkedIdentity');
+jest.mock(
+  '../../../src/eventHandlers/AccountMetadataEmittedEvent/receiversRepository',
+);
+jest.mock('../../../src/utils/accountIdUtils');
 jest.mock('../../../src/core/contractClients', () => ({
   dripsContract: {
     splitsHash: jest.fn(),
   },
 }));
 
-describe('setLinkedIdentityFlag', () => {
+describe('processLinkedIdentitySplits', () => {
   let mockScopedLogger: ScopedLogger;
   let mockTransaction: Transaction;
   let mockLinkedIdentity: any;
@@ -31,6 +39,7 @@ describe('setLinkedIdentityFlag', () => {
       log: jest.fn(),
       bufferUpdate: jest.fn(),
       bufferMessage: jest.fn(),
+      bufferCreation: jest.fn(),
     } as any;
 
     mockTransaction = {
@@ -47,9 +56,15 @@ describe('setLinkedIdentityFlag', () => {
     };
 
     jest.mocked(dripsContract.splitsHash).mockResolvedValue(mockReceiversHash);
+    jest.mocked(SplitsReceiverModel.findAll).mockResolvedValue([]);
+    jest.mocked(SplitsReceiverModel.destroy).mockResolvedValue(0);
+    jest
+      .mocked(receiversRepository.createSplitReceiver)
+      .mockResolvedValue(undefined);
+    jest.mocked(accountIdUtils.assertIsRepoDriverId);
   });
 
-  it('should update isLinked flag when validation returns true', async () => {
+  it('should update isLinked flag when validation returns true and create splits record', async () => {
     (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(
       mockLinkedIdentity,
     );
@@ -58,9 +73,10 @@ describe('setLinkedIdentityFlag', () => {
     const mockEvent = {
       accountId: mockAccountId,
       receiversHash: mockReceiversHash,
+      blockTimestamp: new Date('2024-01-01'),
     };
 
-    await setLinkedIdentityFlag(
+    await processLinkedIdentitySplits(
       mockEvent as any,
       mockScopedLogger,
       mockTransaction,
@@ -76,6 +92,25 @@ describe('setLinkedIdentityFlag', () => {
       mockAccountId,
       mockOwnerAccountId,
     );
+
+    expect(SplitsReceiverModel.findAll).toHaveBeenCalledWith({
+      where: { senderAccountId: mockAccountId },
+      transaction: mockTransaction,
+    });
+
+    expect(receiversRepository.createSplitReceiver).toHaveBeenCalledWith({
+      scopedLogger: mockScopedLogger,
+      transaction: mockTransaction,
+      splitReceiverShape: {
+        senderAccountType: 'linked_identity',
+        senderAccountId: mockAccountId,
+        receiverAccountType: 'address',
+        receiverAccountId: mockOwnerAccountId,
+        relationshipType: 'identity_owner',
+        weight: 1_000_000,
+        blockTimestamp: new Date('2024-01-01'),
+      },
+    });
 
     expect(mockLinkedIdentity.isLinked).toBe(true);
     expect(mockLinkedIdentity.save).toHaveBeenCalledWith({
@@ -93,9 +128,10 @@ describe('setLinkedIdentityFlag', () => {
     const mockEvent = {
       accountId: mockAccountId,
       receiversHash: mockReceiversHash,
+      blockTimestamp: new Date('2024-01-01'),
     };
 
-    await setLinkedIdentityFlag(
+    await processLinkedIdentitySplits(
       mockEvent as any,
       mockScopedLogger,
       mockTransaction,
@@ -121,9 +157,10 @@ describe('setLinkedIdentityFlag', () => {
     const mockEvent = {
       accountId: mockAccountId,
       receiversHash: mockReceiversHash,
+      blockTimestamp: new Date('2024-01-01'),
     };
 
-    await setLinkedIdentityFlag(
+    await processLinkedIdentitySplits(
       mockEvent as any,
       mockScopedLogger,
       mockTransaction,
@@ -136,16 +173,100 @@ describe('setLinkedIdentityFlag', () => {
     );
   });
 
+  it('should cleanup and recreate splits record when it already exists', async () => {
+    const mockExistingSplits = [{ id: 1, senderAccountId: mockAccountId }];
+    jest
+      .mocked(SplitsReceiverModel.findAll)
+      .mockResolvedValue(mockExistingSplits as any);
+
+    (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(
+      mockLinkedIdentity,
+    );
+    (validateLinkedIdentity as jest.Mock).mockResolvedValue(true);
+
+    const mockEvent = {
+      accountId: mockAccountId,
+      receiversHash: mockReceiversHash,
+      blockTimestamp: new Date('2024-01-01'),
+    };
+
+    await processLinkedIdentitySplits(
+      mockEvent as any,
+      mockScopedLogger,
+      mockTransaction,
+    );
+
+    expect(SplitsReceiverModel.findAll).toHaveBeenCalledWith({
+      where: { senderAccountId: mockAccountId },
+      transaction: mockTransaction,
+    });
+
+    // Should cleanup existing record
+    expect(SplitsReceiverModel.destroy).toHaveBeenCalledWith({
+      where: { senderAccountId: mockAccountId },
+      transaction: mockTransaction,
+    });
+
+    // Should create a new splits record
+    expect(receiversRepository.createSplitReceiver).toHaveBeenCalled();
+
+    expect(mockLinkedIdentity.isLinked).toBe(true);
+    expect(mockLinkedIdentity.save).toHaveBeenCalledWith({
+      transaction: mockTransaction,
+    });
+  });
+
+  it('should throw error when multiple splits receivers found', async () => {
+    const mockExistingSplits = [
+      { id: 1, senderAccountId: mockAccountId },
+      { id: 2, senderAccountId: mockAccountId },
+    ];
+    jest
+      .mocked(SplitsReceiverModel.findAll)
+      .mockResolvedValue(mockExistingSplits as any);
+
+    (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(
+      mockLinkedIdentity,
+    );
+    (validateLinkedIdentity as jest.Mock).mockResolvedValue(true);
+
+    const mockEvent = {
+      accountId: mockAccountId,
+      receiversHash: mockReceiversHash,
+      blockTimestamp: new Date('2024-01-01'),
+    };
+
+    await expect(
+      processLinkedIdentitySplits(
+        mockEvent as any,
+        mockScopedLogger,
+        mockTransaction,
+      ),
+    ).rejects.toThrow(
+      `Found 2 splits receivers for ORCID account ${mockAccountId}, expected 1`,
+    );
+
+    expect(SplitsReceiverModel.findAll).toHaveBeenCalledWith({
+      where: { senderAccountId: mockAccountId },
+      transaction: mockTransaction,
+    });
+
+    // Should not proceed to create or destroy
+    expect(SplitsReceiverModel.destroy).not.toHaveBeenCalled();
+    expect(receiversRepository.createSplitReceiver).not.toHaveBeenCalled();
+  });
+
   it('should throw RecoverableError when LinkedIdentity does not exist', async () => {
     (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(null);
 
     const mockEvent = {
       accountId: mockAccountId,
       receiversHash: mockReceiversHash,
+      blockTimestamp: new Date('2024-01-01'),
     };
 
     await expect(
-      setLinkedIdentityFlag(
+      processLinkedIdentitySplits(
         mockEvent as any,
         mockScopedLogger,
         mockTransaction,
