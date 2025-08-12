@@ -2,6 +2,7 @@ import type { ModelStaticMembers } from '../core/types';
 import {
   AccountMetadataEmittedEventModel,
   DripListModel,
+  DeadlineModel,
   ProjectModel,
   TransferEventModel,
   GivenEventModel,
@@ -34,6 +35,7 @@ export function registerModels(): void {
   registerModel(SubListModel);
   registerModel(ProjectModel);
   registerModel(DripListModel);
+  registerModel(DeadlineModel);
   registerModel(GivenEventModel);
   registerModel(SplitEventModel);
   registerModel(TransferEventModel);

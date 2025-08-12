@@ -28,6 +28,11 @@ const SPLIT_RULES = Object.freeze([
     receiverAccountType: 'drip_list',
     relationshipType: 'project_dependency',
   },
+  {
+    senderAccountType: 'project',
+    receiverAccountType: 'deadline',
+    relationshipType: 'project_dependency',
+  },
 
   // Drip List Rules
   {
@@ -45,11 +50,21 @@ const SPLIT_RULES = Object.freeze([
     receiverAccountType: 'project',
     relationshipType: 'drip_list_receiver',
   },
+  {
+    senderAccountType: 'drip_list',
+    receiverAccountType: 'deadline',
+    relationshipType: 'drip_list_receiver',
+  },
 
   // Ecosystem Main Account Rules
   {
     senderAccountType: 'ecosystem_main_account',
     receiverAccountType: 'project',
+    relationshipType: 'ecosystem_receiver',
+  },
+  {
+    senderAccountType: 'ecosystem_main_account',
+    receiverAccountType: 'deadline',
     relationshipType: 'ecosystem_receiver',
   },
   {
@@ -72,6 +87,11 @@ const SPLIT_RULES = Object.freeze([
   {
     senderAccountType: 'sub_list',
     receiverAccountType: 'project',
+    relationshipType: 'sub_list_link',
+  },
+  {
+    senderAccountType: 'sub_list',
+    receiverAccountType: 'deadline',
     relationshipType: 'sub_list_link',
   },
   {
@@ -139,7 +159,7 @@ export const RELATIONSHIP_TYPES = Array.from(
 ) as (typeof SPLIT_RULES)[number]['relationshipType'][];
 
 export const ACCOUNT_TYPE_TO_METADATA_RECEIVER_TYPE: Record<
-  AccountType,
+  Exclude<AccountType, 'deadline'>, // We don't populated `RepoDeadlineDriver` metadata.
   string
 > = {
   project: 'repoDriver',

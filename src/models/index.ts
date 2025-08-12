@@ -1,6 +1,7 @@
 export { default as SubListModel } from './SubListModel';
 export { default as ProjectModel } from './ProjectModel';
 export { default as DripListModel } from './DripListModel';
+export { default as DeadlineModel } from './DeadlineModel';
 export { default as GivenEventModel } from './GivenEventModel';
 export { default as SplitEventModel } from './SplitEventModel';
 export { default as SplitsReceiverModel } from './SplitsReceiverModel';
