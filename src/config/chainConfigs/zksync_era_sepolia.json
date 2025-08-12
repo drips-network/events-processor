@@ -8,6 +8,9 @@
     "repoDriver": {
       "address": "0x8bDC23877A23Ce59fEF1712A1486810d9A6E2B94"
     },
+    "repoDeadlineDriver": {
+      "address": "0xe1139558bbBb20b6bE95b069402370c01250eE4e"
+    },
     "repoSubAccountDriver": {
       "address": "0x0000000000000000000000000000000000000000"
     },
