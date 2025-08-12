@@ -48,43 +48,44 @@ export async function processLinkedIdentitySplits(
 
   assertIsRepoDriverId(accountId);
 
-  const existingSplits = await SplitsReceiverModel.findAll({
+  // Always delete existing splits to ensure clean state.
+  const deletedCount = await SplitsReceiverModel.destroy({
     where: { senderAccountId: accountId },
     transaction,
   });
 
-  // ORCID accounts should have exactly one splits receiver (100% to owner).
-  if (existingSplits.length > 1) {
-    const errorMsg = `Found ${existingSplits.length} splits receivers for ORCID account ${accountId}, expected 1`;
-    scopedLogger.bufferMessage(errorMsg);
-    throw new Error(errorMsg);
+  if (deletedCount > 1) {
+    scopedLogger.log(
+      `Deleted ${deletedCount} splits receivers for ORCID account ${accountId}, expected 0 or 1`,
+      'warn',
+    );
   }
 
-  if (existingSplits.length > 0) {
-    await SplitsReceiverModel.destroy({
-      where: { senderAccountId: accountId },
+  // Only create new splits if identity is properly linked.
+  if (isLinked) {
+    await createSplitReceiver({
+      scopedLogger,
       transaction,
+      splitReceiverShape: {
+        senderAccountType: 'linked_identity',
+        senderAccountId: accountId,
+        receiverAccountType: 'address',
+        receiverAccountId: linkedIdentity.ownerAccountId,
+        relationshipType: 'identity_owner',
+        weight: 1_000_000, // 100% in Drips weight format.
+        blockTimestamp,
+      },
     });
+
+    scopedLogger.bufferMessage(
+      `Created valid splits record for linked ORCID account ${accountId} with 100% to owner ${linkedIdentity.ownerAccountId}`,
+    );
+  } else {
+    scopedLogger.log(
+      `ORCID account ${accountId} is not properly linked. On-chain splits don't match expected 100% to owner ${linkedIdentity.ownerAccountId}. No splits record created.`,
+      'warn',
+    );
   }
-
-  // Create the ORCID splits record (100% to owner).
-  await createSplitReceiver({
-    scopedLogger,
-    transaction,
-    splitReceiverShape: {
-      senderAccountType: 'linked_identity',
-      senderAccountId: accountId,
-      receiverAccountType: 'address',
-      receiverAccountId: linkedIdentity.ownerAccountId,
-      relationshipType: 'identity_owner',
-      weight: 1_000_000, // 100% in Drips weight format.
-      blockTimestamp,
-    },
-  });
-
-  scopedLogger.bufferMessage(
-    `Updated splits record for ORCID account ${accountId} with 100% to owner ${linkedIdentity.ownerAccountId}`,
-  );
 
   linkedIdentity.isLinked = isLinked;
 

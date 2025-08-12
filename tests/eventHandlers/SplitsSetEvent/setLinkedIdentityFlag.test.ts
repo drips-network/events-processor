@@ -56,7 +56,6 @@ describe('processLinkedIdentitySplits', () => {
     };
 
     jest.mocked(dripsContract.splitsHash).mockResolvedValue(mockReceiversHash);
-    jest.mocked(SplitsReceiverModel.findAll).mockResolvedValue([]);
     jest.mocked(SplitsReceiverModel.destroy).mockResolvedValue(0);
     jest
       .mocked(receiversRepository.createSplitReceiver)
@@ -69,6 +68,7 @@ describe('processLinkedIdentitySplits', () => {
       mockLinkedIdentity,
     );
     (validateLinkedIdentity as jest.Mock).mockResolvedValue(true);
+    jest.mocked(SplitsReceiverModel.destroy).mockResolvedValue(0);
 
     const mockEvent = {
       accountId: mockAccountId,
@@ -93,11 +93,10 @@ describe('processLinkedIdentitySplits', () => {
       mockOwnerAccountId,
     );
 
-    expect(SplitsReceiverModel.findAll).toHaveBeenCalledWith({
+    expect(SplitsReceiverModel.destroy).toHaveBeenCalledWith({
       where: { senderAccountId: mockAccountId },
       transaction: mockTransaction,
     });
-
     expect(receiversRepository.createSplitReceiver).toHaveBeenCalledWith({
       scopedLogger: mockScopedLogger,
       transaction: mockTransaction,
@@ -118,12 +117,13 @@ describe('processLinkedIdentitySplits', () => {
     });
   });
 
-  it('should update isLinked flag when validation returns false', async () => {
+  it('should update isLinked flag when validation returns false and NOT create splits', async () => {
     mockLinkedIdentity.isLinked = true;
     (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(
       mockLinkedIdentity,
     );
     (validateLinkedIdentity as jest.Mock).mockResolvedValue(false);
+    jest.mocked(SplitsReceiverModel.destroy).mockResolvedValue(1);
 
     const mockEvent = {
       accountId: mockAccountId,
@@ -142,10 +142,20 @@ describe('processLinkedIdentitySplits', () => {
       mockOwnerAccountId,
     );
 
+    expect(SplitsReceiverModel.destroy).toHaveBeenCalledWith({
+      where: { senderAccountId: mockAccountId },
+      transaction: mockTransaction,
+    });
+
+    expect(receiversRepository.createSplitReceiver).not.toHaveBeenCalled();
+
     expect(mockLinkedIdentity.isLinked).toBe(false);
     expect(mockLinkedIdentity.save).toHaveBeenCalledWith({
       transaction: mockTransaction,
     });
+    expect(mockScopedLogger.bufferMessage).toHaveBeenCalledWith(
+      expect.stringContaining('WARNING: ORCID account'),
+    );
   });
 
   it('should skip when on-chain hash does not match event hash', async () => {
@@ -173,11 +183,8 @@ describe('processLinkedIdentitySplits', () => {
     );
   });
 
-  it('should cleanup and recreate splits record when it already exists', async () => {
-    const mockExistingSplits = [{ id: 1, senderAccountId: mockAccountId }];
-    jest
-      .mocked(SplitsReceiverModel.findAll)
-      .mockResolvedValue(mockExistingSplits as any);
+  it('should always delete existing splits and recreate when isLinked is true', async () => {
+    jest.mocked(SplitsReceiverModel.destroy).mockResolvedValue(1);
 
     (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(
       mockLinkedIdentity,
@@ -196,18 +203,10 @@ describe('processLinkedIdentitySplits', () => {
       mockTransaction,
     );
 
-    expect(SplitsReceiverModel.findAll).toHaveBeenCalledWith({
-      where: { senderAccountId: mockAccountId },
-      transaction: mockTransaction,
-    });
-
-    // Should cleanup existing record
     expect(SplitsReceiverModel.destroy).toHaveBeenCalledWith({
       where: { senderAccountId: mockAccountId },
       transaction: mockTransaction,
     });
-
-    // Should create a new splits record
     expect(receiversRepository.createSplitReceiver).toHaveBeenCalled();
 
     expect(mockLinkedIdentity.isLinked).toBe(true);
@@ -216,14 +215,8 @@ describe('processLinkedIdentitySplits', () => {
     });
   });
 
-  it('should throw error when multiple splits receivers found', async () => {
-    const mockExistingSplits = [
-      { id: 1, senderAccountId: mockAccountId },
-      { id: 2, senderAccountId: mockAccountId },
-    ];
-    jest
-      .mocked(SplitsReceiverModel.findAll)
-      .mockResolvedValue(mockExistingSplits as any);
+  it('should handle case when zero splits are deleted', async () => {
+    jest.mocked(SplitsReceiverModel.destroy).mockResolvedValue(0);
 
     (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(
       mockLinkedIdentity,
@@ -236,24 +229,21 @@ describe('processLinkedIdentitySplits', () => {
       blockTimestamp: new Date('2024-01-01'),
     };
 
-    await expect(
-      processLinkedIdentitySplits(
-        mockEvent as any,
-        mockScopedLogger,
-        mockTransaction,
-      ),
-    ).rejects.toThrow(
-      `Found 2 splits receivers for ORCID account ${mockAccountId}, expected 1`,
+    await processLinkedIdentitySplits(
+      mockEvent as any,
+      mockScopedLogger,
+      mockTransaction,
     );
 
-    expect(SplitsReceiverModel.findAll).toHaveBeenCalledWith({
+    expect(SplitsReceiverModel.destroy).toHaveBeenCalledWith({
       where: { senderAccountId: mockAccountId },
       transaction: mockTransaction,
     });
 
-    // Should not proceed to create or destroy
-    expect(SplitsReceiverModel.destroy).not.toHaveBeenCalled();
-    expect(receiversRepository.createSplitReceiver).not.toHaveBeenCalled();
+    expect(mockScopedLogger.bufferMessage).not.toHaveBeenCalledWith(
+      expect.stringContaining('WARNING: Deleted'),
+    );
+    expect(receiversRepository.createSplitReceiver).toHaveBeenCalled();
   });
 
   it('should throw RecoverableError when LinkedIdentity does not exist', async () => {
