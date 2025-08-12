@@ -7,6 +7,7 @@ import type {
   ImmutableSplitsDriverId,
   NftDriverId,
   RepoDriverId,
+  RepoDeadlineDriverId,
   RepoSubAccountDriverId,
 } from '../core/types';
 import { ORCID_FORGE_ID } from '../models/LinkedIdentityModel';
@@ -40,6 +41,8 @@ export function getContractNameFromAccountId(id: string): DripsContract {
       return 'repoDriver';
     case 4n:
       return 'repoSubAccountDriver';
+    case 5n:
+      return 'repoDeadlineDriver';
     default:
       throw new Error(`Unknown driver for ID ${id}.`);
   }
@@ -207,6 +210,46 @@ export function assertIsRepoSubAccountDriverId(
   }
 }
 
+// RepoDeadlineDriver
+export function isRepoDeadlineDriverId(
+  id: string | bigint,
+): id is RepoDeadlineDriverId {
+  const idString = typeof id === 'bigint' ? id.toString() : id;
+  const isNaN = Number.isNaN(Number(idString));
+  const isAccountIdOfRepoDeadlineDriver =
+    getContractNameFromAccountId(idString) === 'repoDeadlineDriver';
+
+  if (isNaN || !isAccountIdOfRepoDeadlineDriver) {
+    return false;
+  }
+
+  return true;
+}
+
+export function convertToRepoDeadlineDriverId(
+  id: bigint | string,
+): RepoDeadlineDriverId {
+  const repoDeadlineDriverId = typeof id === 'bigint' ? id.toString() : id;
+
+  if (!isRepoDeadlineDriverId(repoDeadlineDriverId)) {
+    throw new Error(
+      `Failed to convert: '${id}' is not a valid RepoDeadlineDriver ID.`,
+    );
+  }
+
+  return repoDeadlineDriverId as RepoDeadlineDriverId;
+}
+
+export function assertIsRepoDeadlineDriverId(
+  id: string,
+): asserts id is RepoDeadlineDriverId {
+  if (!isRepoDeadlineDriverId(id)) {
+    throw new Error(
+      `Failed to assert: '${id}' is not a valid RepoDeadlineDriver ID.`,
+    );
+  }
+}
+
 export async function transformRepoDriverId(
   id: string,
   direction: 'toParent' | 'toSub',
@@ -261,7 +304,8 @@ export function convertToAccountId(id: bigint | string): AccountId {
     isNftDriverId(accountIdAsString) ||
     isAddressDriverId(accountIdAsString) ||
     isImmutableSplitsDriverId(accountIdAsString) ||
-    isRepoSubAccountDriverId(accountIdAsString)
+    isRepoSubAccountDriverId(accountIdAsString) ||
+    isRepoDeadlineDriverId(accountIdAsString)
   ) {
     return accountIdAsString as AccountId;
   }
@@ -279,7 +323,8 @@ export function assertIsAccountId(
     !isNftDriverId(accountId) &&
     !isAddressDriverId(accountId) &&
     !isImmutableSplitsDriverId(accountId) &&
-    !isRepoSubAccountDriverId(accountId)
+    !isRepoSubAccountDriverId(accountId) &&
+    !isRepoDeadlineDriverId(accountId)
   ) {
     throw new Error(
       `Failed to assert: '${accountId}' is not a valid account ID.`,
