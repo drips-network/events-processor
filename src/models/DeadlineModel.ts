@@ -19,8 +19,8 @@ export default class DeadlineModel extends Model<
 > {
   declare public accountId: RepoDeadlineDriverId;
 
-  declare public receivingAccountId: AccountId;
-  declare public receivingAccountType: AccountType;
+  declare public receiverAccountId: AccountId;
+  declare public receiverAccountType: AccountType;
 
   declare public claimableProjectId: RepoDriverId;
 
@@ -39,11 +39,11 @@ export default class DeadlineModel extends Model<
           primaryKey: true,
           type: DataTypes.STRING,
         },
-        receivingAccountId: {
+        receiverAccountId: {
           allowNull: false,
           type: DataTypes.STRING,
         },
-        receivingAccountType: {
+        receiverAccountType: {
           allowNull: false,
           type: DataTypes.ENUM(...ACCOUNT_TYPES),
         },
@@ -80,7 +80,7 @@ export default class DeadlineModel extends Model<
         timestamps: true,
         indexes: [
           {
-            fields: ['receivingAccountId'],
+            fields: ['receiverAccountId'],
             name: 'idx_deadlines_receiving_account_id',
           },
           {

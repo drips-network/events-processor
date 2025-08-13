@@ -17,6 +17,7 @@ export async function up({ context: sequelize }: any): Promise<void> {
   `);
 
   await createDeadlinesTable(queryInterface, schema);
+  await createAccountSeenEventsTable(queryInterface, schema);
 }
 
 async function createDeadlinesTable(
@@ -33,11 +34,11 @@ async function createDeadlinesTable(
         primaryKey: true,
         type: DataTypes.STRING,
       },
-      receivingAccountId: {
+      receiverAccountId: {
         allowNull: false,
         type: DataTypes.STRING,
       },
-      receivingAccountType: {
+      receiverAccountType: {
         allowNull: false,
         type: literal(`${schema}.account_type`).val as unknown as DataType,
       },
@@ -73,7 +74,7 @@ async function createDeadlinesTable(
       schema,
       tableName: 'deadlines',
     },
-    transformFieldArrayToSnakeCase(['receivingAccountId']),
+    transformFieldArrayToSnakeCase(['receiverAccountId']),
     {
       name: 'idx_deadlines_receiving_account_id',
     },
@@ -113,11 +114,76 @@ async function createDeadlinesTable(
   );
 }
 
+async function createAccountSeenEventsTable(
+  queryInterface: QueryInterface,
+  schema: DbSchema,
+) {
+  await queryInterface.createTable(
+    {
+      schema,
+      tableName: 'account_seen_events',
+    },
+    transformFieldNamesToSnakeCase({
+      transactionHash: {
+        primaryKey: true,
+        allowNull: false,
+        type: DataTypes.STRING,
+      },
+      logIndex: {
+        primaryKey: true,
+        allowNull: false,
+        type: DataTypes.INTEGER,
+      },
+      accountId: {
+        allowNull: false,
+        type: DataTypes.STRING,
+      },
+      repoAccountId: {
+        allowNull: false,
+        type: DataTypes.STRING,
+      },
+      receiverAccountId: {
+        allowNull: false,
+        type: DataTypes.STRING,
+      },
+      refundAccountId: {
+        allowNull: false,
+        type: DataTypes.STRING,
+      },
+      deadline: {
+        allowNull: false,
+        type: DataTypes.DATE,
+      },
+      blockTimestamp: {
+        allowNull: false,
+        type: DataTypes.DATE,
+      },
+      blockNumber: {
+        allowNull: false,
+        type: DataTypes.INTEGER,
+      },
+      createdAt: {
+        allowNull: false,
+        type: DataTypes.DATE,
+      },
+      updatedAt: {
+        allowNull: false,
+        type: DataTypes.DATE,
+      },
+    }),
+  );
+}
+
 export async function down({ context: sequelize }: any): Promise<void> {
   const schema = getSchema();
   const queryInterface: QueryInterface = sequelize.getQueryInterface();
 
-  // Drop table
+  // Drop tables
+  await queryInterface.dropTable({
+    schema,
+    tableName: 'account_seen_events',
+  });
+
   await queryInterface.dropTable({
     schema,
     tableName: 'deadlines',
