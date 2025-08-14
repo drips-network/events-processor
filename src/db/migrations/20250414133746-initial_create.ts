@@ -30,7 +30,8 @@ export async function up({ context: sequelize }: any): Promise<void> {
       'project_maintainer',
       'drip_list_receiver',
       'ecosystem_receiver',
-      'sub_list_link'
+      'sub_list_link',
+      'sub_list_receiver'
     );
   `);
 

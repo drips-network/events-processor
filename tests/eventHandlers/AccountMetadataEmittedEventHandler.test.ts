@@ -245,5 +245,43 @@ describe('AccountMetadataEmittedHandler', () => {
         emitterAccountId: convertToAccountId(request.event.args[0]),
       });
     });
+
+    test('should skip processing when ORCID account emits metadata', async () => {
+      // Arrange
+      const orcidAccountId =
+        81301089168126148130792717371793573750187013649223913888328074657793n;
+
+      const orcidRequest = {
+        id: randomUUID(),
+        event: {
+          args: [
+            orcidAccountId,
+            DRIPS_APP_USER_METADATA_KEY,
+            '0x516d65444e625169575257666333395844754d354d69796337725755465156666b706d5a7675723965757767584a',
+          ],
+          logIndex: 1,
+          blockNumber: 1,
+          blockTimestamp: new Date(),
+          transactionHash: 'requestTransactionHash',
+        } as EventData<'AccountMetadataEmitted(uint256,bytes32,bytes)'>,
+      };
+
+      AccountMetadataEmittedEventModel.create = jest.fn().mockResolvedValue([
+        {
+          transactionHash: 'AccountMetadataEmittedEventTransactionHash',
+          logIndex: 1,
+        },
+        true,
+      ]);
+
+      // Act
+      await handler['_handle'](orcidRequest);
+
+      // Assert
+      expect(handleProjectMetadata.default).not.toHaveBeenCalled();
+      expect(handleDripListMetadata.default).not.toHaveBeenCalled();
+      expect(handleEcosystemMainAccountMetadata.default).not.toHaveBeenCalled();
+      expect(handleSubListMetadata.default).not.toHaveBeenCalled();
+    });
   });
 });

@@ -8,6 +8,7 @@ import {
   isImmutableSplitsDriverId,
   isNftDriverId,
   isRepoDriverId,
+  isOrcidAccount,
   convertToAccountId,
   convertToRepoDriverId,
   convertToNftDriverId,
@@ -120,6 +121,14 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       }
 
       if (isRepoDriverId(accountId)) {
+        if (isOrcidAccount(accountId)) {
+          scopedLogger.log(
+            `Skipping ${eventSignature} event: accountId '${accountId}' is ORCID and cannot emit metadata events.`,
+          );
+
+          return;
+        }
+
         await handleProjectMetadata({
           logIndex,
           ipfsHash,

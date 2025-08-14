@@ -33,6 +33,7 @@ import {
 } from '../../../utils/accountIdUtils';
 import { makeVersion } from '../../../utils/lastProcessedVersion';
 import type { repoSubAccountDriverSplitReceiverSchema } from '../../../metadata/schemas/common/repoSubAccountDriverSplitReceiverSchema';
+import type { gitHubSourceSchema } from '../../../metadata/schemas/common/sources';
 
 type Params = {
   logIndex: number;
@@ -80,7 +81,10 @@ export default async function handleSubListMetadata({
   }
 
   const { areProjectsValid, message } = await verifyProjectSources(
-    metadata.recipients.filter((r) => r.type === 'repoSubAccountDriver'),
+    metadata.recipients.filter(
+      (r): r is typeof r & { source: z.infer<typeof gitHubSourceSchema> } =>
+        r.type === 'repoSubAccountDriver' && r.source.forge !== 'orcid',
+    ),
   );
 
   if (!areProjectsValid) {
@@ -200,6 +204,26 @@ async function createNewSplitReceivers({
       case 'repoSubAccountDriver': {
         const repoDriverId = await calcParentRepoDriverId(receiver.accountId);
 
+        if (receiver.source.forge === 'orcid') {
+          return createSplitReceiver({
+            scopedLogger,
+            transaction,
+            splitReceiverShape: {
+              senderAccountId: emitterAccountId,
+              senderAccountType: 'sub_list',
+              receiverAccountId: repoDriverId,
+              receiverAccountType: 'linked_identity',
+              relationshipType: 'sub_list_link',
+              weight: receiver.weight,
+              blockTimestamp,
+              splitsToRepoDriverSubAccount:
+                subList.rootAccountType === 'ecosystem_main_account'
+                  ? true
+                  : undefined,
+            },
+          });
+        }
+
         await ProjectModel.findOrCreate({
           transaction,
           lock: transaction.LOCK.UPDATE,
@@ -226,7 +250,7 @@ async function createNewSplitReceivers({
             senderAccountType: 'sub_list',
             receiverAccountId: repoDriverId,
             receiverAccountType: 'project',
-            relationshipType: 'sub_list_link',
+            relationshipType: 'sub_list_receiver',
             weight: receiver.weight,
             blockTimestamp,
             splitsToRepoDriverSubAccount:
@@ -263,7 +287,7 @@ async function createNewSplitReceivers({
             senderAccountType: 'sub_list',
             receiverAccountId: receiver.accountId,
             receiverAccountType: 'drip_list',
-            relationshipType: 'sub_list_link',
+            relationshipType: 'sub_list_receiver',
             weight: receiver.weight,
             blockTimestamp,
           },
@@ -279,7 +303,7 @@ async function createNewSplitReceivers({
             senderAccountType: 'sub_list',
             receiverAccountId: receiver.accountId,
             receiverAccountType: 'address',
-            relationshipType: 'sub_list_link',
+            relationshipType: 'sub_list_receiver',
             weight: receiver.weight,
             blockTimestamp,
           },

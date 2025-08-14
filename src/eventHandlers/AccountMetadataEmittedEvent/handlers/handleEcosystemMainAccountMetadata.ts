@@ -34,6 +34,7 @@ import {
   makeVersion,
 } from '../../../utils/lastProcessedVersion';
 import type { repoSubAccountDriverSplitReceiverSchema } from '../../../metadata/schemas/common/repoSubAccountDriverSplitReceiverSchema';
+import type { gitHubSourceSchema } from '../../../metadata/schemas/common/sources';
 
 type Params = {
   ipfsHash: IpfsHash;
@@ -80,7 +81,10 @@ export default async function handleEcosystemMainAccountMetadata({
   }
 
   const { areProjectsValid, message } = await verifyProjectSources(
-    metadata.recipients.filter((r) => r.type === 'repoSubAccountDriver'),
+    metadata.recipients.filter(
+      (r): r is typeof r & { source: z.infer<typeof gitHubSourceSchema> } =>
+        r.type === 'repoSubAccountDriver' && r.source.forge !== 'orcid',
+    ),
   );
 
   if (!areProjectsValid) {
@@ -223,6 +227,23 @@ async function createNewSplitReceivers({
     switch (receiver.type) {
       case 'repoSubAccountDriver': {
         const repoDriverId = await calcParentRepoDriverId(receiver.accountId);
+
+        if (receiver.source.forge === 'orcid') {
+          return createSplitReceiver({
+            scopedLogger,
+            transaction,
+            splitReceiverShape: {
+              senderAccountId: emitterAccountId,
+              senderAccountType: 'ecosystem_main_account',
+              receiverAccountId: repoDriverId,
+              receiverAccountType: 'linked_identity',
+              relationshipType: 'ecosystem_receiver',
+              weight: receiver.weight,
+              blockTimestamp,
+              splitsToRepoDriverSubAccount: true, // Ecosystem Main Accounts always split to Repo Driver Sub Accounts. This is how `Ecosystems API` is designed.
+            },
+          });
+        }
 
         await ProjectModel.findOrCreate({
           transaction,

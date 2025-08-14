@@ -154,7 +154,7 @@ describe('processLinkedIdentitySplits', () => {
       transaction: mockTransaction,
     });
     expect(mockScopedLogger.log).toHaveBeenCalledWith(
-      expect.stringContaining('not properly linked'),
+      expect.stringContaining('ORCID account'),
       'warn',
     );
   });
