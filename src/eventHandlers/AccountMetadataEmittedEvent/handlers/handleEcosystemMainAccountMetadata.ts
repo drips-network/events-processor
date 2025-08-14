@@ -34,6 +34,7 @@ import {
   makeVersion,
 } from '../../../utils/lastProcessedVersion';
 import type { repoSubAccountDriverSplitReceiverSchema } from '../../../metadata/schemas/common/repoSubAccountDriverSplitReceiverSchema';
+import type { gitHubSourceSchema } from '../../../metadata/schemas/common/sources';
 
 type Params = {
   ipfsHash: IpfsHash;
@@ -81,7 +82,7 @@ export default async function handleEcosystemMainAccountMetadata({
 
   const { areProjectsValid, message } = await verifyProjectSources(
     metadata.recipients.filter(
-      (r): r is typeof r & { source: any } =>
+      (r): r is typeof r & { source: z.infer<typeof gitHubSourceSchema> } =>
         r.type === 'repoSubAccountDriver' && r.source.forge !== 'orcid',
     ),
   );
