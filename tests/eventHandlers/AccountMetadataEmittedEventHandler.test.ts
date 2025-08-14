@@ -246,7 +246,7 @@ describe('AccountMetadataEmittedHandler', () => {
       });
     });
 
-    test('should throw error when ORCID account emits metadata', async () => {
+    test('should skip processing when ORCID account emits metadata', async () => {
       // Arrange
       const orcidAccountId =
         81301089168126148130792717371793573750187013649223913888328074657793n;
@@ -274,10 +274,14 @@ describe('AccountMetadataEmittedHandler', () => {
         true,
       ]);
 
-      // Act & Assert
-      await expect(handler['_handle'](orcidRequest)).rejects.toThrow(
-        `ORCID account ${orcidAccountId} emitted metadata. ORCID accounts should not emit metadata events.`,
-      );
+      // Act
+      await handler['_handle'](orcidRequest);
+
+      // Assert
+      expect(handleProjectMetadata.default).not.toHaveBeenCalled();
+      expect(handleDripListMetadata.default).not.toHaveBeenCalled();
+      expect(handleEcosystemMainAccountMetadata.default).not.toHaveBeenCalled();
+      expect(handleSubListMetadata.default).not.toHaveBeenCalled();
     });
   });
 });
