@@ -1,6 +1,7 @@
 /* eslint-disable no-param-reassign */ // Mutating Sequelize model instance is intentional and safe here.
 import { type Transaction } from 'sequelize';
 import type { AnyVersion } from '@efstajas/versioned-parser';
+import type { z } from 'zod';
 import { ProjectModel } from '../../../models';
 import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas';
 import type ScopedLogger from '../../../core/ScopedLogger';
@@ -24,6 +25,7 @@ import {
 } from '../receiversRepository';
 import { makeVersion } from '../../../utils/lastProcessedVersion';
 import RecoverableError from '../../../utils/recoverableError';
+import type { gitHubSourceSchema } from '../../../metadata/schemas/common/sources';
 
 type Params = {
   logIndex: number;
@@ -45,6 +47,8 @@ export default async function handleProjectMetadata({
   emitterAccountId,
 }: Params) {
   const metadata = await getProjectMetadata(ipfsHash);
+
+  assertIsGitHubProject(metadata);
 
   if (metadata.describes.accountId !== emitterAccountId) {
     scopedLogger.bufferMessage(
@@ -84,9 +88,10 @@ export default async function handleProjectMetadata({
     );
   }
 
-  const projectReceivers = metadata.splits.dependencies.flatMap((s) =>
-    'source' in s ? [s] : [],
-  );
+  const projectReceivers = metadata.splits.dependencies.filter(
+    (dep) => 'source' in dep && dep.source.forge === 'github',
+  ) as { accountId: string; source: z.infer<typeof gitHubSourceSchema> }[];
+
   const { areProjectsValid, message } = await verifyProjectSources([
     ...projectReceivers,
     {
@@ -161,7 +166,7 @@ async function updateProject({
   ipfsHash: IpfsHash;
   transaction: Transaction;
   scopedLogger: ScopedLogger;
-  metadata: AnyVersion<typeof repoDriverAccountMetadataParser>;
+  metadata: GitHubProjectMetadata;
 }): Promise<void> {
   const { color, source } = metadata;
 
@@ -245,6 +250,22 @@ async function createNewSplitReceivers({
         );
       }
 
+      if (dependency.source.forge === 'orcid') {
+        return createSplitReceiver({
+          scopedLogger,
+          transaction,
+          splitReceiverShape: {
+            senderAccountId: emitterAccountId,
+            senderAccountType: 'project',
+            receiverAccountId: dependency.accountId,
+            receiverAccountType: 'linked_identity',
+            relationshipType: 'project_dependency',
+            weight: dependency.weight,
+            blockTimestamp,
+          },
+        });
+      }
+
       await ProjectModel.findOrCreate({
         transaction,
         lock: transaction.LOCK.UPDATE,
@@ -316,4 +337,20 @@ async function createNewSplitReceivers({
   });
 
   await Promise.all([...maintainerPromises, ...dependencyPromises]);
+}
+
+type GitHubProjectMetadata = AnyVersion<
+  typeof repoDriverAccountMetadataParser
+> & {
+  source: z.infer<typeof gitHubSourceSchema>;
+};
+
+function assertIsGitHubProject(
+  metadata: AnyVersion<typeof repoDriverAccountMetadataParser>,
+): asserts metadata is GitHubProjectMetadata {
+  if (metadata.source.forge !== 'github') {
+    throw new Error(
+      `Expected GitHub project metadata but got forge: ${metadata.source.forge}`,
+    );
+  }
 }

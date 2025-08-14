@@ -8,6 +8,7 @@ import {
   isImmutableSplitsDriverId,
   isNftDriverId,
   isRepoDriverId,
+  isOrcidAccount,
   convertToAccountId,
   convertToRepoDriverId,
   convertToNftDriverId,
@@ -28,6 +29,7 @@ import type { AccountMetadataEmittedEvent } from '../../../contracts/CURRENT_NET
 import { AccountMetadataEmittedEventModel } from '../../models';
 import ScopedLogger from '../../core/ScopedLogger';
 import { isLatestEvent } from '../../utils/isLatestEvent';
+import unreachableError from '../../utils/unreachableError';
 
 export default class AccountMetadataEmittedEventHandler extends EventHandlerBase<'AccountMetadataEmitted(uint256,bytes32,bytes)'> {
   public readonly eventSignatures = [
@@ -120,6 +122,12 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
       }
 
       if (isRepoDriverId(accountId)) {
+        if (isOrcidAccount(accountId)) {
+          unreachableError(
+            `Unexpected: ORCID account ${accountId} emitted metadata. ORCID accounts should not emit metadata events.`,
+          );
+        }
+
         await handleProjectMetadata({
           logIndex,
           ipfsHash,

@@ -153,8 +153,9 @@ describe('processLinkedIdentitySplits', () => {
     expect(mockLinkedIdentity.save).toHaveBeenCalledWith({
       transaction: mockTransaction,
     });
-    expect(mockScopedLogger.bufferMessage).toHaveBeenCalledWith(
-      expect.stringContaining('WARNING: ORCID account'),
+    expect(mockScopedLogger.log).toHaveBeenCalledWith(
+      expect.stringContaining('ORCID account'),
+      'warn',
     );
   });
 

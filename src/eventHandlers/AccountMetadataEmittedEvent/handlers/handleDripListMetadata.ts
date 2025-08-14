@@ -82,7 +82,12 @@ export default async function handleDripListMetadata({
   }
 
   const { areProjectsValid, message } = await verifyProjectSources(
-    splitReceivers.filter((splitReceiver) => 'source' in splitReceiver),
+    splitReceivers.filter(
+      (
+        splitReceiver,
+      ): splitReceiver is typeof splitReceiver & { source: any } =>
+        'source' in splitReceiver && splitReceiver.source.forge !== 'orcid',
+    ),
   );
 
   if (!areProjectsValid) {
@@ -253,6 +258,22 @@ async function createNewSplitReceivers({
     switch (receiver.type) {
       case 'repoDriver':
         assertIsRepoDriverId(receiver.accountId);
+
+        if (receiver.source.forge === 'orcid') {
+          return createSplitReceiver({
+            scopedLogger,
+            transaction,
+            splitReceiverShape: {
+              senderAccountId: emitterAccountId,
+              senderAccountType: 'drip_list',
+              receiverAccountId: receiver.accountId,
+              receiverAccountType: 'linked_identity',
+              relationshipType: 'drip_list_receiver',
+              weight: receiver.weight,
+              blockTimestamp,
+            },
+          });
+        }
 
         await ProjectModel.findOrCreate({
           transaction,

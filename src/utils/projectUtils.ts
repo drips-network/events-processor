@@ -4,7 +4,7 @@ import unreachableError from './unreachableError';
 import type ProjectModel from '../models/ProjectModel';
 import type { Forge, ProjectVerificationStatus } from '../models/ProjectModel';
 import { repoDriverContract } from '../core/contractClients';
-import type { sourceSchema } from '../metadata/schemas/common/sources';
+import type { gitHubSourceSchema } from '../metadata/schemas/common/sources';
 import {
   calcParentRepoDriverId,
   isRepoDriverId,
@@ -62,7 +62,7 @@ export async function calcProjectId(
 export async function verifyProjectSources(
   projects: {
     accountId: string;
-    source: z.infer<typeof sourceSchema>;
+    source: z.infer<typeof gitHubSourceSchema>;
   }[],
 ): Promise<{
   areProjectsValid: boolean;

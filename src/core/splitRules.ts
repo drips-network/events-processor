@@ -28,6 +28,11 @@ const SPLIT_RULES = Object.freeze([
     receiverAccountType: 'drip_list',
     relationshipType: 'project_dependency',
   },
+  {
+    senderAccountType: 'project',
+    receiverAccountType: 'linked_identity',
+    relationshipType: 'project_dependency',
+  },
 
   // Drip List Rules
   {
@@ -45,11 +50,21 @@ const SPLIT_RULES = Object.freeze([
     receiverAccountType: 'project',
     relationshipType: 'drip_list_receiver',
   },
+  {
+    senderAccountType: 'drip_list',
+    receiverAccountType: 'linked_identity',
+    relationshipType: 'drip_list_receiver',
+  },
 
   // Ecosystem Main Account Rules
   {
     senderAccountType: 'ecosystem_main_account',
     receiverAccountType: 'project',
+    relationshipType: 'ecosystem_receiver',
+  },
+  {
+    senderAccountType: 'ecosystem_main_account',
+    receiverAccountType: 'linked_identity',
     relationshipType: 'ecosystem_receiver',
   },
   {
@@ -77,6 +92,11 @@ const SPLIT_RULES = Object.freeze([
   {
     senderAccountType: 'sub_list',
     receiverAccountType: 'sub_list',
+    relationshipType: 'sub_list_link',
+  },
+  {
+    senderAccountType: 'sub_list',
+    receiverAccountType: 'linked_identity',
     relationshipType: 'sub_list_link',
   },
 

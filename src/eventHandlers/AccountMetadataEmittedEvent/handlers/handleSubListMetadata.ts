@@ -80,7 +80,10 @@ export default async function handleSubListMetadata({
   }
 
   const { areProjectsValid, message } = await verifyProjectSources(
-    metadata.recipients.filter((r) => r.type === 'repoSubAccountDriver'),
+    metadata.recipients.filter(
+      (r): r is typeof r & { source: any } =>
+        r.type === 'repoSubAccountDriver' && r.source.forge !== 'orcid',
+    ),
   );
 
   if (!areProjectsValid) {
@@ -199,6 +202,26 @@ async function createNewSplitReceivers({
     switch (receiver.type) {
       case 'repoSubAccountDriver': {
         const repoDriverId = await calcParentRepoDriverId(receiver.accountId);
+
+        if (receiver.source.forge === 'orcid') {
+          return createSplitReceiver({
+            scopedLogger,
+            transaction,
+            splitReceiverShape: {
+              senderAccountId: emitterAccountId,
+              senderAccountType: 'sub_list',
+              receiverAccountId: repoDriverId,
+              receiverAccountType: 'linked_identity',
+              relationshipType: 'sub_list_link',
+              weight: receiver.weight,
+              blockTimestamp,
+              splitsToRepoDriverSubAccount:
+                subList.rootAccountType === 'ecosystem_main_account'
+                  ? true
+                  : undefined,
+            },
+          });
+        }
 
         await ProjectModel.findOrCreate({
           transaction,
