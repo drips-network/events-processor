@@ -247,7 +247,7 @@ async function createNewSplitReceivers({
             senderAccountType: 'sub_list',
             receiverAccountId: receiver.accountId,
             receiverAccountType: 'sub_list',
-            relationshipType: 'sub_list_receiver',
+            relationshipType: 'sub_list_link',
             weight: receiver.weight,
             blockTimestamp,
           },
