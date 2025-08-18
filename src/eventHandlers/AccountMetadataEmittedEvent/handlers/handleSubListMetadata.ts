@@ -213,7 +213,7 @@ async function createNewSplitReceivers({
               senderAccountType: 'sub_list',
               receiverAccountId: repoDriverId,
               receiverAccountType: 'linked_identity',
-              relationshipType: 'sub_list_link',
+              relationshipType: 'sub_list_receiver',
               weight: receiver.weight,
               blockTimestamp,
               splitsToRepoDriverSubAccount:

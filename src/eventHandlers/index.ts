@@ -2,7 +2,7 @@ export { default as GivenEventHandler } from './GivenEventHandler';
 export { default as SplitEventHandler } from './SplitEventHandler';
 export { default as TransferEventHandler } from './TransferEventHandler';
 export { default as StreamsSetEventHandler } from './StreamsSetEventHandler';
-export { default as AccountSeenEventHandler } from './AccountSeenEventHandler';
+export { default as AccountSeenEventHandler } from './AccountSeenEventHandler/AccountSeenEventHandler';
 export { default as OwnerUpdatedEventHandler } from './OwnerUpdatedEventHandler';
 export { default as SqueezedStreamsEventHandler } from './SqueezedStreamsEventHandler';
 export { default as SplitsSetEventHandler } from './SplitsSetEvent/SplitsSetEventHandler';

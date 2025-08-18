@@ -1,17 +1,19 @@
-import type { AccountSeenEvent } from '../../contracts/CURRENT_NETWORK/RepoDeadlineDriver';
-import ScopedLogger from '../core/ScopedLogger';
-import { dbConnection } from '../db/database';
-import EventHandlerBase from '../events/EventHandlerBase';
-import type EventHandlerRequest from '../events/EventHandlerRequest';
-import DeadlineModel from '../models/DeadlineModel';
-import AccountSeenEventModel from '../models/AccountSeenEventModel';
+import type { AccountSeenEvent } from '../../../contracts/CURRENT_NETWORK/RepoDeadlineDriver';
+import ScopedLogger from '../../core/ScopedLogger';
+import { dbConnection } from '../../db/database';
+import EventHandlerBase from '../../events/EventHandlerBase';
+import type EventHandlerRequest from '../../events/EventHandlerRequest';
+import DeadlineModel from '../../models/DeadlineModel';
+import AccountSeenEventModel from '../../models/AccountSeenEventModel';
 import {
   convertToAccountId,
   convertToRepoDeadlineDriverId,
   convertToRepoDriverId,
-} from '../utils/accountIdUtils';
-import { getAccountType } from '../utils/getAccountType';
-import { isLatestEvent } from '../utils/isLatestEvent';
+} from '../../utils/accountIdUtils';
+import { getAccountType } from '../../utils/getAccountType';
+import { isLatestEvent } from '../../utils/isLatestEvent';
+import { findAffectedAccounts } from './findAffectedAccounts';
+import { recalculateValidationFlags } from './recalculateValidationFlags';
 
 export default class AccountSeenEventHandler extends EventHandlerBase<'AccountSeen(uint256,uint256,uint256,uint256,uint32)'> {
   public eventSignatures = [
@@ -47,10 +49,14 @@ export default class AccountSeenEventHandler extends EventHandlerBase<'AccountSe
     const scopedLogger = new ScopedLogger(this.name, requestId);
 
     await dbConnection.transaction(async (transaction) => {
-      const [receiverAccountType, refundAccountType] = await Promise.all([
-        getAccountType(receiverAccountId, transaction),
-        getAccountType(refundAccountId, transaction),
-      ]);
+      const receiverAccountType = await getAccountType(
+        receiverAccountId,
+        transaction,
+      );
+      const refundAccountType = await getAccountType(
+        refundAccountId,
+        transaction,
+      );
 
       scopedLogger.log(
         [
@@ -137,6 +143,24 @@ export default class AccountSeenEventHandler extends EventHandlerBase<'AccountSe
         });
 
         await deadlineEntry.save({ transaction });
+      }
+
+      // Recalculate validation flags for accounts affected by this deadline becoming "seen"
+      const affectedAccounts = await findAffectedAccounts(
+        accountId,
+        transaction,
+      );
+
+      if (affectedAccounts.length > 0) {
+        scopedLogger.bufferMessage(
+          `Found ${affectedAccounts.length} accounts with splits pointing to deadline ${accountId}. Recalculating validation flags.`,
+        );
+
+        await recalculateValidationFlags(
+          affectedAccounts,
+          scopedLogger,
+          transaction,
+        );
       }
 
       scopedLogger.flush();

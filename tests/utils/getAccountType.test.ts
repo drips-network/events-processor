@@ -27,7 +27,11 @@ describe('getAccountType', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockTransaction = {} as Transaction;
+    mockTransaction = {
+      LOCK: {
+        UPDATE: 'UPDATE',
+      },
+    } as Transaction;
   });
 
   describe('repoDriver (project and linked_identity)', () => {
@@ -38,7 +42,7 @@ describe('getAccountType', () => {
       (isOrcidAccount as jest.Mock).mockReturnValue(false);
 
       // Act.
-      const result = await getAccountType(accountId);
+      const result = await getAccountType(accountId, mockTransaction);
 
       // Assert.
       expect(result).toBe('project');
@@ -73,7 +77,7 @@ describe('getAccountType', () => {
       });
 
       // Act.
-      const result = await getAccountType(accountId);
+      const result = await getAccountType(accountId, mockTransaction);
 
       // Assert.
       expect(result).toBe('linked_identity');
@@ -81,11 +85,12 @@ describe('getAccountType', () => {
       expect(isOrcidAccount).toHaveBeenCalledWith(accountId);
       expect(convertToRepoDriverId).toHaveBeenCalledWith(accountId);
       expect(LinkedIdentityModel.findOne).toHaveBeenCalledWith({
+        lock: mockTransaction.LOCK.UPDATE,
         where: {
           accountId: convertedId,
           identityType: 'orcid',
         },
-        transaction: undefined,
+        transaction: mockTransaction,
         attributes: ['accountId'],
       });
     });
@@ -107,6 +112,7 @@ describe('getAccountType', () => {
       // Assert.
       expect(result).toBe('linked_identity');
       expect(LinkedIdentityModel.findOne).toHaveBeenCalledWith({
+        lock: mockTransaction.LOCK.UPDATE,
         where: {
           accountId: convertedId,
           identityType: 'orcid',
@@ -126,7 +132,9 @@ describe('getAccountType', () => {
       (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(null);
 
       // Act & Assert.
-      await expect(getAccountType(accountId)).rejects.toThrow();
+      await expect(
+        getAccountType(accountId, mockTransaction),
+      ).rejects.toThrow();
     });
   });
 
@@ -139,7 +147,7 @@ describe('getAccountType', () => {
       );
 
       // Act.
-      const result = await getAccountType(accountId);
+      const result = await getAccountType(accountId, mockTransaction);
 
       // Assert.
       expect(result).toBe('address');
@@ -178,13 +186,13 @@ describe('getAccountType', () => {
       });
 
       // Act.
-      const result = await getAccountType(accountId);
+      const result = await getAccountType(accountId, mockTransaction);
 
       // Assert.
       expect(result).toBe('sub_list');
       expect(convertToImmutableSplitsDriverId).toHaveBeenCalledWith(accountId);
       expect(SubListModel.findByPk).toHaveBeenCalledWith(convertedId, {
-        transaction: undefined,
+        transaction: mockTransaction,
         attributes: ['accountId'],
       });
     });
@@ -227,7 +235,9 @@ describe('getAccountType', () => {
       (SubListModel.findByPk as jest.Mock).mockResolvedValue(null);
 
       // Act & Assert.
-      await expect(getAccountType(accountId)).rejects.toThrow();
+      await expect(
+        getAccountType(accountId, mockTransaction),
+      ).rejects.toThrow();
     });
   });
 
@@ -245,13 +255,13 @@ describe('getAccountType', () => {
       });
 
       // Act.
-      const result = await getAccountType(accountId);
+      const result = await getAccountType(accountId, mockTransaction);
 
       // Assert.
       expect(result).toBe('deadline');
       expect(convertToRepoDeadlineDriverId).toHaveBeenCalledWith(accountId);
       expect(DeadlineModel.findByPk).toHaveBeenCalledWith(convertedId, {
-        transaction: undefined,
+        transaction: mockTransaction,
         attributes: ['accountId'],
       });
     });
@@ -290,7 +300,9 @@ describe('getAccountType', () => {
       (DeadlineModel.findByPk as jest.Mock).mockResolvedValue(null);
 
       // Act & Assert.
-      await expect(getAccountType(accountId)).rejects.toThrow();
+      await expect(
+        getAccountType(accountId, mockTransaction),
+      ).rejects.toThrow();
     });
   });
 
@@ -303,7 +315,7 @@ describe('getAccountType', () => {
       );
 
       // Act.
-      const result = await getAccountType(accountId);
+      const result = await getAccountType(accountId, mockTransaction);
 
       // Assert.
       expect(result).toBe('project');
@@ -339,7 +351,7 @@ describe('getAccountType', () => {
       (DripListModel.findByPk as jest.Mock).mockResolvedValue(null);
 
       // Act.
-      const result = await getAccountType(accountId);
+      const result = await getAccountType(accountId, mockTransaction);
 
       // Assert.
       expect(result).toBe('ecosystem_main_account');
@@ -347,12 +359,12 @@ describe('getAccountType', () => {
       expect(EcosystemMainAccountModel.findByPk).toHaveBeenCalledWith(
         convertedId,
         {
-          transaction: undefined,
+          transaction: mockTransaction,
           attributes: ['accountId'],
         },
       );
       expect(DripListModel.findByPk).toHaveBeenCalledWith(convertedId, {
-        transaction: undefined,
+        transaction: mockTransaction,
         attributes: ['accountId'],
       });
     });
@@ -369,7 +381,7 @@ describe('getAccountType', () => {
       });
 
       // Act.
-      const result = await getAccountType(accountId);
+      const result = await getAccountType(accountId, mockTransaction);
 
       // Assert.
       expect(result).toBe('drip_list');
@@ -389,7 +401,7 @@ describe('getAccountType', () => {
       });
 
       // Act.
-      const result = await getAccountType(accountId);
+      const result = await getAccountType(accountId, mockTransaction);
 
       // Assert.
       expect(result).toBe('ecosystem_main_account');
@@ -434,7 +446,9 @@ describe('getAccountType', () => {
       (DripListModel.findByPk as jest.Mock).mockResolvedValue(null);
 
       // Act & Assert.
-      await expect(getAccountType(accountId)).rejects.toThrow();
+      await expect(
+        getAccountType(accountId, mockTransaction),
+      ).rejects.toThrow();
     });
   });
 
@@ -447,7 +461,9 @@ describe('getAccountType', () => {
       );
 
       // Act & Assert.
-      await expect(getAccountType(accountId)).rejects.toThrow();
+      await expect(
+        getAccountType(accountId, mockTransaction),
+      ).rejects.toThrow();
     });
 
     it('should throw error for invalid contract name', async () => {
@@ -458,7 +474,9 @@ describe('getAccountType', () => {
       );
 
       // Act & Assert.
-      await expect(getAccountType(accountId)).rejects.toThrow();
+      await expect(
+        getAccountType(accountId, mockTransaction),
+      ).rejects.toThrow();
     });
 
     it('should handle database errors gracefully', async () => {
@@ -475,7 +493,9 @@ describe('getAccountType', () => {
       (SubListModel.findByPk as jest.Mock).mockRejectedValue(dbError);
 
       // Act & Assert.
-      await expect(getAccountType(accountId)).rejects.toThrow(dbError);
+      await expect(getAccountType(accountId, mockTransaction)).rejects.toThrow(
+        dbError,
+      );
     });
   });
 });

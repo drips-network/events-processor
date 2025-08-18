@@ -6,10 +6,13 @@ import type { EventData } from '../../src/events/types';
 import AccountSeenEventModel from '../../src/models/AccountSeenEventModel';
 import DeadlineModel from '../../src/models/DeadlineModel';
 import ScopedLogger from '../../src/core/ScopedLogger';
-import AccountSeenEventHandler from '../../src/eventHandlers/AccountSeenEventHandler';
+import AccountSeenEventHandler from '../../src/eventHandlers/AccountSeenEventHandler/AccountSeenEventHandler';
 import * as accountIdUtils from '../../src/utils/accountIdUtils';
 import * as getAccountType from '../../src/utils/getAccountType';
 import * as isLatestEvent from '../../src/utils/isLatestEvent';
+import * as findAffectedAccounts from '../../src/eventHandlers/AccountSeenEventHandler/findAffectedAccounts';
+import * as recalculateValidationFlags from '../../src/eventHandlers/AccountSeenEventHandler/recalculateValidationFlags';
+import type { AffectedAccount } from '../../src/eventHandlers/AccountSeenEventHandler/findAffectedAccounts';
 import type {
   AccountId,
   RepoDeadlineDriverId,
@@ -23,6 +26,12 @@ jest.mock('bee-queue');
 jest.mock('../../src/core/ScopedLogger');
 jest.mock('../../src/utils/getAccountType');
 jest.mock('../../src/utils/isLatestEvent');
+jest.mock(
+  '../../src/eventHandlers/AccountSeenEventHandler/findAffectedAccounts',
+);
+jest.mock(
+  '../../src/eventHandlers/AccountSeenEventHandler/recalculateValidationFlags',
+);
 
 describe('AccountSeenEventHandler', () => {
   let mockDbTransaction: any;
@@ -81,9 +90,17 @@ describe('AccountSeenEventHandler', () => {
 
     jest.mocked(isLatestEvent.isLatestEvent).mockResolvedValue(true);
 
+    jest
+      .mocked(findAffectedAccounts.findAffectedAccounts)
+      .mockResolvedValue([]);
+    jest
+      .mocked(recalculateValidationFlags.recalculateValidationFlags)
+      .mockResolvedValue();
+
     ScopedLogger.prototype.log = jest.fn();
     ScopedLogger.prototype.bufferCreation = jest.fn();
     ScopedLogger.prototype.bufferUpdate = jest.fn();
+    ScopedLogger.prototype.bufferMessage = jest.fn();
     ScopedLogger.prototype.flush = jest.fn();
   });
 
@@ -240,6 +257,41 @@ describe('AccountSeenEventHandler', () => {
       );
       expect(getAccountType.getAccountType).toHaveBeenCalledWith(
         'refund-account-id',
+        mockDbTransaction,
+      );
+    });
+
+    test('should call recalculateValidationFlags when affected accounts exist', async () => {
+      // Arrange
+      const accountSeenEvent = {
+        accountId: 'deadline-account-id',
+      };
+      const affectedAccounts: AffectedAccount[] = [
+        { accountId: 'affected-account-1' as AccountId, type: 'Project' },
+        { accountId: 'affected-account-2' as AccountId, type: 'DripList' },
+      ];
+
+      AccountSeenEventModel.create = jest
+        .fn()
+        .mockResolvedValue(accountSeenEvent);
+      DeadlineModel.findOrCreate = jest.fn().mockResolvedValue([{}, true]);
+      jest
+        .mocked(findAffectedAccounts.findAffectedAccounts)
+        .mockResolvedValue(affectedAccounts);
+
+      // Act
+      await handler['_handle'](mockRequest);
+
+      // Assert
+      expect(findAffectedAccounts.findAffectedAccounts).toHaveBeenCalledWith(
+        'deadline-account-id',
+        mockDbTransaction,
+      );
+      expect(
+        recalculateValidationFlags.recalculateValidationFlags,
+      ).toHaveBeenCalledWith(
+        affectedAccounts,
+        expect.any(ScopedLogger),
         mockDbTransaction,
       );
     });

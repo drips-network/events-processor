@@ -18,12 +18,13 @@ import RecoverableError from './recoverableError';
 
 export async function getAccountType(
   accountId: AccountId,
-  transaction?: Transaction,
+  transaction: Transaction,
 ): Promise<AccountType> {
   const contractName = getContractNameFromAccountId(accountId);
 
   if (contractName === 'repoDriver' && isOrcidAccount(accountId)) {
     const linkedIdentity = await LinkedIdentityModel.findOne({
+      lock: transaction.LOCK.UPDATE,
       where: {
         accountId: convertToRepoDriverId(accountId),
         identityType: 'orcid',
@@ -83,16 +84,15 @@ export async function getAccountType(
     case 'nftDriver': {
       const nftDriverId = convertToNftDriverId(accountId);
 
-      const [ecosystem, dripList] = await Promise.all([
-        EcosystemMainAccountModel.findByPk(nftDriverId, {
-          transaction,
-          attributes: ['accountId'],
-        }),
-        DripListModel.findByPk(nftDriverId, {
-          transaction,
-          attributes: ['accountId'],
-        }),
-      ]);
+      const ecosystem = await EcosystemMainAccountModel.findByPk(nftDriverId, {
+        transaction,
+        attributes: ['accountId'],
+      });
+
+      const dripList = await DripListModel.findByPk(nftDriverId, {
+        transaction,
+        attributes: ['accountId'],
+      });
 
       if (ecosystem) return 'ecosystem_main_account';
       if (dripList) return 'drip_list';

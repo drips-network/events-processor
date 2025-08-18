@@ -45,6 +45,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       ].join('\n'),
     );
 
+    // Ensure we process the latest event.
     const onChainOwner = (await repoDriverContract.ownerOf(
       accountId,
     )) as Address;
@@ -174,7 +175,11 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           identityType: 'orcid',
           ownerAddress: owner,
           ownerAccountId,
-          isLinked: await validateLinkedIdentity(accountId, ownerAccountId),
+          isLinked: await validateLinkedIdentity(
+            accountId,
+            ownerAccountId,
+            transaction,
+          ),
           lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
         },
       },
@@ -193,6 +198,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       linkedIdentity.isLinked = await validateLinkedIdentity(
         accountId,
         linkedIdentity.ownerAccountId,
+        transaction,
       );
       linkedIdentity.lastProcessedVersion = makeVersion(
         blockNumber,
