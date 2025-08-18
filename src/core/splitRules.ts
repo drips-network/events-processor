@@ -179,7 +179,7 @@ export const RELATIONSHIP_TYPES = Array.from(
 ) as (typeof SPLIT_RULES)[number]['relationshipType'][];
 
 export const ACCOUNT_TYPE_TO_METADATA_RECEIVER_TYPE: Record<
-  Exclude<AccountType, 'deadline'>, // We don't populated `RepoDeadlineDriver` metadata.
+  Exclude<AccountType, 'deadline'>, // We don't populate `RepoDeadlineDriver` metadata.
   string
 > = {
   project: 'repoDriver',

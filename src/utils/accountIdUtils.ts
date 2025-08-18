@@ -215,11 +215,11 @@ export function isRepoDeadlineDriverId(
   id: string | bigint,
 ): id is RepoDeadlineDriverId {
   const idString = typeof id === 'bigint' ? id.toString() : id;
-  const isNaN = Number.isNaN(Number(idString));
+  const isNotANum = Number.isNaN(Number(idString));
   const isAccountIdOfRepoDeadlineDriver =
     getContractNameFromAccountId(idString) === 'repoDeadlineDriver';
 
-  if (isNaN || !isAccountIdOfRepoDeadlineDriver) {
+  if (isNotANum || !isAccountIdOfRepoDeadlineDriver) {
     return false;
   }
 
