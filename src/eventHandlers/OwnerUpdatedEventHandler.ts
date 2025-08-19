@@ -117,16 +117,15 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           const newVersion = makeVersion(blockNumber, logIndex);
           const storedVersion = BigInt(project.lastProcessedVersion);
 
-          // Safely update fields that another event handler could also modify.
-          if (newVersion > storedVersion) {
-            project.verificationStatus = calculateProjectStatus(project);
-          }
-
           project.ownerAccountId = (
             await addressDriverContract.calcAccountId(onChainOwner)
           ).toString() as AddressDriverId;
           project.ownerAddress = onChainOwner;
           project.claimedAt = blockTimestamp;
+
+          if (newVersion > storedVersion) {
+            project.verificationStatus = calculateProjectStatus(project);
+          }
 
           project.lastProcessedVersion = newVersion.toString();
 

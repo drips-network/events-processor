@@ -51,7 +51,7 @@ export async function getCurrentSplitReceiversBySender(
   });
 
   const accountIds = [
-    ...splitReceivers.map((receiver) => receiver.senderAccountId),
+    ...splitReceivers.map((receiver) => receiver.receiverAccountId),
   ];
 
   return Array.from(new Set(accountIds));
