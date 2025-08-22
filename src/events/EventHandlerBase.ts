@@ -84,13 +84,17 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
 
     if (accountIds.length > 0) {
       try {
-        fetch(appSettings.cacheInvalidationEndpoint, {
+        const res = await fetch(appSettings.cacheInvalidationEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(accountIds),
         });
+
+        if (!res.ok) {
+          throw new Error(`${res.status} -${res.statusText}`);
+        }
 
         logger.info(
           `[${requestId}]'${
