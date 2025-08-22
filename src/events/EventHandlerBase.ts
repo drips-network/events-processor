@@ -93,7 +93,9 @@ export default abstract class EventHandlerBase<T extends EventSignature> {
         });
 
         if (!res.ok) {
-          throw new Error(`${res.status} -${res.statusText}`);
+          throw new Error(
+            `${res.status} - ${res.statusText} - ${await res.text()}`,
+          );
         }
 
         logger.info(
