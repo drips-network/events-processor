@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
 import logger from './core/logger';
 import getProvider from './core/getProvider';
-import _LastIndexedBlockModel from './models/_LastIndexedBlockModel';
+import LastIndexedBlockModel from './models/LastIndexedBlockModel';
 
 export const healthEndpoint: RequestHandler = async (req, res) => {
   const HEALTH_THRESHOLD = 10;
@@ -10,7 +10,7 @@ export const healthEndpoint: RequestHandler = async (req, res) => {
     const provider = getProvider();
     const latestChainBlock = await provider.getBlockNumber();
 
-    const lastIndexedBlockRecord = await _LastIndexedBlockModel.findOne({
+    const lastIndexedBlockRecord = await LastIndexedBlockModel.findOne({
       order: [['blockNumber', 'DESC']],
     });
 
@@ -41,11 +41,9 @@ export const healthEndpoint: RequestHandler = async (req, res) => {
     });
   } catch (error: any) {
     logger.error(`Health check endpoint error: ${error.message}`, error);
-    return res
-      .status(500)
-      .send({
-        status: 'Error',
-        message: 'Internal server error during health check.',
-      });
+    return res.status(500).send({
+      status: 'Error',
+      message: 'Internal server error during health check.',
+    });
   }
 };

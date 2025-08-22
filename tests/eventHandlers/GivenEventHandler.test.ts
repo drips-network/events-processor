@@ -4,23 +4,23 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import GivenEventModel from '../../src/models/GivenEventModel';
-import LogManager from '../../src/core/LogManager';
+import ScopedLogger from '../../src/core/ScopedLogger';
 import GivenEventHandler from '../../src/eventHandlers/GivenEventHandler';
-import { toAccountId } from '../../src/utils/accountIdUtils';
+import { convertToAccountId } from '../../src/utils/accountIdUtils';
 import { toAddress } from '../../src/utils/ethereumAddressUtils';
 import { toBigIntString } from '../../src/utils/bigintUtils';
 
 jest.mock('../../src/models/GivenEventModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
-jest.mock('../../src/core/LogManager');
+jest.mock('../../src/core/ScopedLogger');
 
 describe('GivenEventHandler', () => {
   let mockDbTransaction: {};
   let handler: GivenEventHandler;
   let mockRequest: EventHandlerRequest<'Given(uint256,uint256,address,uint128)'>;
 
-  beforeAll(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
 
     handler = new GivenEventHandler();
@@ -51,15 +51,14 @@ describe('GivenEventHandler', () => {
   describe('_handle', () => {
     test('should create a new GivenEventModel', async () => {
       // Arrange
-      GivenEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      GivenEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'GivenEventTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
-      LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
+      ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
 
       // Act
       await handler['_handle'](mockRequest);
@@ -75,16 +74,10 @@ describe('GivenEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(GivenEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
-          accountId: toAccountId(rawAccountId),
-          receiver: toAccountId(rawReceiver),
+      expect(GivenEventModel.create).toHaveBeenCalledWith(
+        {
+          accountId: convertToAccountId(rawAccountId),
+          receiver: convertToAccountId(rawReceiver),
           erc20: toAddress(rawErc20),
           amt: toBigIntString(rawAmt.toString()),
           logIndex,
@@ -92,7 +85,10 @@ describe('GivenEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
     });
   });
 });

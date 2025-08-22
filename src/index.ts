@@ -1,6 +1,6 @@
 import express from 'express';
-
 import logger from './core/logger';
+
 import appSettings from './config/appSettings';
 import initJobProcessingQueue from './queue/initJobProcessingQueue';
 import { arenaConfig } from './queue/queueMonitoring';
@@ -22,7 +22,10 @@ import networkConstant from '../contracts/CURRENT_NETWORK/network-constant';
 import { healthEndpoint } from './health';
 
 process.on('uncaughtException', (error: Error) => {
-  logger.error(`Uncaught Exception: ${error.message}`);
+  logger.error('Uncaught Exception', {
+    message: error.message,
+    stack: error.stack,
+  });
 
   // Railway will restart the process if it exits with a non-zero exit code.
   process.exit(1);
@@ -80,9 +83,9 @@ async function init() {
     app.use('/health', healthEndpoint);
   }
 
-  app.listen(appSettings.monitoringUiPort, () => {
+  app.listen(appSettings.queueUiPort, () => {
     logger.info(
-      `Monitoring available on port ${appSettings.monitoringUiPort}. Routes: /health, /arena`,
+      `Monitoring available on port ${appSettings.queueUiPort}. Routes: /health, /arena`,
     );
   });
 }

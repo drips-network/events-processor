@@ -4,26 +4,27 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { TransferEventHandler } from '../../src/eventHandlers';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
-import { calcAccountId, toNftDriverId } from '../../src/utils/accountIdUtils';
-import { isLatestEvent } from '../../src/utils/eventUtils';
-import LogManager from '../../src/core/LogManager';
+import { convertToNftDriverId } from '../../src/utils/accountIdUtils';
+import ScopedLogger from '../../src/core/ScopedLogger';
 import TransferEventModel from '../../src/models/TransferEventModel';
 import DripListModel from '../../src/models/DripListModel';
+import * as contractClients from '../../src/core/contractClients';
 
 jest.mock('../../src/models/TransferEventModel');
 jest.mock('../../src/models/DripListModel');
 jest.mock('../../src/db/database');
 jest.mock('bee-queue');
-jest.mock('../../src/utils/eventUtils');
+jest.mock('../../src/events/eventHandlerUtils');
 jest.mock('../../src/utils/accountIdUtils');
-jest.mock('../../src/core/LogManager');
+jest.mock('../../src/core/ScopedLogger');
+jest.mock('../../src/core/contractClients');
 
 describe('TransferEventHandler', () => {
   let mockDbTransaction: {};
   let handler: TransferEventHandler;
   let mockRequest: EventHandlerRequest<'Transfer(address,address,uint256)'>;
 
-  beforeAll(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
 
     handler = new TransferEventHandler();
@@ -43,7 +44,9 @@ describe('TransferEventHandler', () => {
       } as EventData<'Transfer(address,address,uint256)'>,
     };
 
-    mockDbTransaction = {};
+    mockDbTransaction = {
+      LOCK: { UPDATE: jest.fn() },
+    };
 
     dbConnection.transaction = jest
       .fn()
@@ -53,19 +56,26 @@ describe('TransferEventHandler', () => {
   describe('_handle', () => {
     test('should create a new TransferEventModel', async () => {
       // Arrange
-      TransferEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      TransferEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'TransferEventTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
-      DripListModel.findOrCreate = jest
+      DripListModel.findByPk = jest
         .fn()
-        .mockResolvedValue([{ save: jest.fn() }, true]);
+        .mockResolvedValue({ save: jest.fn(), lastProcessedVersion: '0' });
 
-      LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
+      ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
+
+      contractClients.nftDriverContract.ownerOf = jest
+        .fn()
+        .mockResolvedValue(mockRequest.event.args[1]) as any;
+
+      contractClients.addressDriverContract.calcAccountId = jest
+        .fn()
+        .mockResolvedValue('ownerAccountId') as any;
 
       // Act
       await handler['_handle'](mockRequest);
@@ -81,15 +91,9 @@ describe('TransferEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(TransferEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
-          tokenId: toNftDriverId(tokenId),
+      expect(TransferEventModel.create).toHaveBeenCalledWith(
+        {
+          tokenId: convertToNftDriverId(tokenId),
           to,
           from,
           logIndex,
@@ -97,97 +101,10 @@ describe('TransferEventHandler', () => {
           blockTimestamp,
           transactionHash,
         },
-      });
-    });
-
-    test('should create a new DripListModel when the token is representing a Drip List', async () => {
-      // Arrange
-      TransferEventModel.findOrCreate = jest.fn().mockResolvedValue([
         {
-          transactionHash: 'TransferEventTransactionHash',
-          logIndex: 1,
+          transaction: mockDbTransaction,
         },
-        true,
-      ]);
-
-      (calcAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
-
-      DripListModel.findOrCreate = jest
-        .fn()
-        .mockResolvedValue([{ save: jest.fn() }, true]);
-
-      LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
-
-      // Act
-      await handler['_handle'](mockRequest);
-
-      // Assert
-      const {
-        event: {
-          args: [from, to, tokenId],
-        },
-      } = mockRequest;
-
-      expect(DripListModel.findOrCreate).toHaveBeenCalledWith({
-        transaction: mockDbTransaction,
-        lock: true,
-        where: {
-          id: toNftDriverId(tokenId),
-        },
-        defaults: {
-          id: toNftDriverId(tokenId),
-          creator: to,
-          isValid: true,
-          isVisible: false,
-          ownerAddress: to,
-          ownerAccountId: 'ownerAccountId',
-          previousOwnerAddress: from,
-        },
-      });
-    });
-
-    test('should update the DripListModel when the incoming event is the latest', async () => {
-      // Arrange
-      TransferEventModel.findOrCreate = jest.fn().mockResolvedValue([
-        {
-          transactionHash: 'TransferEventTransactionHash',
-          logIndex: 1,
-        },
-        true,
-      ]);
-
-      (calcAccountId as jest.Mock).mockResolvedValue('ownerAccountId');
-
-      const mockDripList = {
-        ownerAddress: '',
-        previousOwnerAddress: '',
-        ownerAccountId: '',
-        save: jest.fn(),
-      };
-      DripListModel.findOrCreate = jest
-        .fn()
-        .mockResolvedValue([mockDripList, false]);
-
-      (isLatestEvent as jest.Mock).mockResolvedValue(true);
-
-      LogManager.prototype.appendIsLatestEventLog = jest.fn().mockReturnThis();
-
-      // Act
-      await handler['_handle'](mockRequest);
-
-      // Assert
-      const {
-        event: {
-          args: [from, to],
-        },
-      } = mockRequest;
-
-      expect(mockDripList.ownerAddress).toBe(to);
-      expect(mockDripList.previousOwnerAddress).toBe(from);
-      expect(mockDripList.ownerAccountId).toBe('ownerAccountId');
-      expect(mockDripList.save).toHaveBeenCalledWith({
-        transaction: mockDbTransaction,
-      });
+      );
     });
   });
 });

@@ -4,23 +4,29 @@ import type EventHandlerRequest from '../../src/events/EventHandlerRequest';
 import { dbConnection } from '../../src/db/database';
 import type { EventData } from '../../src/events/types';
 import SplitsSetEventModel from '../../src/models/SplitsSetEventModel';
-import LogManager from '../../src/core/LogManager';
-import { toAccountId } from '../../src/utils/accountIdUtils';
-import { SplitsSetEventHandler } from '../../src/eventHandlers';
-import setIsValidFlag from '../../src/eventHandlers/SplitsSetEventHandler/setIsValidFlag';
+import * as accountIdUtils from '../../src/utils/accountIdUtils';
+import SplitsSetEventHandler from '../../src/eventHandlers/SplitsSetEvent/SplitsSetEventHandler';
+import ScopedLogger from '../../src/core/ScopedLogger';
+import setIsValidFlag from '../../src/eventHandlers/SplitsSetEvent/setIsValidFlag';
+import { processLinkedIdentitySplits } from '../../src/eventHandlers/SplitsSetEvent/processLinkedIdentitySplits';
+import type { AccountId } from '../../src/core/types';
 
 jest.mock('../../src/models/SplitsSetEventModel');
+jest.mock('../../src/models/LinkedIdentityModel');
 jest.mock('../../src/db/database');
+jest.mock('../../src/utils/validateLinkedIdentity');
 jest.mock('bee-queue');
-jest.mock('../../src/core/LogManager');
-jest.mock('../../src/eventHandlers/SplitsSetEventHandler/setIsValidFlag');
+jest.mock('../../src/core/ScopedLogger');
+jest.mock('../../src/eventHandlers/SplitsSetEvent/setIsValidFlag');
+jest.mock('../../src/eventHandlers/SplitsSetEvent/processLinkedIdentitySplits');
+jest.mock('../../src/utils/accountIdUtils');
 
 describe('SplitsSetEventHandler', () => {
   let mockDbTransaction: {};
   let handler: SplitsSetEventHandler;
   let mockRequest: EventHandlerRequest<'SplitsSet(uint256,bytes32)'>;
 
-  beforeAll(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
 
     handler = new SplitsSetEventHandler();
@@ -39,7 +45,15 @@ describe('SplitsSetEventHandler', () => {
       } as EventData<'SplitsSet(uint256,bytes32)'>,
     };
 
-    mockDbTransaction = {};
+    mockDbTransaction = {
+      LOCK: {
+        UPDATE: 'UPDATE',
+      },
+    };
+
+    jest
+      .mocked(accountIdUtils.convertToAccountId)
+      .mockReturnValue(mockRequest.event.args[0] as AccountId);
 
     dbConnection.transaction = jest
       .fn()
@@ -49,15 +63,14 @@ describe('SplitsSetEventHandler', () => {
   describe('_handle', () => {
     test('should create a new SplitsSetEventModel', async () => {
       // Arrange
-      SplitsSetEventModel.findOrCreate = jest.fn().mockResolvedValue([
+      SplitsSetEventModel.create = jest.fn().mockResolvedValue([
         {
           transactionHash: 'SplitsSetTransactionHash',
           logIndex: 1,
         },
-        true,
       ]);
 
-      LogManager.prototype.appendFindOrCreateLog = jest.fn().mockReturnThis();
+      ScopedLogger.prototype.bufferCreation = jest.fn().mockReturnThis();
 
       // Act
       await handler['_handle'](mockRequest);
@@ -73,24 +86,85 @@ describe('SplitsSetEventHandler', () => {
         },
       } = mockRequest;
 
-      expect(SplitsSetEventModel.findOrCreate).toHaveBeenCalledWith({
-        lock: true,
-        transaction: mockDbTransaction,
-        where: {
-          logIndex,
-          transactionHash,
-        },
-        defaults: {
-          accountId: toAccountId(rawAccountId),
+      expect(SplitsSetEventModel.create).toHaveBeenCalledWith(
+        {
+          accountId: accountIdUtils.convertToAccountId(rawAccountId),
           receiversHash: rawReceiversHash,
           logIndex,
           blockNumber,
           blockTimestamp,
           transactionHash,
         },
-      });
+        {
+          transaction: mockDbTransaction,
+        },
+      );
 
       expect(setIsValidFlag).toHaveBeenCalled();
+    });
+
+    test('should set isLinked flag for ORCID account', async () => {
+      // Arrange
+      const orcidAccountId =
+        '81320912658542974439730181977206773330805723773165208113981035642880'; // ORCID account
+      const mockOrcidRequest = {
+        ...mockRequest,
+        event: {
+          ...mockRequest.event,
+          args: [BigInt(orcidAccountId), 'receiversHash'],
+        },
+      };
+
+      jest.mocked(accountIdUtils.isOrcidAccount).mockReturnValue(true);
+
+      const splitsSetEvent = {
+        transactionHash: 'SplitsSetTransactionHash',
+        logIndex: 1,
+      };
+
+      SplitsSetEventModel.create = jest.fn().mockResolvedValue(splitsSetEvent);
+
+      // Act
+      await handler['_handle'](mockOrcidRequest);
+
+      // Assert
+      expect(processLinkedIdentitySplits).toHaveBeenCalledWith(
+        splitsSetEvent,
+        expect.any(ScopedLogger),
+        mockDbTransaction,
+      );
+    });
+
+    test('should set isValid flag for Project account', async () => {
+      // Arrange
+      const projectAccountId =
+        '81320912658542974439730181977206773330805723773165208113981035642880'; // ORCID account
+      const mockOrcidRequest = {
+        ...mockRequest,
+        event: {
+          ...mockRequest.event,
+          args: [BigInt(projectAccountId), 'receiversHash'],
+        },
+      };
+
+      jest.mocked(accountIdUtils.isOrcidAccount).mockReturnValue(false);
+
+      const splitsSetEvent = {
+        transactionHash: 'SplitsSetTransactionHash',
+        logIndex: 1,
+      };
+
+      SplitsSetEventModel.create = jest.fn().mockResolvedValue(splitsSetEvent);
+
+      // Act
+      await handler['_handle'](mockOrcidRequest);
+
+      // Assert
+      expect(setIsValidFlag).toHaveBeenCalledWith(
+        splitsSetEvent,
+        expect.any(ScopedLogger),
+        mockDbTransaction,
+      );
     });
   });
 });

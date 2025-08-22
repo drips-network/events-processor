@@ -1,22 +1,22 @@
 import type { ModelStaticMembers } from '../core/types';
 import {
   AccountMetadataEmittedEventModel,
-  AddressDriverSplitReceiverModel,
   DripListModel,
-  DripListSplitReceiverModel,
-  GitProjectModel,
-  OwnerUpdateRequestedEventModel,
-  OwnerUpdatedEventModel,
-  RepoDriverSplitReceiverModel,
+  ProjectModel,
   TransferEventModel,
   GivenEventModel,
-  SplitsSetEventModel,
   StreamsSetEventModel,
   StreamReceiverSeenEventModel,
+  LastIndexedBlockModel,
+  SplitEventModel,
+  SqueezedStreamsEventModel,
+  SubListModel,
+  EcosystemMainAccountModel,
+  SplitsReceiverModel,
+  OwnerUpdatedEventModel,
+  LinkedIdentityModel,
 } from '../models';
-import _LastIndexedBlockModel from '../models/_LastIndexedBlockModel';
-import SplitEventModel from '../models/SplitEventModel';
-import SqueezedStreamsEventModel from '../models/SqueezedStreamsEventModel';
+import SplitsSetEventModel from '../models/SplitsSetEventModel';
 
 const REGISTERED_MODELS: ModelStaticMembers[] = [];
 
@@ -29,21 +29,21 @@ export function getRegisteredModels(): ModelStaticMembers[] {
 }
 
 export function registerModels(): void {
-  registerModel(_LastIndexedBlockModel);
+  registerModel(LastIndexedBlockModel);
 
+  registerModel(SubListModel);
+  registerModel(ProjectModel);
   registerModel(DripListModel);
   registerModel(GivenEventModel);
   registerModel(SplitEventModel);
-  registerModel(GitProjectModel);
   registerModel(TransferEventModel);
-  registerModel(StreamsSetEventModel);
+  registerModel(LinkedIdentityModel);
+  registerModel(SplitsReceiverModel);
   registerModel(SplitsSetEventModel);
+  registerModel(StreamsSetEventModel);
   registerModel(OwnerUpdatedEventModel);
+  registerModel(EcosystemMainAccountModel);
   registerModel(SqueezedStreamsEventModel);
-  registerModel(DripListSplitReceiverModel);
   registerModel(StreamReceiverSeenEventModel);
-  registerModel(RepoDriverSplitReceiverModel);
-  registerModel(OwnerUpdateRequestedEventModel);
-  registerModel(AddressDriverSplitReceiverModel);
   registerModel(AccountMetadataEmittedEventModel);
 }

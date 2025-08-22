@@ -1,35 +1,60 @@
 import winston from 'winston';
+import type { LoggingConfig } from '../config/appSettings.schema';
 import appSettings from '../config/appSettings';
 
-const format = winston.format.combine(
-  winston.format.timestamp(),
-  winston.format.colorize(),
-  winston.format.errors({ stack: true }),
-  winston.format.printf(
-    ({ timestamp, level, message, requestId }) =>
-      `${timestamp} ${level}${requestId ? ` [${requestId}]` : ''}: ${message}`,
-  ),
-);
+function createLogger(config: LoggingConfig): winston.Logger {
+  const formats = [
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+  ];
 
-const developmentLogger = winston.createLogger({
-  level: appSettings.logLevel,
-  format,
-  transports: [new winston.transports.Console()],
-});
+  // Add pretty printing for console if configured.
+  if (config.format === 'pretty' && config.destination === 'console') {
+    formats.push(
+      winston.format.colorize(),
+      winston.format.printf((info: winston.Logform.TransformableInfo) => {
+        const { level, message, timestamp, metadata, ...rest } = info;
+        const metaStr =
+          metadata || Object.keys(rest).length
+            ? `\n${JSON.stringify(metadata || rest, null, 2)}`
+            : '';
 
-const productionLogger = winston.createLogger({
-  level: appSettings.logLevel,
-  format,
-  transports: [
-    new winston.transports.Console(),
-    // Logs are stored on Railways, so we don't need to store them locally.
-    // new winston.transports.File({
-    //   filename: `logs/${new Date().toISOString().slice(0, 10)}.log`,
-    // }),
-  ],
-});
+        return `${timestamp} ${level}: ${message}${metaStr}`;
+      }),
+    );
+  } else {
+    formats.push(winston.format.json());
+  }
 
-const logger =
-  appSettings.network === 'mainnet' ? productionLogger : developmentLogger;
+  const transports: winston.transport[] = [];
 
+  // Configure transport based on destination.
+  if (config.destination === 'file' && config.filename) {
+    transports.push(
+      new winston.transports.File({
+        filename: config.filename,
+        level: config.level,
+        format: winston.format.combine(...formats),
+        maxFiles: 7,
+        maxsize: 10 * 1024 * 1024, // 10MB
+        tailable: true,
+      }),
+    );
+  } else {
+    transports.push(
+      new winston.transports.Console({
+        level: config.level,
+        format: winston.format.combine(...formats),
+      }),
+    );
+  }
+
+  return winston.createLogger({
+    level: config.level,
+    transports,
+  });
+}
+
+// Singleton logger instance
+const logger = createLogger(appSettings.logger);
 export default logger;

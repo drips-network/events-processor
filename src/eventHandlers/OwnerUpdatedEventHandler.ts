@@ -1,142 +1,227 @@
+import type { Transaction } from 'sequelize';
 import type { OwnerUpdatedEvent } from '../../contracts/CURRENT_NETWORK/RepoDriver';
-import EventHandlerBase from '../events/EventHandlerBase';
-import { GitProjectModel, OwnerUpdatedEventModel } from '../models';
-import LogManager from '../core/LogManager';
-import { calcAccountId, toRepoDriverId } from '../utils/accountIdUtils';
-import { calculateProjectStatus } from '../utils/gitProjectUtils';
-import { isLatestEvent } from '../utils/eventUtils';
-import type EventHandlerRequest from '../events/EventHandlerRequest';
-import { ProjectVerificationStatus } from '../models/GitProjectModel';
+import {
+  addressDriverContract,
+  repoDriverContract,
+} from '../core/contractClients';
+import ScopedLogger from '../core/ScopedLogger';
+import type { Address, AddressDriverId, RepoDriverId } from '../core/types';
 import { dbConnection } from '../db/database';
+import EventHandlerBase from '../events/EventHandlerBase';
+import type EventHandlerRequest from '../events/EventHandlerRequest';
+import { ProjectModel, LinkedIdentityModel } from '../models';
+import OwnerUpdatedEventModel from '../models/OwnerUpdatedEventModel';
+import { convertToRepoDriverId, isOrcidAccount } from '../utils/accountIdUtils';
+import { makeVersion } from '../utils/lastProcessedVersion';
+import { calculateProjectStatus } from '../utils/projectUtils';
+import { validateLinkedIdentity } from '../utils/validateLinkedIdentity';
 
 export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpdated(uint256,address)'> {
   public readonly eventSignatures = ['OwnerUpdated(uint256,address)' as const];
 
-  protected async _handle(
-    request: EventHandlerRequest<'OwnerUpdated(uint256,address)'>,
-  ): Promise<void> {
-    const {
-      id: requestId,
-      event: { args, logIndex, blockNumber, blockTimestamp, transactionHash },
-    } = request;
+  protected async _handle({
+    id: requestId,
+    event: {
+      args,
+      logIndex,
+      blockNumber,
+      blockTimestamp,
+      transactionHash,
+      eventSignature,
+    },
+  }: EventHandlerRequest<'OwnerUpdated(uint256,address)'>): Promise<void> {
+    const [rawAccountId, owner] = args as OwnerUpdatedEvent.OutputTuple;
+    const accountId = convertToRepoDriverId(rawAccountId);
 
-    const [accountId, owner] = args as OwnerUpdatedEvent.OutputTuple;
+    const scopedLogger = new ScopedLogger(this.name, requestId);
 
-    const repoDriverId = toRepoDriverId(accountId);
-
-    LogManager.logRequestInfo(
-      `📥 ${this.name} is processing the following ${request.event.eventSignature}:
-      \r\t - owner:       ${owner}
-      \r\t - accountId:   ${repoDriverId}
-      \r\t - logIndex:    ${logIndex}
-      \r\t - blockNumber: ${blockNumber}
-      \r\t - tx hash:     ${transactionHash}`,
-      requestId,
+    scopedLogger.log(
+      [
+        `📥 ${this.name} is processing ${eventSignature}:`,
+        `  - owner:      ${owner}`,
+        `  - accountId:  ${accountId}`,
+        `  - logIndex:   ${logIndex}`,
+        `  - txHash:     ${transactionHash}`,
+      ].join('\n'),
     );
 
-    await dbConnection.transaction(async (transaction) => {
-      const logManager = new LogManager(requestId);
+    const onChainOwner = (await repoDriverContract.ownerOf(
+      accountId,
+    )) as Address;
+    if (owner !== onChainOwner) {
+      scopedLogger.log(
+        `Skipped Project ${accountId} 'OwnerUpdated' event processing: on-chain owner '${onChainOwner}' does not match event 'owner' '${owner}'.`,
+      );
 
-      const [ownerUpdatedEvent, isEventCreated] =
-        await OwnerUpdatedEventModel.findOrCreate({
-          lock: true,
+      return;
+    }
+
+    await dbConnection.transaction(async (transaction) => {
+      const ownerUpdatedEvent = await OwnerUpdatedEventModel.create(
+        {
+          owner,
+          logIndex,
+          blockNumber,
+          blockTimestamp,
+          transactionHash,
+          accountId,
+        },
+        { transaction },
+      );
+
+      scopedLogger.bufferCreation({
+        input: ownerUpdatedEvent,
+        type: OwnerUpdatedEventModel,
+        id: `${transactionHash}-${logIndex}`,
+      });
+
+      if (isOrcidAccount(accountId)) {
+        await this._handleOrcidLinkedIdentity({
+          logIndex,
+          accountId,
           transaction,
+          blockNumber,
+          scopedLogger,
+          owner: onChainOwner,
+        });
+      } else {
+        // Handle regular project.
+        const [project, isCreation] = await ProjectModel.findOrCreate({
+          transaction,
+          lock: transaction.LOCK.UPDATE,
           where: {
-            logIndex,
-            transactionHash,
+            accountId,
           },
           defaults: {
-            owner,
-            logIndex,
-            blockNumber,
-            blockTimestamp,
-            transactionHash,
-            accountId: repoDriverId,
+            accountId,
+            ownerAddress: onChainOwner,
+            ownerAccountId: (
+              await addressDriverContract.calcAccountId(onChainOwner)
+            ).toString() as AddressDriverId,
+            claimedAt: blockTimestamp,
+            verificationStatus: 'pending_metadata',
+            isVisible: true, // Visible by default. Account metadata will set the final visibility.
+            isValid: true, // There are no receivers yet. Consider the project valid.
+            lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
           },
         });
 
-      logManager.appendFindOrCreateLog(
-        OwnerUpdatedEventModel,
-        isEventCreated,
-        `${ownerUpdatedEvent.transactionHash}-${ownerUpdatedEvent.logIndex}`,
-      );
+        if (isCreation) {
+          scopedLogger.bufferCreation({
+            type: ProjectModel,
+            input: project,
+            id: project.accountId,
+          });
+        } else {
+          const newVersion = makeVersion(blockNumber, logIndex);
+          const storedVersion = BigInt(project.lastProcessedVersion);
 
-      // Depending on the order of processing, a project can be created:
-      // - By a `OwnerUpdateRequested` event.
-      // - By a `OwnerUpdated` event.
-      // - By an `AccountMetadataEmitted` event, as a (non existing in the DB) Project dependency of the account that emitted the metadata.
-      const [project, isProjectCreated] = await GitProjectModel.findOrCreate({
+          project.ownerAccountId = (
+            await addressDriverContract.calcAccountId(onChainOwner)
+          ).toString() as AddressDriverId;
+          project.ownerAddress = onChainOwner;
+          project.claimedAt = blockTimestamp;
+
+          if (newVersion > storedVersion) {
+            project.verificationStatus = calculateProjectStatus(project);
+          }
+
+          project.lastProcessedVersion = newVersion.toString();
+
+          scopedLogger.bufferUpdate({
+            type: ProjectModel,
+            id: project.accountId,
+            input: project,
+          });
+
+          await project.save({ transaction });
+        }
+      }
+
+      scopedLogger.flush();
+    });
+  }
+
+  private async _handleOrcidLinkedIdentity({
+    owner,
+    logIndex,
+    accountId,
+    blockNumber,
+    transaction,
+    scopedLogger,
+  }: {
+    owner: Address;
+    logIndex: number;
+    blockNumber: number;
+    accountId: RepoDriverId;
+    transaction: Transaction;
+    scopedLogger: ScopedLogger;
+  }): Promise<void> {
+    const ownerAccountId = (
+      await addressDriverContract.calcAccountId(owner)
+    ).toString() as AddressDriverId;
+
+    const [linkedIdentity, isCreation] = await LinkedIdentityModel.findOrCreate(
+      {
         transaction,
-        lock: true,
+        lock: transaction.LOCK.UPDATE,
         where: {
-          id: repoDriverId,
+          accountId,
         },
         defaults: {
-          isVisible: true, // During creation, the project is visible by default. Account metadata will set the final visibility.
-          id: repoDriverId,
-          isValid: true, // There are no receivers yet, so the project is valid.
+          accountId,
+          identityType: 'orcid',
           ownerAddress: owner,
-          claimedAt: blockTimestamp,
-          ownerAccountId: await calcAccountId(owner),
-          verificationStatus: ProjectVerificationStatus.OwnerUpdated,
+          ownerAccountId,
+          isLinked: await validateLinkedIdentity(accountId, ownerAccountId),
+          lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
         },
+      },
+    );
+
+    if (isCreation) {
+      scopedLogger.bufferCreation({
+        type: LinkedIdentityModel,
+        input: linkedIdentity,
+        id: linkedIdentity.accountId,
+      });
+    } else {
+      // Update existing linked identity
+      linkedIdentity.ownerAddress = owner;
+      linkedIdentity.ownerAccountId = ownerAccountId;
+      linkedIdentity.isLinked = await validateLinkedIdentity(
+        accountId,
+        linkedIdentity.ownerAccountId,
+      );
+      linkedIdentity.lastProcessedVersion = makeVersion(
+        blockNumber,
+        logIndex,
+      ).toString();
+
+      scopedLogger.bufferUpdate({
+        type: LinkedIdentityModel,
+        id: linkedIdentity.accountId,
+        input: linkedIdentity,
       });
 
-      if (isProjectCreated) {
-        logManager
-          .appendFindOrCreateLog(GitProjectModel, isProjectCreated, project.id)
-          .logAllInfo();
-
-        return;
-      }
-
-      // Here, the Project already exists.
-      // Only if the event is the latest (in the DB), we process the metadata.
-      // After all events are processed, the Project will be updated with the latest values.
-      if (
-        !isLatestEvent(
-          ownerUpdatedEvent,
-          OwnerUpdatedEventModel,
-          {
-            logIndex,
-            transactionHash,
-            accountId: repoDriverId,
-          },
-          transaction,
-        )
-      ) {
-        logManager.logAllInfo();
-
-        return;
-      }
-
-      project.ownerAddress = owner;
-      project.claimedAt = blockTimestamp;
-      project.ownerAccountId = (await calcAccountId(owner)) ?? null;
-      project.verificationStatus = calculateProjectStatus(project);
-
-      logManager
-        .appendIsLatestEventLog()
-        .appendUpdateLog(project, GitProjectModel, project.id);
-
-      await project.save({ transaction });
-
-      logManager.logAllInfo();
-    });
+      await linkedIdentity.save({ transaction });
+    }
   }
 
   override async afterHandle(context: {
     args: [accountId: bigint, owner: string];
     blockTimestamp: Date;
+    requestId: string;
   }): Promise<void> {
     const { args, blockTimestamp } = context;
     const [accountId, owner] = args;
 
-    const ownerAccountId = await calcAccountId(owner);
+    const ownerAccountId = await addressDriverContract.calcAccountId(owner);
 
     super.afterHandle({
       args: [accountId, ownerAccountId],
       blockTimestamp,
+      requestId: context.requestId,
     });
   }
 }
