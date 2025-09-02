@@ -5,6 +5,7 @@ import type {
   AnyChainImmutableSplitsDriverFilters,
   AnyChainNftDriverFilters,
   AnyChainRepoDriverFilters,
+  AnyChainRepoDeadlineDriverFilters,
   AnyChainTypedLogDescription,
 } from '../../contracts/contract-types';
 
@@ -12,11 +13,14 @@ import type {
 type AllFilters = AnyChainDripsFilters &
   AnyChainNftDriverFilters &
   AnyChainRepoDriverFilters &
+  AnyChainRepoDeadlineDriverFilters &
   AnyChainImmutableSplitsDriverFilters;
 
 export type DripsContractEvent = ValuesOf<AnyChainDripsFilters>;
 export type NftDriverContractEvent = ValuesOf<AnyChainNftDriverFilters>;
 export type RepoDriverContractEvent = ValuesOf<AnyChainRepoDriverFilters>;
+export type RepoDeadlineDriverContractEvent =
+  ValuesOf<AnyChainRepoDeadlineDriverFilters>;
 export type ImmutableSplitsDriverContractEvent =
   ValuesOf<AnyChainImmutableSplitsDriverFilters>;
 

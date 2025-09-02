@@ -3,14 +3,21 @@ import {
   getAddressDriverContract,
   getNftDriverContract,
   getRepoDriverContract,
+  getRepoDeadlineDriverContract,
   getRepoSubAccountDriverContract,
 } from '../../contracts/contract-types';
 import loadChainConfig from '../config/loadChainConfig';
 import getProvider from './getProvider';
 
 const { contracts } = loadChainConfig();
-const { drips, addressDriver, nftDriver, repoDriver, repoSubAccountDriver } =
-  contracts;
+const {
+  drips,
+  addressDriver,
+  nftDriver,
+  repoDriver,
+  repoDeadlineDriver,
+  repoSubAccountDriver,
+} = contracts;
 
 const provider = getProvider();
 
@@ -28,6 +35,11 @@ export const nftDriverContract = getNftDriverContract(
 
 export const repoDriverContract = getRepoDriverContract(
   repoDriver.address,
+  provider,
+);
+
+export const repoDeadlineDriverContract = getRepoDeadlineDriverContract(
+  repoDeadlineDriver.address,
   provider,
 );
 
