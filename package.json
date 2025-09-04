@@ -67,7 +67,7 @@
     "express": "^4.21.2",
     "get-caller-file": "^2.0.5",
     "pg": "^8.11.3",
-    "redis": "^4.6.10",
+    "redis": "^2.0.0",
     "sequelize": "^6.32.1",
     "umzug": "^3.8.2",
     "winston": "^3.10.0",
