@@ -6,6 +6,7 @@ import type { EventSignature } from '../events/types';
 
 const redisClient = createClient({
   url: appSettings.redisConnectionString,
+  family: 'IPv6',
 });
 
 const eventProcessingQueue = new BeeQueue<{
