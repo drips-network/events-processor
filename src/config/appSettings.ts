@@ -32,6 +32,7 @@ function loadAppSettings(): AppSettings {
       ? parseInt(process.env.MONITORING_UI_PORT, 10)
       : undefined,
     redisConnectionString: process.env.REDIS_CONNECTION_STRING,
+    redisUseIpv6: process.env.REDIS_USE_IPV6 === 'true',
     postgresConnectionString: process.env.POSTGRES_CONNECTION_STRING,
     shouldStartMonitoringUI:
       (process.env.SHOULD_START_MONITORING_UI as unknown as string) === 'true',
