@@ -25,6 +25,7 @@ export const appSettingsSchema = z.object({
     .default('https://drips.mypinata.cloud'),
   queueUiPort: z.number().positive().optional().default(3000),
   redisConnectionString: z.string(),
+  redisUseIpv6: z.boolean().optional().default(false),
   postgresConnectionString: z.string(),
   shouldStartMonitoringUI: z.boolean().optional().default(false),
   cacheInvalidationEndpoint: z.string(),
