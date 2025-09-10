@@ -41,6 +41,24 @@ export async function processLinkedIdentitySplits(
     );
   }
 
+  if (!linkedIdentity.ownerAccountId) {
+    scopedLogger.bufferMessage(
+      `ORCID account ${accountId} has no owner set yet. Skipping validation and splits creation.`,
+    );
+
+    linkedIdentity.isLinked = false;
+
+    scopedLogger.bufferUpdate({
+      type: LinkedIdentityModel,
+      id: linkedIdentity.accountId,
+      input: linkedIdentity,
+    });
+
+    await linkedIdentity.save({ transaction });
+
+    return;
+  }
+
   const isLinked = await validateLinkedIdentity(
     accountId,
     linkedIdentity.ownerAccountId,

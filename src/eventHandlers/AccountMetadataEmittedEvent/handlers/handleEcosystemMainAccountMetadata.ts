@@ -35,6 +35,7 @@ import {
 } from '../../../utils/lastProcessedVersion';
 import type { repoSubAccountDriverSplitReceiverSchema } from '../../../metadata/schemas/common/repoSubAccountDriverSplitReceiverSchema';
 import type { gitHubSourceSchema } from '../../../metadata/schemas/common/sources';
+import { ensureLinkedIdentityExists } from '../../../utils/linkedIdentityUtils';
 
 type Params = {
   ipfsHash: IpfsHash;
@@ -229,6 +230,13 @@ async function createNewSplitReceivers({
         const repoDriverId = await calcParentRepoDriverId(receiver.accountId);
 
         if (receiver.source.forge === 'orcid') {
+          await ensureLinkedIdentityExists(
+            repoDriverId,
+            { blockNumber, logIndex },
+            transaction,
+            scopedLogger,
+          );
+
           return createSplitReceiver({
             scopedLogger,
             transaction,

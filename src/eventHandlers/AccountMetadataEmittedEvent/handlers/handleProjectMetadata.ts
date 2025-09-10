@@ -26,6 +26,7 @@ import {
 import { makeVersion } from '../../../utils/lastProcessedVersion';
 import RecoverableError from '../../../utils/recoverableError';
 import type { gitHubSourceSchema } from '../../../metadata/schemas/common/sources';
+import { ensureLinkedIdentityExists } from '../../../utils/linkedIdentityUtils';
 
 type Params = {
   logIndex: number;
@@ -251,6 +252,13 @@ async function createNewSplitReceivers({
       }
 
       if (dependency.source.forge === 'orcid') {
+        await ensureLinkedIdentityExists(
+          dependency.accountId,
+          { blockNumber, logIndex },
+          transaction,
+          scopedLogger,
+        );
+
         return createSplitReceiver({
           scopedLogger,
           transaction,
