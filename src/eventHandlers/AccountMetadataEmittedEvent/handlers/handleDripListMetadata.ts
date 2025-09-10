@@ -31,6 +31,7 @@ import {
   nftDriverContract,
 } from '../../../core/contractClients';
 import { ProjectModel } from '../../../models';
+import { ensureLinkedIdentityExists } from '../../../utils/linkedIdentityUtils';
 
 type Params = {
   ipfsHash: IpfsHash;
@@ -258,6 +259,13 @@ async function createNewSplitReceivers({
     switch (receiver.type) {
       case 'orcid':
         assertIsRepoDriverId(receiver.accountId);
+        await ensureLinkedIdentityExists(
+          receiver.accountId,
+          { blockNumber, logIndex },
+          transaction,
+          scopedLogger,
+        );
+
         return createSplitReceiver({
           scopedLogger,
           transaction,
