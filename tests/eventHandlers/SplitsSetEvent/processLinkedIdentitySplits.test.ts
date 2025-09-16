@@ -91,6 +91,7 @@ describe('processLinkedIdentitySplits', () => {
     expect(validateLinkedIdentity).toHaveBeenCalledWith(
       mockAccountId,
       mockOwnerAccountId,
+      mockTransaction,
     );
 
     expect(SplitsReceiverModel.destroy).toHaveBeenCalledWith({
@@ -140,6 +141,7 @@ describe('processLinkedIdentitySplits', () => {
     expect(validateLinkedIdentity).toHaveBeenCalledWith(
       mockAccountId,
       mockOwnerAccountId,
+      mockTransaction,
     );
 
     expect(SplitsReceiverModel.destroy).toHaveBeenCalledWith({
