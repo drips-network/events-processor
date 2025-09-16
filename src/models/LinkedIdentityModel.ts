@@ -20,14 +20,14 @@ export default class LinkedIdentityModel extends Model<
   InferAttributes<LinkedIdentityModel>,
   InferCreationAttributes<LinkedIdentityModel>
 > {
-  declare public accountId: RepoDriverId;
-  declare public identityType: LinkedIdentityType;
-  declare public ownerAddress: Address;
-  declare public ownerAccountId: AddressDriverId;
-  declare public isLinked: boolean;
-  declare public lastProcessedVersion: string;
-  declare public createdAt: CreationOptional<Date>;
-  declare public updatedAt: CreationOptional<Date>;
+  public declare accountId: RepoDriverId;
+  public declare identityType: LinkedIdentityType;
+  public declare ownerAddress: Address | null;
+  public declare ownerAccountId: AddressDriverId | null;
+  public declare isLinked: boolean;
+  public declare lastProcessedVersion: string;
+  public declare createdAt: CreationOptional<Date>;
+  public declare updatedAt: CreationOptional<Date>;
 
   public static initialize(sequelize: Sequelize): void {
     this.init(
@@ -41,16 +41,17 @@ export default class LinkedIdentityModel extends Model<
           type: DataTypes.ENUM(...LINKED_IDENTITY_TYPES),
         },
         ownerAddress: {
-          allowNull: false,
+          allowNull: true,
           type: DataTypes.STRING,
         },
         ownerAccountId: {
-          allowNull: false,
+          allowNull: true,
           type: DataTypes.STRING,
         },
         isLinked: {
           allowNull: false,
           type: DataTypes.BOOLEAN,
+          defaultValue: false,
         },
         lastProcessedVersion: {
           allowNull: false,

@@ -31,6 +31,7 @@ import {
   nftDriverContract,
 } from '../../../core/contractClients';
 import { ProjectModel } from '../../../models';
+import { ensureLinkedIdentityExists } from '../../../utils/linkedIdentityUtils';
 
 type Params = {
   ipfsHash: IpfsHash;
@@ -256,24 +257,31 @@ async function createNewSplitReceivers({
   // 3. Persist receivers.
   const receiverPromises = splitReceivers.map(async (receiver) => {
     switch (receiver.type) {
+      case 'orcid':
+        assertIsRepoDriverId(receiver.accountId);
+        await ensureLinkedIdentityExists(
+          receiver.accountId,
+          { blockNumber, logIndex },
+          transaction,
+          scopedLogger,
+        );
+
+        return createSplitReceiver({
+          scopedLogger,
+          transaction,
+          splitReceiverShape: {
+            senderAccountId: emitterAccountId,
+            senderAccountType: 'drip_list',
+            receiverAccountId: receiver.accountId,
+            receiverAccountType: 'linked_identity',
+            relationshipType: 'drip_list_receiver',
+            weight: receiver.weight,
+            blockTimestamp,
+          },
+        });
+
       case 'repoDriver':
         assertIsRepoDriverId(receiver.accountId);
-
-        if (receiver.source.forge === 'orcid') {
-          return createSplitReceiver({
-            scopedLogger,
-            transaction,
-            splitReceiverShape: {
-              senderAccountId: emitterAccountId,
-              senderAccountType: 'drip_list',
-              receiverAccountId: receiver.accountId,
-              receiverAccountType: 'linked_identity',
-              relationshipType: 'drip_list_receiver',
-              weight: receiver.weight,
-              blockTimestamp,
-            },
-          });
-        }
 
         await ProjectModel.findOrCreate({
           transaction,
