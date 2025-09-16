@@ -46,7 +46,7 @@ export async function processLinkedIdentitySplits(
       `ORCID account ${accountId} has no owner set yet. Skipping validation and splits creation.`,
     );
 
-    linkedIdentity.isLinked = false;
+    linkedIdentity.areSplitsValid = false;
 
     scopedLogger.bufferUpdate({
       type: LinkedIdentityModel,
@@ -105,7 +105,7 @@ export async function processLinkedIdentitySplits(
     );
   }
 
-  linkedIdentity.isLinked = isLinked;
+  linkedIdentity.areSplitsValid = isLinked;
 
   scopedLogger.bufferUpdate({
     type: LinkedIdentityModel,

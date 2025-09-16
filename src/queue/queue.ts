@@ -45,4 +45,9 @@ eventProcessingQueue.on('job retrying', (job, err) => {
   logger.info(`♻️ [${job}] failed (will be retried): ${err.message}`);
 });
 
+export async function closeQueue(): Promise<void> {
+  await eventProcessingQueue.close();
+  redisClient.quit();
+}
+
 export default eventProcessingQueue;

@@ -173,7 +173,10 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           identityType: 'orcid',
           ownerAddress: owner,
           ownerAccountId,
-          isLinked: await validateLinkedIdentity(accountId, ownerAccountId),
+          areSplitsValid: await validateLinkedIdentity(
+            accountId,
+            ownerAccountId,
+          ),
           lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
         },
       },
@@ -189,7 +192,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       // Update existing linked identity
       linkedIdentity.ownerAddress = owner;
       linkedIdentity.ownerAccountId = ownerAccountId;
-      linkedIdentity.isLinked = await validateLinkedIdentity(
+      linkedIdentity.areSplitsValid = await validateLinkedIdentity(
         accountId,
         linkedIdentity.ownerAccountId,
       );
