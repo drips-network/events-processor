@@ -105,7 +105,7 @@ export default async function handleEcosystemMainAccountMetadata({
     transaction,
   });
 
-  deleteExistingSplitReceivers(emitterAccountId, transaction);
+  await deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
     logIndex,

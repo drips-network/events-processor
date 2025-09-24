@@ -110,7 +110,7 @@ export default async function handleDripListMetadata({
     transaction,
   });
 
-  deleteExistingSplitReceivers(emitterAccountId, transaction);
+  await deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
     metadata,

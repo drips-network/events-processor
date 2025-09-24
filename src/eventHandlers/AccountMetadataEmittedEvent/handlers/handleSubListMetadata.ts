@@ -108,7 +108,7 @@ export default async function handleSubListMetadata({
     emitterAccountId,
   });
 
-  deleteExistingSplitReceivers(emitterAccountId, transaction);
+  await deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
     subList,

@@ -139,7 +139,7 @@ export default async function handleProjectMetadata({
     scopedLogger,
   });
 
-  deleteExistingSplitReceivers(emitterAccountId, transaction);
+  await deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
     logIndex,
