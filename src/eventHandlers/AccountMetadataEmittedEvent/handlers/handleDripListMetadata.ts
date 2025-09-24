@@ -85,7 +85,7 @@ export default async function handleDripListMetadata({
     return;
   }
 
-  const { areProjectsValid, message } = await verifyProjectSources(
+  const verificationResult = await verifyProjectSources(
     splitReceivers.filter(
       (
         splitReceiver,
@@ -94,9 +94,9 @@ export default async function handleDripListMetadata({
     ),
   );
 
-  if (!areProjectsValid) {
+  if (!verificationResult.isValid) {
     scopedLogger.bufferMessage(
-      `🚨🕵️‍♂️ Skipped Drip List ${emitterAccountId} metadata processing: ${message}`,
+      `🚨🕵️‍♂️ Skipped Drip List ${emitterAccountId} metadata processing: ${verificationResult.message}`,
     );
 
     return;

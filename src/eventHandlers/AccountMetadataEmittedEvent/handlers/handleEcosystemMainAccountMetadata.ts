@@ -81,16 +81,16 @@ export default async function handleEcosystemMainAccountMetadata({
     return;
   }
 
-  const { areProjectsValid, message } = await verifyProjectSources(
+  const verificationResult = await verifyProjectSources(
     metadata.recipients.filter(
       (r): r is typeof r & { source: z.infer<typeof gitHubSourceSchema> } =>
         r.type === 'repoSubAccountDriver' && r.source.forge !== 'orcid',
     ),
   );
 
-  if (!areProjectsValid) {
+  if (!verificationResult.isValid) {
     scopedLogger.bufferMessage(
-      `🚨🕵️‍♂️ Skipped Ecosystem Main Account ${emitterAccountId} metadata processing: ${message}`,
+      `🚨🕵️‍♂️ Skipped Ecosystem Main Account ${emitterAccountId} metadata processing: ${verificationResult.message}`,
     );
   }
 

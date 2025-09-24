@@ -81,16 +81,16 @@ export default async function handleSubListMetadata({
     return;
   }
 
-  const { areProjectsValid, message } = await verifyProjectSources(
+  const verificationResult = await verifyProjectSources(
     metadata.recipients.filter(
       (r): r is typeof r & { source: z.infer<typeof gitHubSourceSchema> } =>
         r.type === 'repoSubAccountDriver' && r.source.forge !== 'orcid',
     ),
   );
 
-  if (!areProjectsValid) {
+  if (!verificationResult.isValid) {
     scopedLogger.bufferMessage(
-      `🚨🕵️‍♂️ Skipped Sub-List metadata processing: ${message}`,
+      `🚨🕵️‍♂️ Skipped Sub-List metadata processing: ${verificationResult.message}`,
     );
 
     return;

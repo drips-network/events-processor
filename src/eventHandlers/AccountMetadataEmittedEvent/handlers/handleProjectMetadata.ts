@@ -93,37 +93,21 @@ export default async function handleProjectMetadata({
     (dep) => 'source' in dep && dep.source.forge === 'github',
   ) as { accountId: string; source: z.infer<typeof gitHubSourceSchema> }[];
 
-  const { areProjectsValid, message } = await verifyProjectSources([
+  const verificationResult = await verifyProjectSources([
     ...projectReceivers,
+    // We'll store `source` information from metadata, not from the 'OwnerUpdatedRequested' event.
+    // Therefore, it's necessary to also verify the emitter project's source.
     {
       accountId: emitterAccountId,
       source: metadata.source,
     },
   ]);
 
-  if (!areProjectsValid) {
+  if (!verificationResult.isValid) {
     scopedLogger.bufferMessage(
-      `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: ${message}`,
+      `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: ${verificationResult.message}`,
     );
 
-    return;
-  }
-
-  // We'll store `source` information the metadata, not from the 'OwnerUpdatedRequested' event.
-  // Therefore, it's necessary to also verify the project's source directly.
-  const { areProjectsValid: isProjectSourceValid } = await verifyProjectSources(
-    [
-      {
-        accountId: emitterAccountId,
-        source: metadata.source,
-      },
-    ],
-  );
-
-  if (!isProjectSourceValid) {
-    scopedLogger.bufferMessage(
-      `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: ${message}`,
-    );
     return;
   }
 

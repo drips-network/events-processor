@@ -59,55 +59,71 @@ export async function calcProjectId(
   return accountId.toString();
 }
 
+export async function verifyProjectSource(
+  accountId: string,
+  source: z.infer<typeof gitHubSourceSchema>,
+): Promise<{ isValid: true } | { isValid: false; message: string }> {
+  const { forge, ownerName, repoName } = source;
+  const isSubAccount = isRepoSubAccountDriverId(accountId.toString());
+  const isParentAccount = isRepoDriverId(accountId.toString());
+
+  if (!isSubAccount && !isParentAccount) {
+    unreachableError(
+      `Invalid account ID: '${accountId}' is not a valid RepoDriver or RepoSubAccount ID.`,
+    );
+  }
+
+  const calculatedParentAccountId = await calcProjectId(
+    forge,
+    ownerName,
+    repoName,
+  );
+
+  if (isSubAccount) {
+    const parentId = await calcParentRepoDriverId(accountId);
+
+    if (parentId !== calculatedParentAccountId.toString()) {
+      return {
+        isValid: false,
+        message: `Mismatch for '${ownerName}/${repoName}' on '${forge}': for sub account '${accountId}', expected parent '${calculatedParentAccountId}', got '${parentId}'.`,
+      };
+    }
+  } else if (accountId !== calculatedParentAccountId.toString()) {
+    return {
+      isValid: false,
+      message: `Mismatch for '${ownerName}/${repoName}' on '${forge}': expected parent account '${calculatedParentAccountId}', got '${accountId}'.`,
+    };
+  }
+
+  return { isValid: true };
+}
+
 export async function verifyProjectSources(
   projects: {
     accountId: string;
     source: z.infer<typeof gitHubSourceSchema>;
   }[],
-): Promise<{
-  areProjectsValid: boolean;
-  message?: string;
-}> {
+): Promise<{ isValid: true } | { isValid: false; message: string }> {
+  // Parallelize all verification calls to fix N+1 problem and sequential processing
+  const verificationResults = await Promise.all(
+    projects.map(({ accountId, source }) =>
+      verifyProjectSource(accountId, source),
+    ),
+  );
+
   const errors: string[] = [];
-  for (const {
-    accountId,
-    source: { forge, ownerName, repoName },
-  } of projects) {
-    const isSubAccount = isRepoSubAccountDriverId(accountId.toString());
-    const isParentAccount = isRepoDriverId(accountId.toString());
-
-    if (!isSubAccount && !isParentAccount) {
-      unreachableError(
-        `Invalid account ID: '${accountId}' is not a valid RepoDriver or RepoSubAccount ID.`,
-      );
-    }
-    const calculatedParentAccountId = await calcProjectId(
-      forge,
-      ownerName,
-      repoName,
-    );
-
-    if (isSubAccount) {
-      const parentId = await calcParentRepoDriverId(accountId);
-
-      if (parentId !== calculatedParentAccountId.toString()) {
-        errors.push(
-          `Mismatch for '${ownerName}/${repoName}' on '${forge}': for sub account '${accountId}', expected parent '${calculatedParentAccountId}', got '${parentId}'.`,
-        );
-      }
-    } else if (accountId !== calculatedParentAccountId.toString()) {
-      errors.push(
-        `Mismatch for '${ownerName}/${repoName}' on '${forge}': expected parent account '${calculatedParentAccountId}', got '${accountId}'.`,
-      );
+  for (const result of verificationResults) {
+    if (!result.isValid) {
+      errors.push(result.message);
     }
   }
+
   if (errors.length > 0) {
     return {
-      areProjectsValid: false,
+      isValid: false,
       message: `Failed to verify project sources:\n${errors.join('\n')}`,
     };
   }
-  return {
-    areProjectsValid: true,
-  };
+
+  return { isValid: true };
 }
