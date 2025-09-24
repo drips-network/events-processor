@@ -51,7 +51,7 @@ describe('processLinkedIdentitySplits', () => {
     mockLinkedIdentity = {
       accountId: mockAccountId,
       ownerAccountId: mockOwnerAccountId,
-      isLinked: false,
+      areSplitsValid: false,
       save: jest.fn(),
     };
 
@@ -63,7 +63,7 @@ describe('processLinkedIdentitySplits', () => {
     jest.mocked(accountIdUtils.assertIsRepoDriverId);
   });
 
-  it('should update isLinked flag when validation returns true and create splits record', async () => {
+  it('should update areSplitsValid flag when validation returns true and create splits record', async () => {
     (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(
       mockLinkedIdentity,
     );
@@ -112,14 +112,14 @@ describe('processLinkedIdentitySplits', () => {
       },
     });
 
-    expect(mockLinkedIdentity.isLinked).toBe(true);
+    expect(mockLinkedIdentity.areSplitsValid).toBe(true);
     expect(mockLinkedIdentity.save).toHaveBeenCalledWith({
       transaction: mockTransaction,
     });
   });
 
-  it('should update isLinked flag when validation returns false and NOT create splits', async () => {
-    mockLinkedIdentity.isLinked = true;
+  it('should update areSplitsValid flag when validation returns false and NOT create splits', async () => {
+    mockLinkedIdentity.areSplitsValid = true;
     (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(
       mockLinkedIdentity,
     );
@@ -151,7 +151,7 @@ describe('processLinkedIdentitySplits', () => {
 
     expect(receiversRepository.createSplitReceiver).not.toHaveBeenCalled();
 
-    expect(mockLinkedIdentity.isLinked).toBe(false);
+    expect(mockLinkedIdentity.areSplitsValid).toBe(false);
     expect(mockLinkedIdentity.save).toHaveBeenCalledWith({
       transaction: mockTransaction,
     });
@@ -186,7 +186,7 @@ describe('processLinkedIdentitySplits', () => {
     );
   });
 
-  it('should always delete existing splits and recreate when isLinked is true', async () => {
+  it('should always delete existing splits and recreate when areSplitsValid is true', async () => {
     jest.mocked(SplitsReceiverModel.destroy).mockResolvedValue(1);
 
     (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(
@@ -212,7 +212,7 @@ describe('processLinkedIdentitySplits', () => {
     });
     expect(receiversRepository.createSplitReceiver).toHaveBeenCalled();
 
-    expect(mockLinkedIdentity.isLinked).toBe(true);
+    expect(mockLinkedIdentity.areSplitsValid).toBe(true);
     expect(mockLinkedIdentity.save).toHaveBeenCalledWith({
       transaction: mockTransaction,
     });

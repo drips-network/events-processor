@@ -23,7 +23,7 @@ export async function processLinkedIdentitySplits(
   // Only proceed if this event matches the latest on-chain hash.
   if (eventReceiversHash !== onChainReceiversHash) {
     scopedLogger.bufferMessage(
-      `Skipped setting 'isLinked' flag for ${accountId}: on-chain splits hash '${onChainReceiversHash}' does not match event hash '${eventReceiversHash}'.`,
+      `Skipped setting 'areSplitsValid' flag for ${accountId}: on-chain splits hash '${onChainReceiversHash}' does not match event hash '${eventReceiversHash}'.`,
     );
 
     return;
@@ -37,7 +37,7 @@ export async function processLinkedIdentitySplits(
 
   if (!linkedIdentity) {
     throw new RecoverableError(
-      `Failed to set 'isLinked' flag for LinkedIdentity: Linked Identity '${accountId}' not found. Likely waiting on 'OwnerUpdated' event to be processed. Retrying, but if this persists, it is a real error.`,
+      `Failed to set 'areSplitsValid' flag for LinkedIdentity: Linked Identity '${accountId}' not found. Likely waiting on 'OwnerUpdated' event to be processed. Retrying, but if this persists, it is a real error.`,
     );
   }
 
@@ -46,7 +46,7 @@ export async function processLinkedIdentitySplits(
       `ORCID account ${accountId} has no owner set yet. Skipping validation and splits creation.`,
     );
 
-    linkedIdentity.isLinked = false;
+    linkedIdentity.areSplitsValid = false;
 
     scopedLogger.bufferUpdate({
       type: LinkedIdentityModel,
@@ -59,7 +59,7 @@ export async function processLinkedIdentitySplits(
     return;
   }
 
-  const isLinked = await validateLinkedIdentity(
+  const areSplitsValid = await validateLinkedIdentity(
     accountId,
     linkedIdentity.ownerAccountId,
     transaction,
@@ -81,7 +81,7 @@ export async function processLinkedIdentitySplits(
   }
 
   // Only create new splits if identity is properly linked.
-  if (isLinked) {
+  if (areSplitsValid) {
     await createSplitReceiver({
       scopedLogger,
       transaction,
@@ -106,7 +106,7 @@ export async function processLinkedIdentitySplits(
     );
   }
 
-  linkedIdentity.isLinked = isLinked;
+  linkedIdentity.areSplitsValid = areSplitsValid;
 
   scopedLogger.bufferUpdate({
     type: LinkedIdentityModel,

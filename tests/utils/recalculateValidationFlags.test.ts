@@ -72,13 +72,13 @@ describe('recalculateValidationFlags', () => {
   });
 
   describe('LinkedIdentity type recalculation', () => {
-    it('should recalculate LinkedIdentity isLinked flag when changed', async () => {
+    it('should recalculate LinkedIdentity areSplitsValid flag when changed', async () => {
       const affectedAccounts: AffectedAccount[] = [
         { accountId: mockAccountId, type: 'LinkedIdentity' },
       ];
 
       const mockLinkedIdentity = {
-        isLinked: false,
+        areSplitsValid: false,
         ownerAccountId: mockOwnerAccountId,
         save: jest.fn(),
       };
@@ -103,7 +103,7 @@ describe('recalculateValidationFlags', () => {
         mockOwnerAccountId,
         mockTransaction,
       );
-      expect(mockLinkedIdentity.isLinked).toBe(true);
+      expect(mockLinkedIdentity.areSplitsValid).toBe(true);
       expect(mockLinkedIdentity.save).toHaveBeenCalledWith({
         transaction: mockTransaction,
       });
@@ -113,17 +113,17 @@ describe('recalculateValidationFlags', () => {
         input: mockLinkedIdentity,
       });
       expect(mockScopedLogger.bufferMessage).toHaveBeenCalledWith(
-        `Recalculated LinkedIdentity ${mockAccountId} isLinked flag: false → true`,
+        `Recalculated LinkedIdentity ${mockAccountId} areSplitsValid flag: false → true`,
       );
     });
 
-    it('should not save LinkedIdentity when isLinked flag unchanged', async () => {
+    it('should not save LinkedIdentity when areSplitsValid flag unchanged', async () => {
       const affectedAccounts: AffectedAccount[] = [
         { accountId: mockAccountId, type: 'LinkedIdentity' },
       ];
 
       const mockLinkedIdentity = {
-        isLinked: true,
+        areSplitsValid: true,
         ownerAccountId: mockOwnerAccountId,
         save: jest.fn(),
       };

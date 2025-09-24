@@ -19,7 +19,7 @@ export interface AffectedAccount {
 
 /**
  * Finds all accounts that have splits pointing to the specified deadline account.
- * These accounts may need their isValid/isLinked flags recalculated when the deadline account becomes "seen".
+ * These accounts may need their isValid/areSplitsValid flags recalculated when the deadline account becomes "seen".
  */
 export async function findAffectedAccounts(
   deadlineAccountId: AccountId,

@@ -64,7 +64,10 @@ export default async function handleDripListMetadata({
     return;
   }
 
-  const splitReceivers = metadata.projects ?? metadata.recipients;
+  const splitReceivers =
+    ('projects' in metadata ? metadata.projects : undefined) ??
+    ('recipients' in metadata ? metadata.recipients : undefined) ??
+    [];
 
   const { isMatch, actualHash, onChainHash } = await verifySplitsReceivers(
     emitterAccountId,

@@ -103,7 +103,7 @@ describe('SplitsSetEventHandler', () => {
       expect(setIsValidFlag).toHaveBeenCalled();
     });
 
-    test('should set isLinked flag for ORCID account', async () => {
+    test('should set areSplitsValid flag for ORCID account', async () => {
       // Arrange
       const orcidAccountId =
         '81320912658542974439730181977206773330805723773165208113981035642880'; // ORCID account

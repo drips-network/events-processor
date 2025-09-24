@@ -187,7 +187,7 @@ describe('OwnerUpdatedEventHandler', () => {
         identityType: 'orcid',
         ownerAddress: mockOwnerAddress,
         ownerAccountId: '123456789',
-        isLinked: false,
+        areSplitsValid: false,
         lastProcessedVersion: mockExpectedVersion,
       },
     });
@@ -255,7 +255,7 @@ describe('OwnerUpdatedEventHandler', () => {
     // Assert
     expect(existingLinkedIdentity.ownerAddress).toBe(mockOwnerAddress);
     expect(existingLinkedIdentity.ownerAccountId).toBe('123456789');
-    expect(existingLinkedIdentity.isLinked).toBe(true); // the mocked validateLinkedIdentity returns true.
+    expect(existingLinkedIdentity.areSplitsValid).toBe(true); // the mocked validateLinkedIdentity returns true.
     expect(existingLinkedIdentity.lastProcessedVersion).toBe(
       mockExpectedVersion,
     );

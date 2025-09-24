@@ -27,7 +27,7 @@ export async function ensureLinkedIdentityExists(
       identityType: 'orcid',
       ownerAddress: null,
       ownerAccountId: null,
-      isLinked: false,
+      areSplitsValid: false,
       lastProcessedVersion: makeVersion(
         ctx.blockNumber,
         ctx.logIndex,

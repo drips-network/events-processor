@@ -22,7 +22,7 @@ import RecoverableError from '../../utils/recoverableError';
 import type { AffectedAccount } from './findAffectedAccounts';
 
 /**
- * Recalculates and updates validation flags (isValid/isLinked).
+ * Recalculates and updates validation flags (isValid/areSplitsValid).
  */
 export async function recalculateValidationFlags(
   affectedAccounts: AffectedAccount[],
@@ -54,15 +54,17 @@ async function recalculateLinkedIdentityFlag(
     );
   }
 
-  const previousIsLinked = linkedIdentity.isLinked;
-  const newIsLinked = await validateLinkedIdentity(
-    accountId,
-    linkedIdentity.ownerAccountId,
-    transaction,
-  );
+  const previousAreSplitsValid = linkedIdentity.areSplitsValid;
+  const newAreSplitsValid = linkedIdentity.ownerAccountId
+    ? await validateLinkedIdentity(
+        accountId,
+        linkedIdentity.ownerAccountId,
+        transaction,
+      )
+    : false;
 
-  if (previousIsLinked !== newIsLinked) {
-    linkedIdentity.isLinked = newIsLinked;
+  if (previousAreSplitsValid !== newAreSplitsValid) {
+    linkedIdentity.areSplitsValid = newAreSplitsValid;
 
     scopedLogger.bufferUpdate({
       id: accountId,
@@ -73,7 +75,7 @@ async function recalculateLinkedIdentityFlag(
     await linkedIdentity.save({ transaction });
 
     scopedLogger.bufferMessage(
-      `Recalculated LinkedIdentity ${accountId} isLinked flag: ${previousIsLinked} → ${newIsLinked}`,
+      `Recalculated LinkedIdentity ${accountId} areSplitsValid flag: ${previousAreSplitsValid} → ${newAreSplitsValid}`,
     );
   }
 }
