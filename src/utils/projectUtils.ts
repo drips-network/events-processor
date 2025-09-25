@@ -1,7 +1,8 @@
 import { hexlify, toUtf8Bytes } from 'ethers';
 import type { z } from 'zod';
+import type { Transaction } from 'sequelize';
 import unreachableError from './unreachableError';
-import type ProjectModel from '../models/ProjectModel';
+import ProjectModel from '../models/ProjectModel';
 import type { Forge, ProjectVerificationStatus } from '../models/ProjectModel';
 import { repoDriverContract } from '../core/contractClients';
 import type { gitHubSourceSchema } from '../metadata/schemas/common/sources';
@@ -10,6 +11,9 @@ import {
   isRepoDriverId,
   isRepoSubAccountDriverId,
 } from './accountIdUtils';
+import type ScopedLogger from '../core/ScopedLogger';
+import type { RepoDriverId } from '../core/types';
+import { makeVersion } from './lastProcessedVersion';
 
 export function convertForgeToNumber(forge: Forge) {
   switch (forge) {
@@ -126,4 +130,43 @@ export async function verifyProjectSources(
   }
 
   return { isValid: true };
+}
+
+export async function ensureProjectExists(ctx: {
+  project: {
+    accountId: RepoDriverId;
+    source: z.infer<typeof gitHubSourceSchema>;
+  };
+  blockNumber: number;
+  logIndex: number;
+  transaction: Transaction;
+  scopedLogger: ScopedLogger;
+}) {
+  const { project, blockNumber, logIndex, transaction, scopedLogger } = ctx;
+
+  const [projectEntry, isCreation] = await ProjectModel.findOrCreate({
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+    where: {
+      accountId: project.accountId,
+    },
+    defaults: {
+      accountId: project.accountId,
+      verificationStatus: 'unclaimed',
+      isVisible: true, // Visible by default. Account metadata will set the final visibility.
+      isValid: true, // There are no receivers yet. Consider the project valid.
+      url: project.source.url,
+      forge: project.source.forge,
+      name: `${project.source.ownerName}/${project.source.repoName}`,
+      lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
+    },
+  });
+
+  if (isCreation) {
+    scopedLogger.bufferCreation({
+      type: ProjectModel,
+      input: projectEntry,
+      id: project.accountId,
+    });
+  }
 }
