@@ -12,9 +12,13 @@ import type {
 import type { nftDriverAccountMetadataParser } from '../../../metadata/schemas';
 import verifySplitsReceivers from '../verifySplitsReceivers';
 import type { subListSplitReceiverSchema } from '../../../metadata/schemas/immutable-splits-driver/v1';
-import { verifyProjectSources } from '../../../utils/projectUtils';
+import {
+  ensureProjectExists,
+  verifyProjectSources,
+} from '../../../utils/projectUtils';
 import {
   assertIsImmutableSplitsDriverId,
+  assertIsRepoDeadlineDriverId,
   calcParentRepoDriverId,
   convertToNftDriverId,
 } from '../../../utils/accountIdUtils';
@@ -34,8 +38,14 @@ import {
   makeVersion,
 } from '../../../utils/lastProcessedVersion';
 import type { repoSubAccountDriverSplitReceiverSchema } from '../../../metadata/schemas/common/repoSubAccountDriverSplitReceiverSchema';
+import type { deadlineSplitReceiverSchema } from '../../../metadata/schemas/repo-driver/v6';
 import type { gitHubSourceSchema } from '../../../metadata/schemas/common/sources';
 import { ensureLinkedIdentityExists } from '../../../utils/linkedIdentityUtils';
+import {
+  ensureDeadlineExists,
+  normalizeDeadlineReceiver,
+  verifyDeadlineReceiver,
+} from '../../../utils/deadlineUtils';
 
 type Params = {
   ipfsHash: IpfsHash;
@@ -222,6 +232,7 @@ async function createNewSplitReceivers({
   splitReceivers: (
     | z.infer<typeof repoSubAccountDriverSplitReceiverSchema>
     | z.infer<typeof subListSplitReceiverSchema>
+    | z.infer<typeof deadlineSplitReceiverSchema>
   )[];
 }) {
   const receiverPromises = splitReceivers.map(async (receiver) => {
@@ -283,6 +294,58 @@ async function createNewSplitReceivers({
             weight: receiver.weight,
             blockTimestamp,
             splitsToRepoDriverSubAccount: true, // Ecosystem Main Accounts always split to Repo Driver Sub Accounts. This is how `Ecosystems API` is designed.
+          },
+        });
+      }
+
+      case 'deadline': {
+        assertIsRepoDeadlineDriverId(receiver.accountId);
+
+        if (receiver.deadline <= blockTimestamp) {
+          throw new Error(
+            `Deadline receiver ${receiver.accountId} has deadline in the past: ${receiver.deadline.toISOString()}`,
+          );
+        }
+
+        const normalizedDeadline = normalizeDeadlineReceiver(receiver);
+
+        const verificationResult =
+          await verifyDeadlineReceiver(normalizedDeadline);
+        if (!verificationResult.isValid) {
+          scopedLogger.bufferMessage(
+            `🚨🕵️‍♂️ Cancelled Ecosystem Main Account ${emitterAccountId} metadata processing: ${verificationResult.message}`,
+          );
+
+          throw new Error(
+            `Cannot process Deadline receiver for Ecosystem Main Account ${emitterAccountId}: ${verificationResult.message}`,
+          );
+        }
+
+        await ensureProjectExists({
+          project: normalizedDeadline.claimableProject,
+          blockNumber,
+          logIndex,
+          transaction,
+          scopedLogger,
+        });
+
+        await ensureDeadlineExists({
+          deadline: normalizedDeadline,
+          transaction,
+          scopedLogger,
+        });
+
+        return createSplitReceiver({
+          scopedLogger,
+          transaction,
+          splitReceiverShape: {
+            senderAccountId: emitterAccountId,
+            senderAccountType: 'ecosystem_main_account',
+            receiverAccountId: receiver.accountId,
+            receiverAccountType: 'deadline',
+            relationshipType: 'ecosystem_receiver',
+            weight: receiver.weight,
+            blockTimestamp,
           },
         });
       }
