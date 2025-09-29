@@ -1,14 +1,11 @@
-import type { Transaction } from 'sequelize';
 import { dripsContract } from '../core/contractClients';
 import type { SplitsReceiverStruct } from '../../contracts/CURRENT_NETWORK/Drips';
 import type { AccountId, AddressDriverId } from '../core/types';
 import logger from '../core/logger';
-import { checkIncompleteDeadlineReceivers } from './checkIncompleteDeadlineReceivers';
 
 export async function validateLinkedIdentity(
   accountId: AccountId,
   expectedOwnerAccountId: AddressDriverId,
-  transaction: Transaction,
 ): Promise<boolean> {
   try {
     const onChainHash = await dripsContract.splitsHash(accountId);
@@ -25,18 +22,7 @@ export async function validateLinkedIdentity(
 
     const isHashValid = onChainHash === expectedHash;
 
-    const hasIncompleteDeadlines = await checkIncompleteDeadlineReceivers(
-      accountId,
-      transaction,
-    );
-
-    if (hasIncompleteDeadlines) {
-      logger.warn(
-        `LinkedIdentity ${accountId} has splits pointing to incomplete deadline accounts`,
-      );
-    }
-
-    return isHashValid && !hasIncompleteDeadlines;
+    return isHashValid;
   } catch (error) {
     logger.error('Error validating linked identity', error);
     return false;

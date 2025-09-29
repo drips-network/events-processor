@@ -12,8 +12,6 @@ import {
 } from '../../utils/accountIdUtils';
 import { getAccountType } from '../../utils/getAccountType';
 import { isLatestEvent } from '../../utils/isLatestEvent';
-import { findAffectedAccounts } from './findAffectedAccounts';
-import { recalculateValidationFlags } from './recalculateValidationFlags';
 
 export default class AccountSeenEventHandler extends EventHandlerBase<'AccountSeen(uint256,uint256,uint256,uint256,uint32)'> {
   public eventSignatures = [
@@ -47,6 +45,22 @@ export default class AccountSeenEventHandler extends EventHandlerBase<'AccountSe
     const deadline = new Date(Number(rawDeadline) * 1000);
 
     const scopedLogger = new ScopedLogger(this.name, requestId);
+
+    if (deadline.getTime() <= blockTimestamp.getTime()) {
+      const message = [
+        'Cannot process AccountSeen event: deadline must be after block timestamp.',
+        `  - deadline:      ${deadline.toISOString()}`,
+        `  - blockTime:     ${blockTimestamp.toISOString()}`,
+        `  - txHash:        ${transactionHash}`,
+        `  - logIndex:      ${logIndex}`,
+      ].join('\n');
+
+      scopedLogger.log(message);
+
+      throw new Error(
+        `AccountSeen deadline ${deadline.toISOString()} is not after block timestamp ${blockTimestamp.toISOString()}.`,
+      );
+    }
 
     await dbConnection.transaction(async (transaction) => {
       const receiverAccountType = await getAccountType(
@@ -143,24 +157,6 @@ export default class AccountSeenEventHandler extends EventHandlerBase<'AccountSe
         });
 
         await deadlineEntry.save({ transaction });
-      }
-
-      // Recalculate validation flags for accounts affected by this deadline becoming "seen"
-      const affectedAccounts = await findAffectedAccounts(
-        accountId,
-        transaction,
-      );
-
-      if (affectedAccounts.length > 0) {
-        scopedLogger.bufferMessage(
-          `Found ${affectedAccounts.length} accounts with splits pointing to deadline ${accountId}. Recalculating validation flags.`,
-        );
-
-        await recalculateValidationFlags(
-          affectedAccounts,
-          scopedLogger,
-          transaction,
-        );
       }
 
       scopedLogger.flush();

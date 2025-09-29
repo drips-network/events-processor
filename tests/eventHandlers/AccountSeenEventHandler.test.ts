@@ -10,14 +10,17 @@ import AccountSeenEventHandler from '../../src/eventHandlers/AccountSeenEventHan
 import * as accountIdUtils from '../../src/utils/accountIdUtils';
 import * as getAccountType from '../../src/utils/getAccountType';
 import * as isLatestEvent from '../../src/utils/isLatestEvent';
-import * as findAffectedAccounts from '../../src/eventHandlers/AccountSeenEventHandler/findAffectedAccounts';
-import * as recalculateValidationFlags from '../../src/eventHandlers/AccountSeenEventHandler/recalculateValidationFlags';
-import type { AffectedAccount } from '../../src/eventHandlers/AccountSeenEventHandler/findAffectedAccounts';
 import type {
   AccountId,
   RepoDeadlineDriverId,
   RepoDriverId,
 } from '../../src/core/types';
+
+const accountSeenDeadlineUnix = 1704067200;
+const accountSeenDeadlineDate = new Date(accountSeenDeadlineUnix * 1000);
+const accountSeenBlockTimestamp = new Date(
+  (accountSeenDeadlineUnix - 60) * 1000,
+);
 
 jest.mock('../../src/models/AccountSeenEventModel');
 jest.mock('../../src/models/DeadlineModel');
@@ -26,12 +29,6 @@ jest.mock('bee-queue');
 jest.mock('../../src/core/ScopedLogger');
 jest.mock('../../src/utils/getAccountType');
 jest.mock('../../src/utils/isLatestEvent');
-jest.mock(
-  '../../src/eventHandlers/AccountSeenEventHandler/findAffectedAccounts',
-);
-jest.mock(
-  '../../src/eventHandlers/AccountSeenEventHandler/recalculateValidationFlags',
-);
 
 describe('AccountSeenEventHandler', () => {
   let mockDbTransaction: any;
@@ -47,15 +44,15 @@ describe('AccountSeenEventHandler', () => {
       id: randomUUID(),
       event: {
         args: [
-          80920745289880686872077472087501508459438916877610571750365932290048n, // accountId
-          80920745289880686872077472087501508459438916877610571750365932290049n, // repoAccountId
-          80920745289880686872077472087501508459438916877610571750365932290050n, // recipientAccountId
-          80920745289880686872077472087501508459438916877610571750365932290051n, // refundAccountId
-          1704067200, // deadline (unix timestamp)
+          80920745289880686872077472087501508459438916877610571750365932290048n,
+          80920745289880686872077472087501508459438916877610571750365932290049n,
+          80920745289880686872077472087501508459438916877610571750365932290050n,
+          80920745289880686872077472087501508459438916877610571750365932290051n,
+          accountSeenDeadlineUnix,
         ],
         logIndex: 1,
         blockNumber: 1,
-        blockTimestamp: new Date(),
+        blockTimestamp: accountSeenBlockTimestamp,
         transactionHash: 'requestTransactionHash',
         eventSignature: 'AccountSeen(uint256,uint256,uint256,uint256,uint32)',
       } as EventData<'AccountSeen(uint256,uint256,uint256,uint256,uint32)'>,
@@ -90,13 +87,6 @@ describe('AccountSeenEventHandler', () => {
 
     jest.mocked(isLatestEvent.isLatestEvent).mockResolvedValue(true);
 
-    jest
-      .mocked(findAffectedAccounts.findAffectedAccounts)
-      .mockResolvedValue([]);
-    jest
-      .mocked(recalculateValidationFlags.recalculateValidationFlags)
-      .mockResolvedValue();
-
     ScopedLogger.prototype.log = jest.fn();
     ScopedLogger.prototype.bufferCreation = jest.fn();
     ScopedLogger.prototype.bufferUpdate = jest.fn();
@@ -112,7 +102,7 @@ describe('AccountSeenEventHandler', () => {
         repoAccountId: 'repo-account-id',
         receiverAccountId: 'receiver-account-id',
         refundAccountId: 'refund-account-id',
-        deadline: new Date(1704067200 * 1000),
+        deadline: accountSeenDeadlineDate,
         logIndex: 1,
         blockNumber: 1,
         blockTimestamp: mockRequest.event.blockTimestamp,
@@ -124,7 +114,7 @@ describe('AccountSeenEventHandler', () => {
         receiverAccountId: 'receiver-account-id',
         receiverAccountType: 'project',
         claimableProjectId: 'repo-account-id',
-        deadline: new Date(1704067200 * 1000),
+        deadline: accountSeenDeadlineDate,
         refundAccountId: 'refund-account-id',
         refundAccountType: 'address',
       };
@@ -146,7 +136,7 @@ describe('AccountSeenEventHandler', () => {
           repoAccountId: 'repo-account-id',
           receiverAccountId: 'receiver-account-id',
           refundAccountId: 'refund-account-id',
-          deadline: new Date(1704067200 * 1000),
+          deadline: accountSeenDeadlineDate,
           logIndex: 1,
           blockNumber: 1,
           blockTimestamp: mockRequest.event.blockTimestamp,
@@ -166,7 +156,7 @@ describe('AccountSeenEventHandler', () => {
           receiverAccountId: 'receiver-account-id',
           receiverAccountType: 'project',
           claimableProjectId: 'repo-account-id',
-          deadline: new Date(1704067200 * 1000),
+          deadline: accountSeenDeadlineDate,
           refundAccountId: 'refund-account-id',
           refundAccountType: 'address',
         },
@@ -206,9 +196,7 @@ describe('AccountSeenEventHandler', () => {
       );
       expect(existingDeadlineEntry.receiverAccountType).toBe('project');
       expect(existingDeadlineEntry.claimableProjectId).toBe('repo-account-id');
-      expect(existingDeadlineEntry.deadline).toEqual(
-        new Date(1704067200 * 1000),
-      );
+      expect(existingDeadlineEntry.deadline).toEqual(accountSeenDeadlineDate);
       expect(existingDeadlineEntry.refundAccountId).toBe('refund-account-id');
       expect(existingDeadlineEntry.refundAccountType).toBe('address');
       expect(existingDeadlineEntry.save).toHaveBeenCalledWith({
@@ -261,39 +249,22 @@ describe('AccountSeenEventHandler', () => {
       );
     });
 
-    test('should call recalculateValidationFlags when affected accounts exist', async () => {
-      // Arrange
-      const accountSeenEvent = {
-        accountId: 'deadline-account-id',
-      };
-      const affectedAccounts: AffectedAccount[] = [
-        { accountId: 'affected-account-1' as AccountId, type: 'Project' },
-        { accountId: 'affected-account-2' as AccountId, type: 'DripList' },
-      ];
+    test('should reject deadlines at or before block timestamp', async () => {
+      const invalidRequest = {
+        ...mockRequest,
+        event: {
+          ...mockRequest.event,
+          blockTimestamp: new Date((accountSeenDeadlineUnix + 60) * 1000),
+        },
+      } as EventHandlerRequest<'AccountSeen(uint256,uint256,uint256,uint256,uint32)'>;
 
-      AccountSeenEventModel.create = jest
-        .fn()
-        .mockResolvedValue(accountSeenEvent);
-      DeadlineModel.findOrCreate = jest.fn().mockResolvedValue([{}, true]);
-      jest
-        .mocked(findAffectedAccounts.findAffectedAccounts)
-        .mockResolvedValue(affectedAccounts);
-
-      // Act
-      await handler['_handle'](mockRequest);
-
-      // Assert
-      expect(findAffectedAccounts.findAffectedAccounts).toHaveBeenCalledWith(
-        'deadline-account-id',
-        mockDbTransaction,
+      await expect(handler['_handle'](invalidRequest)).rejects.toThrow(
+        /deadline .* not after block timestamp/,
       );
-      expect(
-        recalculateValidationFlags.recalculateValidationFlags,
-      ).toHaveBeenCalledWith(
-        affectedAccounts,
-        expect.any(ScopedLogger),
-        mockDbTransaction,
-      );
+
+      expect(dbConnection.transaction).not.toHaveBeenCalled();
+      expect(AccountSeenEventModel.create).not.toHaveBeenCalled();
+      expect(ScopedLogger.prototype.flush).not.toHaveBeenCalled();
     });
   });
 });

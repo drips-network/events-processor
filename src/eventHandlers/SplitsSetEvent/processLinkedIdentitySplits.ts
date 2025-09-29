@@ -62,7 +62,6 @@ export async function processLinkedIdentitySplits(
   const areSplitsValid = await validateLinkedIdentity(
     accountId,
     linkedIdentity.ownerAccountId,
-    transaction,
   );
 
   assertIsRepoDriverId(accountId);

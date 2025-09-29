@@ -23,7 +23,6 @@ import {
 import type SplitsSetEventModel from '../../models/SplitsSetEventModel';
 import type ScopedLogger from '../../core/ScopedLogger';
 import unreachableError from '../../utils/unreachableError';
-import { checkIncompleteDeadlineReceivers } from '../../utils/checkIncompleteDeadlineReceivers';
 
 export default async function setIsValidFlag(
   { accountId, receiversHash: eventReceiversHash }: SplitsSetEventModel,
@@ -191,14 +190,7 @@ async function handleEntityValidation(
     entityType,
   );
 
-  const { hasIncompleteDeadlines } = await validateDeadlineReceivers(
-    accountId,
-    transaction,
-    scopedLogger,
-    entityType,
-  );
-
-  const isValid = hashValid && !hasIncompleteDeadlines;
+  const isValid = hashValid;
 
   entity.isValid = isValid;
 
@@ -213,7 +205,6 @@ async function handleEntityValidation(
   if (!isValid) {
     const reasons = [];
     if (!hashValid) reasons.push('splits hash mismatch');
-    if (hasIncompleteDeadlines) reasons.push('incomplete deadline receivers');
 
     throw new RecoverableError(
       `${entityType} '${accountId}' validation failed: ${reasons.join(', ')}. Likely waiting on another event to be processed. Retrying, but if this persists, it is a real error.`,
@@ -241,28 +232,6 @@ async function validateSplitsHash(
   }
 
   return { hashValid, dbReceiversHash };
-}
-
-async function validateDeadlineReceivers(
-  accountId: AccountId,
-  transaction: Transaction,
-  scopedLogger: ScopedLogger,
-  entityType: string,
-): Promise<{
-  hasIncompleteDeadlines: boolean;
-}> {
-  const hasIncompleteDeadlines = await checkIncompleteDeadlineReceivers(
-    accountId,
-    transaction,
-  );
-
-  if (hasIncompleteDeadlines) {
-    scopedLogger.bufferMessage(
-      `${entityType} ${accountId} has splits pointing to incomplete deadline accounts`,
-    );
-  }
-
-  return { hasIncompleteDeadlines };
 }
 
 async function hashDbSplits(

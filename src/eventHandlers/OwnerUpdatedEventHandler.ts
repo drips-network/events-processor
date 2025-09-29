@@ -177,7 +177,6 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
           areSplitsValid: await validateLinkedIdentity(
             accountId,
             ownerAccountId,
-            transaction,
           ),
           lastProcessedVersion: makeVersion(blockNumber, logIndex).toString(),
         },
@@ -197,7 +196,6 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       linkedIdentity.areSplitsValid = await validateLinkedIdentity(
         accountId,
         linkedIdentity.ownerAccountId,
-        transaction,
       );
       linkedIdentity.lastProcessedVersion = makeVersion(
         blockNumber,

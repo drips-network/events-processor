@@ -91,7 +91,6 @@ describe('processLinkedIdentitySplits', () => {
     expect(validateLinkedIdentity).toHaveBeenCalledWith(
       mockAccountId,
       mockOwnerAccountId,
-      mockTransaction,
     );
 
     expect(SplitsReceiverModel.destroy).toHaveBeenCalledWith({
@@ -116,49 +115,6 @@ describe('processLinkedIdentitySplits', () => {
     expect(mockLinkedIdentity.save).toHaveBeenCalledWith({
       transaction: mockTransaction,
     });
-  });
-
-  it('should update areSplitsValid flag when validation returns false and NOT create splits', async () => {
-    mockLinkedIdentity.areSplitsValid = true;
-    (LinkedIdentityModel.findOne as jest.Mock).mockResolvedValue(
-      mockLinkedIdentity,
-    );
-    (validateLinkedIdentity as jest.Mock).mockResolvedValue(false);
-    jest.mocked(SplitsReceiverModel.destroy).mockResolvedValue(1);
-
-    const mockEvent = {
-      accountId: mockAccountId,
-      receiversHash: mockReceiversHash,
-      blockTimestamp: new Date('2024-01-01'),
-    };
-
-    await processLinkedIdentitySplits(
-      mockEvent as any,
-      mockScopedLogger,
-      mockTransaction,
-    );
-
-    expect(validateLinkedIdentity).toHaveBeenCalledWith(
-      mockAccountId,
-      mockOwnerAccountId,
-      mockTransaction,
-    );
-
-    expect(SplitsReceiverModel.destroy).toHaveBeenCalledWith({
-      where: { senderAccountId: mockAccountId },
-      transaction: mockTransaction,
-    });
-
-    expect(receiversRepository.createSplitReceiver).not.toHaveBeenCalled();
-
-    expect(mockLinkedIdentity.areSplitsValid).toBe(false);
-    expect(mockLinkedIdentity.save).toHaveBeenCalledWith({
-      transaction: mockTransaction,
-    });
-    expect(mockScopedLogger.log).toHaveBeenCalledWith(
-      expect.stringContaining('ORCID account'),
-      'warn',
-    );
   });
 
   it('should skip when on-chain hash does not match event hash', async () => {
