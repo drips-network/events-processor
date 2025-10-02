@@ -95,14 +95,21 @@ export default async function setIsValidFlag(
             },
           );
 
-          const entity = dripList ?? ecosystemMain!;
-          const Model = dripList ? DripListModel : EcosystemMainAccountModel;
+          const entity = dripList ?? ecosystemMain;
+          // eslint-disable-next-line no-nested-ternary
+          const resolvedModelName = dripList
+            ? DripListModel.name
+            : ecosystemMain !== null
+              ? EcosystemMainAccountModel.name
+              : 'DripList or EcosystemMainAccount';
 
           if (!entity) {
             throw new RecoverableError(
-              `Failed to set 'isValid' flag for ${Model.name}: ${Model.name} '${accountId}' not found.`,
+              `Failed to set 'isValid' flag for ${resolvedModelName}: ${resolvedModelName} '${accountId}' not found.`,
             );
           }
+
+          const Model = dripList ? DripListModel : EcosystemMainAccountModel;
 
           if (dripList && ecosystemMain) {
             unreachableError(
