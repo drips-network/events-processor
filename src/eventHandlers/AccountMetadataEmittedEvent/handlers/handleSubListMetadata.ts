@@ -91,12 +91,17 @@ export default async function handleSubListMetadata({
     return;
   }
 
-  const verificationResult = await verifyProjectSources(
-    metadata.recipients.filter(
-      (r): r is typeof r & { source: z.infer<typeof gitHubSourceSchema> } =>
-        r.type === 'repoSubAccountDriver' && r.source.forge !== 'orcid',
-    ),
-  );
+  const projectReceivers = metadata.recipients
+    .filter((r) => r.type === 'repoSubAccountDriver')
+    .filter((r) => {
+      if (r.type !== 'repoSubAccountDriver') return false;
+      return r.source.forge !== 'orcid';
+    }) as Array<{
+    accountId: string;
+    source: z.infer<typeof gitHubSourceSchema>;
+  }>;
+
+  const verificationResult = await verifyProjectSources(projectReceivers);
 
   if (!verificationResult.isValid) {
     scopedLogger.bufferMessage(
