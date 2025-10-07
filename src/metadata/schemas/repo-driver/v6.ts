@@ -24,7 +24,14 @@ export const deadlineSplitReceiverSchema = z.object({
   }),
   recipientAccountId: z.string(),
   refundAccountId: z.string(),
-  deadline: z.coerce.date(),
+  deadline: z.coerce
+    .date()
+    .refine((date) => !Number.isNaN(date.getTime()), 'Invalid date')
+    .refine((date) => date > new Date(), 'Deadline must be in the future')
+    .refine(
+      (date) => date < new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      'Deadline cannot be more than 1 year in the future',
+    ),
 });
 
 const repoDriverAccountSplitsSchemaV6 = z.object({
