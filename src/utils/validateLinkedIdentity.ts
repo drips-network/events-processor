@@ -20,7 +20,9 @@ export async function validateLinkedIdentity(
 
     const expectedHash = await dripsContract.hashSplits(expectedReceivers);
 
-    return onChainHash === expectedHash;
+    const isHashValid = onChainHash === expectedHash;
+
+    return isHashValid;
   } catch (error) {
     logger.error('Error validating linked identity', error);
     return false;

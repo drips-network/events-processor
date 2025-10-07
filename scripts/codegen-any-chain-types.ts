@@ -40,6 +40,7 @@ function generateTypeImports(chainNames: string[]) {
 import { Drips as ${chainName}Drips } from './${chainName}/';
 import { NftDriver as ${chainName}NftDriver } from './${chainName}/';
 import { RepoDriver as ${chainName}RepoDriver } from './${chainName}/';
+import { RepoDeadlineDriver as ${chainName}RepoDeadlineDriver } from './${chainName}/';
 import { RepoSubAccountDriver as ${chainName}RepoSubAccountDriver } from './${chainName}/';
 import { AddressDriver as ${chainName}AddressDriver } from './${chainName}/';
 import { ImmutableSplitsDriver as ${chainName}ImmutableSplitsDriver } from './${chainName}/';
@@ -55,6 +56,7 @@ function generateAnyChainTypes(chainNames: string[]) {
 export type AnyChainDrips = ${chainNames.map((name) => `${name}Drips`).join(' | ')};
 export type AnyChainNftDriver = ${chainNames.map((name) => `${name}NftDriver`).join(' | ')};
 export type AnyChainRepoDriver = ${chainNames.map((name) => `${name}RepoDriver`).join(' | ')};
+export type AnyChainRepoDeadlineDriver = ${chainNames.map((name) => `${name}RepoDeadlineDriver`).join(' | ')};
 export type AnyChainRepoSubAccountDriver = ${chainNames.map((name) => `${name}RepoSubAccountDriver`).join(' | ')};
 export type AnyChainAddressDriver = ${chainNames.map((name) => `${name}AddressDriver`).join(' | ')};
 export type AnyChainImmutableSplitsDriver = ${chainNames.map((name) => `${name}ImmutableSplitsDriver`).join(' | ')};
@@ -62,6 +64,7 @@ export type AnyChainImmutableSplitsDriver = ${chainNames.map((name) => `${name}I
 export type AnyChainDripsFilters = ${chainNames.map((name) => `${name}Drips['filters']`).join(' & ')};
 export type AnyChainNftDriverFilters = ${chainNames.map((name) => `${name}NftDriver['filters']`).join(' & ')};
 export type AnyChainRepoDriverFilters = ${chainNames.map((name) => `${name}RepoDriver['filters']`).join(' & ')};
+export type AnyChainRepoDeadlineDriverFilters = ${chainNames.map((name) => `${name}RepoDeadlineDriver['filters']`).join(' & ')};
 export type AnyChainRepoSubAccountDriverFilters = ${chainNames.map((name) => `${name}RepoSubAccountDriver['filters']`).join(' & ')};
 export type AnyChainAddressDriverFilters = ${chainNames.map((name) => `${name}AddressDriver['filters']`).join(' & ')};
 export type AnyChainImmutableSplitsDriverFilters = ${chainNames.map((name) => `${name}ImmutableSplitsDriver['filters']`).join(' & ')};
@@ -76,7 +79,7 @@ function generateContractGetters() {
   return `
 import type { Provider } from 'ethers';
 
-import { Drips__factory, NftDriver__factory, RepoDriver__factory, AddressDriver__factory, ImmutableSplitsDriver__factory, RepoSubAccountDriver__factory } from './${process.env.NETWORK}';
+import { Drips__factory, NftDriver__factory, RepoDriver__factory, RepoDeadlineDriver__factory, AddressDriver__factory, ImmutableSplitsDriver__factory, RepoSubAccountDriver__factory } from './${process.env.NETWORK}';
 
 export const getDripsContract: (contractAddress: string, provider: Provider) => AnyChainDrips = (contractAddress, provider) => Drips__factory.connect(
     contractAddress,
@@ -89,6 +92,11 @@ export const getNftDriverContract: (contractAddress: string, provider: Provider)
 );
 
 export const getRepoDriverContract: (contractAddress: string, provider: Provider) => AnyChainRepoDriver = (contractAddress, provider) => RepoDriver__factory.connect(
+    contractAddress,
+    provider
+);
+
+export const getRepoDeadlineDriverContract: (contractAddress: string, provider: Provider) => AnyChainRepoDeadlineDriver = (contractAddress, provider) => RepoDeadlineDriver__factory.connect(
     contractAddress,
     provider
 );

@@ -235,8 +235,8 @@ export default class AccountMetadataEmittedEventHandler extends EventHandlerBase
     metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
   ): boolean {
     return (
-      metadata.isDripList ||
-      ('type' in metadata ? metadata.type === 'dripList' : false)
+      ('isDripList' in metadata && metadata.isDripList) ||
+      ('type' in metadata && metadata.type === 'dripList')
     );
   }
 }

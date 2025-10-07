@@ -17,7 +17,10 @@ import type { subListSplitReceiverSchema } from '../../../metadata/schemas/immut
 import type { dripListSplitReceiverSchema } from '../../../metadata/schemas/nft-driver/v2';
 import RecoverableError from '../../../utils/recoverableError';
 import type { immutableSplitsDriverMetadataParser } from '../../../metadata/schemas';
-import { verifyProjectSources } from '../../../utils/projectUtils';
+import {
+  ensureProjectExists,
+  verifyProjectSources,
+} from '../../../utils/projectUtils';
 import {
   createSplitReceiver,
   deleteExistingSplitReceivers,
@@ -27,6 +30,7 @@ import {
   assertIsAddressDiverId,
   assertIsImmutableSplitsDriverId,
   assertIsNftDriverId,
+  assertIsRepoDeadlineDriverId,
   calcParentRepoDriverId,
   convertToAccountId,
   convertToImmutableSplitsDriverId,
@@ -35,6 +39,12 @@ import { makeVersion } from '../../../utils/lastProcessedVersion';
 import type { repoSubAccountDriverSplitReceiverSchema } from '../../../metadata/schemas/common/repoSubAccountDriverSplitReceiverSchema';
 import type { gitHubSourceSchema } from '../../../metadata/schemas/common/sources';
 import { ensureLinkedIdentityExists } from '../../../utils/linkedIdentityUtils';
+import type { deadlineSplitReceiverSchema } from '../../../metadata/schemas/repo-driver/v6';
+import {
+  ensureDeadlineExists,
+  normalizeDeadlineReceiver,
+  verifyDeadlineReceiver,
+} from '../../../utils/deadlineUtils';
 
 type Params = {
   logIndex: number;
@@ -81,16 +91,21 @@ export default async function handleSubListMetadata({
     return;
   }
 
-  const { areProjectsValid, message } = await verifyProjectSources(
-    metadata.recipients.filter(
-      (r): r is typeof r & { source: z.infer<typeof gitHubSourceSchema> } =>
-        r.type === 'repoSubAccountDriver' && r.source.forge !== 'orcid',
-    ),
-  );
+  const projectReceivers = metadata.recipients
+    .filter((r) => r.type === 'repoSubAccountDriver')
+    .filter((r) => {
+      if (r.type !== 'repoSubAccountDriver') return false;
+      return r.source.forge !== 'orcid';
+    }) as Array<{
+    accountId: string;
+    source: z.infer<typeof gitHubSourceSchema>;
+  }>;
 
-  if (!areProjectsValid) {
+  const verificationResult = await verifyProjectSources(projectReceivers);
+
+  if (!verificationResult.isValid) {
     scopedLogger.bufferMessage(
-      `🚨🕵️‍♂️ Skipped Sub-List metadata processing: ${message}`,
+      `🚨🕵️‍♂️ Skipped Sub-List metadata processing: ${verificationResult.message}`,
     );
 
     return;
@@ -108,7 +123,7 @@ export default async function handleSubListMetadata({
     emitterAccountId,
   });
 
-  deleteExistingSplitReceivers(emitterAccountId, transaction);
+  await deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
     subList,
@@ -198,6 +213,7 @@ async function createNewSplitReceivers({
     | z.infer<typeof subListSplitReceiverSchema>
     | z.infer<typeof addressDriverSplitReceiverSchema>
     | z.infer<typeof dripListSplitReceiverSchema>
+    | z.infer<typeof deadlineSplitReceiverSchema>
   )[];
 }) {
   const receiverPromises = receivers.map(async (receiver) => {
@@ -265,6 +281,58 @@ async function createNewSplitReceivers({
               subList.rootAccountType === 'ecosystem_main_account'
                 ? true
                 : undefined,
+          },
+        });
+      }
+
+      case 'deadline': {
+        assertIsRepoDeadlineDriverId(receiver.accountId);
+
+        if (receiver.deadline <= blockTimestamp) {
+          throw new Error(
+            `Deadline receiver ${receiver.accountId} has deadline in the past: ${receiver.deadline.toISOString()}`,
+          );
+        }
+
+        const normalizedDeadline = normalizeDeadlineReceiver(receiver);
+
+        const verificationResult =
+          await verifyDeadlineReceiver(normalizedDeadline);
+        if (!verificationResult.isValid) {
+          scopedLogger.bufferMessage(
+            `🚨🕵️‍♂️ Cancelled Sub-List ${emitterAccountId} metadata processing: ${verificationResult.message}`,
+          );
+
+          throw new Error(
+            `Cannot process Deadline receiver for Sub-List ${emitterAccountId}: ${verificationResult.message}`,
+          );
+        }
+
+        await ensureProjectExists({
+          project: normalizedDeadline.claimableProject,
+          blockNumber,
+          logIndex,
+          transaction,
+          scopedLogger,
+        });
+
+        await ensureDeadlineExists({
+          deadline: normalizedDeadline,
+          transaction,
+          scopedLogger,
+        });
+
+        return createSplitReceiver({
+          scopedLogger,
+          transaction,
+          splitReceiverShape: {
+            senderAccountId: emitterAccountId,
+            senderAccountType: 'sub_list',
+            receiverAccountId: receiver.accountId,
+            receiverAccountType: 'deadline',
+            relationshipType: 'sub_list_link',
+            weight: receiver.weight,
+            blockTimestamp,
           },
         });
       }

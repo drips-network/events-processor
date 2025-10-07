@@ -1,20 +1,55 @@
 import { z } from 'zod';
+import { nftDriverAccountMetadataSchemaV5 } from './v5';
 import {
-  dripListVariant as dripListVariantV6,
-  nftDriverAccountMetadataSchemaV6,
-} from './v6';
-import { orcidSplitReceiverSchema } from '../repo-driver/v6';
+  addressDriverSplitReceiverSchema,
+  repoDriverSplitReceiverSchema,
+} from '../repo-driver/v2';
+import { subListSplitReceiverSchema } from '../immutable-splits-driver/v1';
+import { dripListSplitReceiverSchema } from './v2';
+import { repoSubAccountDriverSplitReceiverSchema } from '../common/repoSubAccountDriverSplitReceiverSchema';
+import { emojiAvatarSchema } from '../repo-driver/v4';
+import {
+  deadlineSplitReceiverSchema,
+  orcidSplitReceiverSchema,
+} from '../repo-driver/v6';
 
-export const dripListVariantV7 = dripListVariantV6.extend({
+const base = nftDriverAccountMetadataSchemaV5
+  .omit({
+    isDripList: true,
+    projects: true,
+  })
+  .extend({
+    allowExternalDonations: z.boolean().optional(),
+  });
+
+const ecosystemVariant = base.extend({
+  type: z.literal('ecosystem'),
   recipients: z.array(
     z.union([
-      ...dripListVariantV6.shape.recipients._def.type.options,
-      orcidSplitReceiverSchema,
+      repoSubAccountDriverSplitReceiverSchema,
+      subListSplitReceiverSchema,
+      deadlineSplitReceiverSchema, // New in v7
+    ]),
+  ),
+  color: z.string(),
+  avatar: emojiAvatarSchema,
+});
+
+const dripListVariant = base.extend({
+  type: z.literal('dripList'),
+  recipients: z.array(
+    z.union([
+      repoDriverSplitReceiverSchema,
+      subListSplitReceiverSchema,
+      addressDriverSplitReceiverSchema,
+      dripListSplitReceiverSchema,
+      deadlineSplitReceiverSchema, // New in v7
+      orcidSplitReceiverSchema, // New in v7
     ]),
   ),
 });
 
 export const nftDriverAccountMetadataSchemaV7 = z.discriminatedUnion('type', [
-  nftDriverAccountMetadataSchemaV6._def.options[0],
-  dripListVariantV7,
+  ecosystemVariant,
+  dripListVariant,
 ]);

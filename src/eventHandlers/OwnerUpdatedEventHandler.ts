@@ -45,6 +45,7 @@ export default class OwnerUpdatedEventHandler extends EventHandlerBase<'OwnerUpd
       ].join('\n'),
     );
 
+    // Ensure we process the latest event.
     const onChainOwner = (await repoDriverContract.ownerOf(
       accountId,
     )) as Address;

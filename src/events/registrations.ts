@@ -1,14 +1,15 @@
 import {
   AccountMetadataEmittedEventHandler,
+  AccountSeenEventHandler,
   GivenEventHandler,
   SplitEventHandler,
   TransferEventHandler,
   StreamReceiverSeenEventHandler,
   StreamsSetEventHandler,
   SqueezedStreamsEventHandler,
+  OwnerUpdatedEventHandler,
+  SplitsSetEventHandler,
 } from '../eventHandlers';
-import OwnerUpdatedEventHandler from '../eventHandlers/OwnerUpdatedEventHandler';
-import SplitsSetEventHandler from '../eventHandlers/SplitsSetEvent/SplitsSetEventHandler';
 import { registerEventHandler } from './eventHandlerUtils';
 
 export function registerEventHandlers(): void {
@@ -47,5 +48,9 @@ export function registerEventHandlers(): void {
   registerEventHandler<'OwnerUpdated(uint256,address)'>(
     'OwnerUpdated(uint256,address)',
     OwnerUpdatedEventHandler,
+  );
+  registerEventHandler<'AccountSeen(uint256,uint256,uint256,uint256,uint32)'>(
+    'AccountSeen(uint256,uint256,uint256,uint256,uint32)',
+    AccountSeenEventHandler,
   );
 }

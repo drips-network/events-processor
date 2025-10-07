@@ -95,4 +95,23 @@ describe('validateLinkedIdentity', () => {
     // Assert
     expect(result).toBe(false);
   });
+
+  test('should return true when hash is valid', async () => {
+    // Arrange
+    (dripsContract as any).splitsHash = jest
+      .fn()
+      .mockResolvedValue(mockOnChainHash);
+    (dripsContract as any).hashSplits = jest
+      .fn()
+      .mockResolvedValue(mockExpectedHash);
+
+    // Act
+    const result = await validateLinkedIdentity(
+      mockAccountId,
+      mockOwnerAccountId,
+    );
+
+    // Assert
+    expect(result).toBe(true);
+  });
 });

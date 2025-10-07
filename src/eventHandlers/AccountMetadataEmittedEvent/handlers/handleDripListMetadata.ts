@@ -17,11 +17,15 @@ import {
   createSplitReceiver,
   deleteExistingSplitReceivers,
 } from '../receiversRepository';
-import { verifyProjectSources } from '../../../utils/projectUtils';
+import {
+  ensureProjectExists,
+  verifyProjectSources,
+} from '../../../utils/projectUtils';
 import DripListModel from '../../../models/DripListModel';
 import {
   assertIsAddressDiverId,
   assertIsNftDriverId,
+  assertIsRepoDeadlineDriverId,
   assertIsRepoDriverId,
   convertToNftDriverId,
 } from '../../../utils/accountIdUtils';
@@ -32,6 +36,11 @@ import {
 } from '../../../core/contractClients';
 import { ProjectModel } from '../../../models';
 import { ensureLinkedIdentityExists } from '../../../utils/linkedIdentityUtils';
+import {
+  ensureDeadlineExists,
+  normalizeDeadlineReceiver,
+  verifyDeadlineReceiver,
+} from '../../../utils/deadlineUtils';
 
 type Params = {
   ipfsHash: IpfsHash;
@@ -43,6 +52,16 @@ type Params = {
   emitterAccountId: NftDriverId;
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>;
 };
+
+type DripListReceiver = DripListMetadata['recipients'][number];
+type LegacyReceiver = LegacyDripListMetadata['projects'][number];
+type LegacyRepoReceiver = Extract<LegacyReceiver, { source: unknown }>;
+type LegacyAddressReceiver = Exclude<LegacyReceiver, { source: unknown }>;
+
+type NormalizedSplitReceiver =
+  | DripListReceiver
+  | (LegacyRepoReceiver & { type: 'repoDriver' })
+  | (LegacyAddressReceiver & { type: 'address' });
 
 export default async function handleDripListMetadata({
   ipfsHash,
@@ -64,7 +83,13 @@ export default async function handleDripListMetadata({
     return;
   }
 
-  const splitReceivers = metadata.projects ?? metadata.recipients;
+  const splitReceivers: ReadonlyArray<DripListReceiver | LegacyReceiver> =
+    // eslint-disable-next-line no-nested-ternary
+    isDripListMetadata(metadata)
+      ? metadata.recipients
+      : isLegacyDripListMetadata(metadata)
+        ? metadata.projects
+        : [];
 
   const { isMatch, actualHash, onChainHash } = await verifySplitsReceivers(
     emitterAccountId,
@@ -82,7 +107,7 @@ export default async function handleDripListMetadata({
     return;
   }
 
-  const { areProjectsValid, message } = await verifyProjectSources(
+  const verificationResult = await verifyProjectSources(
     splitReceivers.filter(
       (
         splitReceiver,
@@ -91,9 +116,9 @@ export default async function handleDripListMetadata({
     ),
   );
 
-  if (!areProjectsValid) {
+  if (!verificationResult.isValid) {
     scopedLogger.bufferMessage(
-      `🚨🕵️‍♂️ Skipped Drip List ${emitterAccountId} metadata processing: ${message}`,
+      `🚨🕵️‍♂️ Skipped Drip List ${emitterAccountId} metadata processing: ${verificationResult.message}`,
     );
 
     return;
@@ -110,7 +135,7 @@ export default async function handleDripListMetadata({
     transaction,
   });
 
-  deleteExistingSplitReceivers(emitterAccountId, transaction);
+  await deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
     metadata,
@@ -223,31 +248,32 @@ async function createNewSplitReceivers({
   emitterAccountId: NftDriverId;
   metadata: AnyVersion<typeof nftDriverAccountMetadataParser>;
 }) {
-  const rawReceivers =
+  const rawReceivers: ReadonlyArray<DripListReceiver | LegacyReceiver> =
     // eslint-disable-next-line no-nested-ternary
-    'recipients' in metadata
-      ? (metadata.recipients ?? [])
-      : 'projects' in metadata
-        ? (metadata.projects ?? [])
+    isDripListMetadata(metadata)
+      ? metadata.recipients
+      : isLegacyDripListMetadata(metadata)
+        ? metadata.projects
         : [];
 
   // 2. Upgrade legacy payloads so that *every* receiver object has a `type`.
   //    – v2+ entries already expose `type`.
   //    – v1 repo receivers carry a `source` property.
-  const splitReceivers = rawReceivers.map((receiver: any) => {
-    if ('type' in receiver) {
-      return receiver; // v6 or v2–v5.
-    }
+  const splitReceivers: ReadonlyArray<NormalizedSplitReceiver> =
+    rawReceivers.map((receiver): NormalizedSplitReceiver => {
+      if ('type' in receiver) {
+        return receiver; // v6 or v2–v5.
+      }
 
-    // v1 without `type`.
-    if ('source' in receiver) {
-      // Legacy repo driver receiver.
-      return { ...receiver, type: 'repoDriver' } as const;
-    }
+      // v1 without `type`.
+      if ('source' in receiver) {
+        // Legacy repo driver receiver.
+        return { ...receiver, type: 'repoDriver' };
+      }
 
-    // Legacy address receiver.
-    return { ...receiver, type: 'address' } as const;
-  });
+      // Legacy address receiver.
+      return { ...receiver, type: 'address' };
+    });
 
   // Nothing to persist.
   if (splitReceivers.length === 0) {
@@ -282,6 +308,13 @@ async function createNewSplitReceivers({
 
       case 'repoDriver':
         assertIsRepoDriverId(receiver.accountId);
+
+        // Narrow down to project receiver.
+        if (!('source' in receiver && receiver.source.forge === 'github')) {
+          throw new Error(
+            `Project receiver ${receiver.accountId} has invalid metadata shape: ${JSON.stringify(receiver)}`,
+          );
+        }
 
         await ProjectModel.findOrCreate({
           transaction,
@@ -347,6 +380,58 @@ async function createNewSplitReceivers({
           },
         });
 
+      case 'deadline': {
+        assertIsRepoDeadlineDriverId(receiver.accountId);
+
+        if (receiver.deadline <= blockTimestamp) {
+          throw new Error(
+            `Deadline receiver ${receiver.accountId} has deadline in the past: ${receiver.deadline.toISOString()}`,
+          );
+        }
+
+        const normalizedDeadline = normalizeDeadlineReceiver(receiver);
+
+        const verificationResult =
+          await verifyDeadlineReceiver(normalizedDeadline);
+        if (!verificationResult.isValid) {
+          scopedLogger.bufferMessage(
+            `🚨🕵️‍♂️ Cancelled Drip List ${emitterAccountId} metadata processing: ${verificationResult.message}`,
+          );
+
+          throw new Error(
+            `Cannot process Deadline receiver for Drip List ${emitterAccountId}: ${verificationResult.message}`,
+          );
+        }
+
+        await ensureProjectExists({
+          project: normalizedDeadline.claimableProject,
+          blockNumber,
+          logIndex,
+          transaction,
+          scopedLogger,
+        });
+
+        await ensureDeadlineExists({
+          deadline: normalizedDeadline,
+          transaction,
+          scopedLogger,
+        });
+
+        return createSplitReceiver({
+          scopedLogger,
+          transaction,
+          splitReceiverShape: {
+            senderAccountId: emitterAccountId,
+            senderAccountType: 'drip_list',
+            receiverAccountId: receiver.accountId,
+            receiverAccountType: 'deadline',
+            relationshipType: 'drip_list_receiver',
+            weight: receiver.weight,
+            blockTimestamp,
+          },
+        });
+      }
+
       default:
         return unreachableError(
           `Unhandled Drip List Split Receiver type: ${(receiver as any).type}`,
@@ -366,4 +451,26 @@ function validateMetadata(
   if (!isV6 && !isV5AndBelow) {
     throw new Error('Invalid Drip List metadata schema.');
   }
+}
+
+type DripListMetadata = Extract<
+  AnyVersion<typeof nftDriverAccountMetadataParser>,
+  { type: 'dripList'; recipients: unknown }
+>;
+
+type LegacyDripListMetadata = Extract<
+  AnyVersion<typeof nftDriverAccountMetadataParser>,
+  { projects: unknown }
+>;
+
+function isDripListMetadata(
+  metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
+): metadata is DripListMetadata {
+  return 'recipients' in metadata && metadata.type === 'dripList';
+}
+
+function isLegacyDripListMetadata(
+  metadata: AnyVersion<typeof nftDriverAccountMetadataParser>,
+): metadata is LegacyDripListMetadata {
+  return 'projects' in metadata;
 }

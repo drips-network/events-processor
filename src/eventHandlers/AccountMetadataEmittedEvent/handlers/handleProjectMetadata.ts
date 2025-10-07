@@ -7,6 +7,7 @@ import type { repoDriverAccountMetadataParser } from '../../../metadata/schemas'
 import type ScopedLogger from '../../../core/ScopedLogger';
 import {
   calculateProjectStatus,
+  ensureProjectExists,
   verifyProjectSources,
 } from '../../../utils/projectUtils';
 import type { IpfsHash, RepoDriverId } from '../../../core/types';
@@ -14,6 +15,7 @@ import {
   assertIsAddressDiverId,
   isAddressDriverId,
   isNftDriverId,
+  isRepoDeadlineDriverId,
   isRepoDriverId,
 } from '../../../utils/accountIdUtils';
 import unreachableError from '../../../utils/unreachableError';
@@ -27,6 +29,11 @@ import { makeVersion } from '../../../utils/lastProcessedVersion';
 import RecoverableError from '../../../utils/recoverableError';
 import type { gitHubSourceSchema } from '../../../metadata/schemas/common/sources';
 import { ensureLinkedIdentityExists } from '../../../utils/linkedIdentityUtils';
+import {
+  ensureDeadlineExists,
+  normalizeDeadlineReceiver,
+  verifyDeadlineReceiver,
+} from '../../../utils/deadlineUtils';
 
 type Params = {
   logIndex: number;
@@ -93,37 +100,21 @@ export default async function handleProjectMetadata({
     (dep) => 'source' in dep && dep.source.forge === 'github',
   ) as { accountId: string; source: z.infer<typeof gitHubSourceSchema> }[];
 
-  const { areProjectsValid, message } = await verifyProjectSources([
+  const verificationResult = await verifyProjectSources([
     ...projectReceivers,
+    // We'll store `source` information from metadata, not from the 'OwnerUpdatedRequested' event.
+    // Therefore, it's necessary to also verify the emitter project's source.
     {
       accountId: emitterAccountId,
       source: metadata.source,
     },
   ]);
 
-  if (!areProjectsValid) {
+  if (!verificationResult.isValid) {
     scopedLogger.bufferMessage(
-      `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: ${message}`,
+      `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: ${verificationResult.message}`,
     );
 
-    return;
-  }
-
-  // We'll store `source` information the metadata, not from the 'OwnerUpdatedRequested' event.
-  // Therefore, it's necessary to also verify the project's source directly.
-  const { areProjectsValid: isProjectSourceValid } = await verifyProjectSources(
-    [
-      {
-        accountId: emitterAccountId,
-        source: metadata.source,
-      },
-    ],
-  );
-
-  if (!isProjectSourceValid) {
-    scopedLogger.bufferMessage(
-      `🚨🕵️‍♂️ Skipped ${metadata.source.ownerName}/${metadata.source.repoName} (${emitterAccountId}) metadata processing: ${message}`,
-    );
     return;
   }
 
@@ -139,7 +130,7 @@ export default async function handleProjectMetadata({
     scopedLogger,
   });
 
-  deleteExistingSplitReceivers(emitterAccountId, transaction);
+  await deleteExistingSplitReceivers(emitterAccountId, transaction);
 
   await createNewSplitReceivers({
     logIndex,
@@ -147,7 +138,10 @@ export default async function handleProjectMetadata({
     scopedLogger,
     transaction,
     blockTimestamp,
-    emitterAccountId,
+    emitter: {
+      accountId: emitterAccountId,
+      source: metadata.source,
+    },
     splitReceivers: metadata.splits,
   });
 }
@@ -207,20 +201,23 @@ async function updateProject({
 }
 
 async function createNewSplitReceivers({
+  emitter,
   logIndex,
   blockNumber,
   transaction,
   scopedLogger,
   blockTimestamp,
   splitReceivers,
-  emitterAccountId,
 }: {
   logIndex: number;
   blockNumber: number;
   blockTimestamp: Date;
   scopedLogger: ScopedLogger;
   transaction: Transaction;
-  emitterAccountId: RepoDriverId;
+  emitter: {
+    accountId: RepoDriverId;
+    source: z.infer<typeof gitHubSourceSchema>;
+  };
   splitReceivers: AnyVersion<typeof repoDriverAccountMetadataParser>['splits'];
 }) {
   const { dependencies, maintainers } = splitReceivers;
@@ -232,7 +229,7 @@ async function createNewSplitReceivers({
       scopedLogger,
       transaction,
       splitReceiverShape: {
-        senderAccountId: emitterAccountId,
+        senderAccountId: emitter.accountId,
         senderAccountType: 'project',
         receiverAccountId: maintainer.accountId,
         receiverAccountType: 'address',
@@ -244,6 +241,7 @@ async function createNewSplitReceivers({
   });
 
   const dependencyPromises = dependencies.map(async (dependency) => {
+    // Project or ORCID
     if (isRepoDriverId(dependency.accountId)) {
       if (!('source' in dependency)) {
         throw new Error(
@@ -263,7 +261,7 @@ async function createNewSplitReceivers({
           scopedLogger,
           transaction,
           splitReceiverShape: {
-            senderAccountId: emitterAccountId,
+            senderAccountId: emitter.accountId,
             senderAccountType: 'project',
             receiverAccountId: dependency.accountId,
             receiverAccountType: 'linked_identity',
@@ -296,7 +294,7 @@ async function createNewSplitReceivers({
         scopedLogger,
         transaction,
         splitReceiverShape: {
-          senderAccountId: emitterAccountId,
+          senderAccountId: emitter.accountId,
           senderAccountType: 'project',
           receiverAccountId: dependency.accountId,
           receiverAccountType: 'project',
@@ -307,12 +305,71 @@ async function createNewSplitReceivers({
       });
     }
 
+    // Deadline
+    if (isRepoDeadlineDriverId(dependency.accountId)) {
+      // Narrow down to deadline receiver.
+      if (!('type' in dependency && dependency.type === 'deadline')) {
+        throw new Error(
+          `Deadline receiver ${dependency.accountId} has invalid metadata shape: ${JSON.stringify(dependency)}`,
+        );
+      }
+
+      if (dependency.deadline <= blockTimestamp) {
+        throw new Error(
+          `Deadline receiver ${dependency.accountId} has deadline in the past: ${dependency.deadline.toISOString()}`,
+        );
+      }
+
+      const normalizedDeadline = normalizeDeadlineReceiver(dependency);
+
+      const verificationResult =
+        await verifyDeadlineReceiver(normalizedDeadline);
+      if (!verificationResult.isValid) {
+        scopedLogger.bufferMessage(
+          `🚨🕵️‍♂️ Cancelled ${emitter.source.ownerName}/${emitter.source.repoName} (${emitter.accountId}) metadata processing: ${verificationResult.message}`,
+        );
+
+        throw new Error(
+          `Cannot process Deadline receiver for ${emitter.source.ownerName}/${emitter.source.repoName} (${emitter.accountId}): ${verificationResult.message}`,
+        );
+      }
+
+      await ensureProjectExists({
+        project: normalizedDeadline.claimableProject,
+        blockNumber,
+        logIndex,
+        transaction,
+        scopedLogger,
+      });
+
+      await ensureDeadlineExists({
+        deadline: normalizedDeadline,
+        transaction,
+        scopedLogger,
+      });
+
+      return createSplitReceiver({
+        scopedLogger,
+        transaction,
+        splitReceiverShape: {
+          senderAccountId: emitter.accountId,
+          senderAccountType: 'project',
+          receiverAccountId: dependency.accountId,
+          receiverAccountType: 'deadline',
+          relationshipType: 'project_dependency',
+          weight: dependency.weight,
+          blockTimestamp,
+        },
+      });
+    }
+
+    // Address
     if (isAddressDriverId(dependency.accountId)) {
       return createSplitReceiver({
         scopedLogger,
         transaction,
         splitReceiverShape: {
-          senderAccountId: emitterAccountId,
+          senderAccountId: emitter.accountId,
           senderAccountType: 'project',
           receiverAccountId: dependency.accountId,
           receiverAccountType: 'address',
@@ -323,12 +380,13 @@ async function createNewSplitReceivers({
       });
     }
 
+    // Drip List
     if (isNftDriverId(dependency.accountId)) {
       return createSplitReceiver({
         scopedLogger,
         transaction,
         splitReceiverShape: {
-          senderAccountId: emitterAccountId,
+          senderAccountId: emitter.accountId,
           senderAccountType: 'project',
           receiverAccountId: dependency.accountId,
           receiverAccountType: 'drip_list',

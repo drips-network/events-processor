@@ -14,6 +14,9 @@
     "repoDriver": {
       "address": "0x808e5C413BB085284D18e17BDF9682A66A0097D5"
     },
+    "repoDeadlineDriver": {
+      "address": "0xE57A3111414E0FaB39cc6e8fDe957b1f6471cd49"
+    },
     "repoSubAccountDriver": {
       "address": "0xe077e0D50fB60b900467F4a44DF7b49deB41097d"
     },

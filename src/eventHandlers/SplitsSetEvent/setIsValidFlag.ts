@@ -31,139 +31,214 @@ export default async function setIsValidFlag(
 ): Promise<void> {
   const onChainReceiversHash = await dripsContract.splitsHash(accountId);
 
-  // Only proceed if this event matches the latest on-chain hash.
   if (eventReceiversHash !== onChainReceiversHash) {
     scopedLogger.bufferMessage(
       `Skipped setting 'isValid' flag for ${accountId}: on-chain splits hash '${onChainReceiversHash}' does not match event hash '${eventReceiversHash}'.`,
     );
-
     return;
   }
 
   if (isRepoDriverId(accountId)) {
-    const project = await ProjectModel.findByPk(accountId, {
+    await handleEntityValidation(
+      accountId,
+      onChainReceiversHash,
       transaction,
-      lock: transaction.LOCK.UPDATE,
-    });
+      scopedLogger,
+      {
+        findEntity: async () => {
+          const project = await ProjectModel.findByPk(accountId, {
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          });
 
-    if (!project) {
-      throw new RecoverableError(
-        `Failed to set 'isValid' flag for Project: Project '${accountId}' not found. Likely waiting on 'AccountMetadataEmitted' event to be processed. Retrying, but if this persists, it is a real error.`,
-      );
-    }
+          if (!project) {
+            throw new RecoverableError(
+              `Failed to set 'isValid' flag for Project: Project '${accountId}' not found. Likely waiting on 'AccountMetadataEmitted' event to be processed. Retrying, but if this persists, it is a real error.`,
+            );
+          }
 
-    const onChainOwner = await repoDriverContract.ownerOf(accountId);
-    const dbOwner = project.ownerAddress; // populated from metadata.
-    if (onChainOwner !== dbOwner) {
-      throw new RecoverableError(
-        `On-chain owner ${onChainOwner} does not match DB owner ${dbOwner} for Project '${accountId}'. Likely waiting on another event to be processed. Retrying, but if this persists, it is a real error.`,
-      );
-    }
-
-    const dbReceiversHash = await hashDbSplits(accountId, transaction);
-    const isValid = dbReceiversHash === onChainReceiversHash;
-
-    project.isValid = isValid;
-
-    scopedLogger.bufferUpdate({
-      id: project.accountId,
-      type: ProjectModel,
-      input: project,
-    });
-
-    await project.save({ transaction });
-
-    if (!isValid) {
-      // Rethrow the error to trigger a retry. Eventually, the on-chain hash should match the DB hash.
-      throw new RecoverableError(
-        `On-chain splits hash '${onChainReceiversHash}' does not match DB splits hash '${dbReceiversHash}' for Project '${accountId}'. Likely waiting on another event to be processed. Retrying, but if this persists, it is a real error.`,
-      );
-    }
+          return {
+            entity: project,
+            Model: ProjectModel,
+            entityType: 'Project',
+          };
+        },
+        validateOwnership: async (entity) => {
+          const onChainOwner = await repoDriverContract.ownerOf(accountId);
+          const dbOwner = entity.ownerAddress;
+          if (onChainOwner !== dbOwner) {
+            throw new RecoverableError(
+              `On-chain owner ${onChainOwner} does not match DB owner ${dbOwner} for Project '${accountId}'. Likely waiting on another event to be processed. Retrying, but if this persists, it is a real error.`,
+            );
+          }
+        },
+      },
+    );
   } else if (isNftDriverId(accountId)) {
-    const dripList = await DripListModel.findByPk(accountId, {
+    await handleEntityValidation(
+      accountId,
+      onChainReceiversHash,
       transaction,
-      lock: transaction.LOCK.UPDATE,
-    });
+      scopedLogger,
+      {
+        findEntity: async () => {
+          const dripList = await DripListModel.findByPk(accountId, {
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          });
 
-    const ecosystemMain = await EcosystemMainAccountModel.findByPk(accountId, {
-      transaction,
-      lock: transaction.LOCK.UPDATE,
-    });
+          const ecosystemMain = await EcosystemMainAccountModel.findByPk(
+            accountId,
+            {
+              transaction,
+              lock: transaction.LOCK.UPDATE,
+            },
+          );
 
-    const entity = dripList ?? ecosystemMain!;
-    const Model = dripList ? DripListModel : EcosystemMainAccountModel;
+          const entity = dripList ?? ecosystemMain;
+          // eslint-disable-next-line no-nested-ternary
+          const resolvedModelName = dripList
+            ? DripListModel.name
+            : ecosystemMain !== null
+              ? EcosystemMainAccountModel.name
+              : 'DripList or EcosystemMainAccount';
 
-    if (!entity) {
-      throw new RecoverableError(
-        `Failed to set 'isValid' flag for ${Model.name}: ${Model.name} '${accountId}' not found.`,
-      );
-    }
+          if (!entity) {
+            throw new RecoverableError(
+              `Failed to set 'isValid' flag for ${resolvedModelName}: ${resolvedModelName} '${accountId}' not found.`,
+            );
+          }
 
-    if (dripList && ecosystemMain) {
-      unreachableError(
-        `Invariant violation: both Drip List and Ecosystem Main Account found for token '${accountId}'.`,
-      );
-    }
+          const Model = dripList ? DripListModel : EcosystemMainAccountModel;
 
-    const onChainOwner = await nftDriverContract.ownerOf(accountId);
-    const dbOwner = entity.ownerAddress;
-    if (onChainOwner !== dbOwner) {
-      throw new RecoverableError(
-        `On-chain owner ${onChainOwner} does not match DB owner ${dbOwner} for ${Model.name} '${accountId}'. Likely waiting on another event to be processed. Retrying, but if this persists, it is a real error.`,
-      );
-    }
+          if (dripList && ecosystemMain) {
+            unreachableError(
+              `Invariant violation: both Drip List and Ecosystem Main Account found for token '${accountId}'.`,
+            );
+          }
 
-    const dbReceiversHash = await hashDbSplits(accountId, transaction);
-    const isValid = dbReceiversHash === onChainReceiversHash;
-
-    entity.isValid = isValid;
-
-    scopedLogger.bufferUpdate({
-      id: entity.accountId,
-      type: Model,
-      input: entity,
-    });
-
-    await entity.save({ transaction });
-
-    if (!isValid) {
-      // Rethrow the error to trigger a retry. Eventually, the on-chain hash should match the DB hash.
-      throw new RecoverableError(
-        `On-chain splits hash '${onChainReceiversHash}' does not match DB splits hash '${dbReceiversHash}' for ${Model.name} '${accountId}'. Likely waiting on another event to be processed. Retrying, but if this persists, it is a real error.`,
-      );
-    }
+          return { entity, Model, entityType: Model.name };
+        },
+        validateOwnership: async (entity) => {
+          const onChainOwner = await nftDriverContract.ownerOf(accountId);
+          const dbOwner = entity.ownerAddress;
+          if (onChainOwner !== dbOwner) {
+            const entityType = entity.constructor.name;
+            throw new RecoverableError(
+              `On-chain owner ${onChainOwner} does not match DB owner ${dbOwner} for ${entityType} '${accountId}'. Likely waiting on another event to be processed. Retrying, but if this persists, it is a real error.`,
+            );
+          }
+        },
+      },
+    );
   } else if (isImmutableSplitsDriverId(accountId)) {
-    const subList = await SubListModel.findByPk(accountId, {
+    await handleEntityValidation(
+      accountId,
+      onChainReceiversHash,
       transaction,
-      lock: transaction.LOCK.UPDATE,
-    });
+      scopedLogger,
+      {
+        findEntity: async () => {
+          const subList = await SubListModel.findByPk(accountId, {
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          });
 
-    if (!subList) {
-      throw new RecoverableError(
-        `Failed to set 'isValid' flag for SubList: SubList '${accountId}' not found.`,
-      );
-    }
+          if (!subList) {
+            throw new RecoverableError(
+              `Failed to set 'isValid' flag for SubList: SubList '${accountId}' not found.`,
+            );
+          }
 
-    const dbReceiversHash = await hashDbSplits(accountId, transaction);
-    const isValid = dbReceiversHash === onChainReceiversHash;
-
-    subList.isValid = isValid;
-
-    scopedLogger.bufferUpdate({
-      id: subList.accountId,
-      type: SubListModel,
-      input: subList,
-    });
-
-    await subList.save({ transaction });
-
-    if (!isValid) {
-      // Rethrow the error to trigger a retry. Eventually, the on-chain hash should match the DB hash.
-      throw new RecoverableError(
-        `On-chain splits hash '${onChainReceiversHash}' does not match DB splits hash '${dbReceiversHash}' for SubList '${accountId}'. Likely waiting on another event to be processed. Retrying, but if this persists, it is a real error.`,
-      );
-    }
+          return {
+            entity: subList,
+            Model: SubListModel,
+            entityType: 'SubList',
+          };
+        },
+      },
+    );
   }
+}
+type EntityWithValidation = {
+  isValid: boolean;
+  accountId: AccountId;
+  ownerAddress?: string | null;
+  save: (options: { transaction: Transaction }) => Promise<any>;
+};
+
+type EntityFinder = {
+  findEntity: () => Promise<{
+    entity: EntityWithValidation;
+    Model: any;
+    entityType: string;
+  }>;
+  validateOwnership?: (entity: EntityWithValidation) => Promise<void>;
+};
+
+async function handleEntityValidation(
+  accountId: AccountId,
+  onChainReceiversHash: string,
+  transaction: Transaction,
+  scopedLogger: ScopedLogger,
+  entityFinder: EntityFinder,
+): Promise<void> {
+  const { entity, Model, entityType } = await entityFinder.findEntity();
+
+  if (entityFinder.validateOwnership) {
+    await entityFinder.validateOwnership(entity);
+  }
+
+  const { hashValid } = await validateSplitsHash(
+    accountId,
+    onChainReceiversHash,
+    transaction,
+    scopedLogger,
+    entityType,
+  );
+
+  const isValid = hashValid;
+
+  entity.isValid = isValid;
+
+  scopedLogger.bufferUpdate({
+    id: entity.accountId,
+    type: Model,
+    input: entity as any,
+  });
+
+  await entity.save({ transaction });
+
+  if (!isValid) {
+    const reasons = [];
+    if (!hashValid) reasons.push('splits hash mismatch');
+
+    throw new RecoverableError(
+      `${entityType} '${accountId}' validation failed: ${reasons.join(', ')}. Likely waiting on another event to be processed. Retrying, but if this persists, it is a real error.`,
+    );
+  }
+}
+
+async function validateSplitsHash(
+  accountId: AccountId,
+  onChainReceiversHash: string,
+  transaction: Transaction,
+  scopedLogger: ScopedLogger,
+  entityType: string,
+): Promise<{
+  hashValid: boolean;
+  dbReceiversHash: string;
+}> {
+  const dbReceiversHash = await hashDbSplits(accountId, transaction);
+  const hashValid = dbReceiversHash === onChainReceiversHash;
+
+  if (!hashValid) {
+    scopedLogger.bufferMessage(
+      `${entityType} ${accountId} splits hash mismatch: on-chain '${onChainReceiversHash}' vs DB '${dbReceiversHash}'`,
+    );
+  }
+
+  return { hashValid, dbReceiversHash };
 }
 
 async function hashDbSplits(
