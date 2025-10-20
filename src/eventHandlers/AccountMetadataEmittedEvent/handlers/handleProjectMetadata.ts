@@ -245,13 +245,7 @@ async function createNewSplitReceivers({
 
   const dependencyPromises = dependencies.map(async (dependency) => {
     if (isRepoDriverId(dependency.accountId)) {
-      if (!('source' in dependency)) {
-        throw new Error(
-          `Project dependency ${dependency.accountId} is missing source information.`,
-        );
-      }
-
-      if (dependency.source.forge === 'orcid') {
+      if ('orcid' in dependency) {
         await ensureLinkedIdentityExists(
           dependency.accountId,
           { blockNumber, logIndex },
@@ -272,6 +266,18 @@ async function createNewSplitReceivers({
             blockTimestamp,
           },
         });
+      }
+
+      if (!('source' in dependency)) {
+        throw new Error(
+          `Project dependency ${dependency.accountId} is missing source information.`,
+        );
+      }
+
+      if (dependency.source.forge !== 'github') {
+        throw new Error(
+          `Project dependency ${dependency.accountId} has unsupported source forge: ${dependency.source.forge}. Expected 'github'.`,
+        );
       }
 
       await ProjectModel.findOrCreate({
