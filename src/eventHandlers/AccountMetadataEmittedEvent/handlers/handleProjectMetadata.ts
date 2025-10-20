@@ -245,7 +245,7 @@ async function createNewSplitReceivers({
 
   const dependencyPromises = dependencies.map(async (dependency) => {
     if (isRepoDriverId(dependency.accountId)) {
-      if ('orcid' in dependency) {
+      if ('orcidId' in dependency) {
         await ensureLinkedIdentityExists(
           dependency.accountId,
           { blockNumber, logIndex },
